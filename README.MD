@@ -71,9 +71,9 @@ astanalyzer --quiet scan ./project
 ## Working with patches
 
 ### Patch workflow
-AstAnalyzer supports a full workflow from analysis to automated code modification.
 
-### Scan the project 
+AstAnalyzer supports a full workflow from analysis to automated code modification.
+#### Scan the project 
 ```bash
 astanalyzer scan .
 ```
@@ -84,7 +84,7 @@ report.html (interactive UI for selecting fixes)
 Select fixes in the browser
 Open report.html, select desired fixes, and export:
 
-### Generate patches
+#### Generate patches
 ```bash
 astanalyzer patch
 ```
@@ -99,7 +99,7 @@ builds patch files (*.patch)
 does NOT modify source code yet
 
 
-### Validate patches (dry-run)
+#### Validate patches (dry-run)
 Validation is automatically executed during patching, but can also be done manually:
 ```bash
 astanalyzer apply --check
@@ -109,7 +109,7 @@ patch is syntactically valid
 patch can be applied cleanly
 no conflicts exist
 
-### Apply patches
+#### Apply patches
 ```bash
 astanalyzer apply
 ```
@@ -117,7 +117,7 @@ If all checks pass:
 patches are applied to files
 files are modified
 
-### Archive run
+#### Archive run
 After successful apply:
 selected JSON 
 scan report
@@ -129,7 +129,7 @@ are moved to:
 used_runs/<timestamp>/
 ```
 
-### Clean workspace
+#### Clean workspace
 ```bash
 astanalyzer clean
 ```
@@ -144,7 +144,8 @@ HTML report
 patch files
 and used_runs/
 
-### What actually happens under the hood
+## What actually happens under the hood
+
 #### Patch creation:
 
 Fix DSL -> transformed into FixProposal
@@ -169,7 +170,7 @@ git apply
 ```
 This modifies files directly.
 
-### Why this design?
+## Why this design?
 
 safe (no direct mutation during scan)
 reviewable (diff-based workflow)
