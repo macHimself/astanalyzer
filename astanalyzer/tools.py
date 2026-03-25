@@ -564,14 +564,12 @@ def function_arg_count(node) -> int:
 
     return posonly + normal + kwonly
 
-
 def arg_count_gt(limit: int):
     def _check(node) -> bool:
         if node.__class__.__name__ not in {"FunctionDef", "AsyncFunctionDef"}:
             return False
         return function_arg_count(node) > limit
     return _check
-
 
 def parent_depth_at_least(type_names: tuple[str, ...], min_depth: int):
     allowed = set(type_names)

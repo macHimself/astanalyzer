@@ -1,4 +1,3 @@
-# astrodsl/node_selector.py
 """
 Utilities for resolving user-facing node selectors into astroid node classes.
 
