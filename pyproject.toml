@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astanalyzer"
+version = "0.0.9"
+description = "AST-based static analysis engine with DSL for Python"
+authors = [
+    { name = "Martin Cech", email = "cech.martinr@outlook.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "astroid",
+]
+
+[project.scripts]
+astanalyzer = "astanalyzer.cli:main"
