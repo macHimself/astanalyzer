@@ -1,23 +1,133 @@
-from astanalyzer.rules.performance import RedundantSortBeforeMinMax, JoinOnGenerator
+def test_print_in_list_comprehension_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "[print(i) for i in xs]\n",
+    )
+
+    assert "COMP-024" in rule_ids
 
 
-def test_redundant_sort_before_min_matches(parse_code):
-    tree = parse_code("x = min(sorted(values))\n")
-    assign = next(tree.get_children())
-    call = assign.value
+def test_useless_list_comprehension_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "[x * 2 for x in xs]\n",
+    )
 
-    rule = RedundantSortBeforeMinMax()
-    matches = rule.match_node(call, ctx={})
-
-    assert len(matches) == 1
+    assert "COMP-025" in rule_ids
 
 
-def test_join_on_generator_matches_listcomp(parse_code):
-    tree = parse_code("x = ','.join([str(i) for i in xs])\n")
-    assign = next(tree.get_children())
-    call = assign.value
+def test_useless_list_comprehension_not_detected_when_assigned(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "result = [x * 2 for x in xs]\n",
+    )
 
-    rule = JoinOnGenerator()
-    matches = rule.match_node(call, ctx={})
+    assert "COMP-025" not in rule_ids
 
-    assert len(matches) == 1
+
+def test_redundant_sort_before_min_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = min(sorted(values))\n",
+    )
+
+    assert "ALG-025" in rule_ids
+
+
+def test_redundant_sort_before_max_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = max(sorted(values))\n",
+    )
+
+    assert "ALG-025" in rule_ids
+
+
+def test_redundant_sort_before_min_not_detected_without_sorted(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = min(values)\n",
+    )
+
+    assert "ALG-025" not in rule_ids
+
+
+def test_unnecessary_copy_matches_nested_list(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = list(list(values))\n",
+    )
+
+    assert "PERF-026" in rule_ids
+
+
+def test_unnecessary_copy_matches_list_literal_wrapper(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = list([1, 2, 3])\n",
+    )
+
+    assert "PERF-026" in rule_ids
+
+
+def test_unnecessary_copy_not_detected_for_single_list_conversion(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = list(values)\n",
+    )
+
+    assert "PERF-026" not in rule_ids
+
+
+def test_double_loop_same_collection_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "for x in items:\n"
+        "    for y in items:\n"
+        "        print(x, y)\n",
+    )
+
+    assert "PERF-027" in rule_ids
+
+
+def test_double_loop_same_collection_not_detected_for_different_iterables(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "for x in items:\n"
+        "    for y in others:\n"
+        "        print(x, y)\n",
+    )
+
+    assert "PERF-027" not in rule_ids
+
+
+def test_loop_could_be_comprehension_matches(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "result = []\n"
+        "for x in xs:\n"
+        "    result.append(x * 2)\n",
+    )
+
+    assert "COMP-028" in rule_ids
+
+
+def test_loop_could_be_comprehension_not_detected_for_plain_for_loop(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "for x in xs:\n"
+        "    print(x)\n",
+    )
+
+    assert "COMP-028" not in rule_ids
+
+
+def test_join_on_generator_matches_listcomp(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = ','.join([str(i) for i in xs])\n",
+    )
+
+    assert "STR-029" in rule_ids
+
+
+def test_join_on_generator_matches_list_wrapped_generator(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = ','.join(list(str(i) for i in xs))\n",
+    )
+
+    assert "STR-029" in rule_ids
+
+
+def test_join_on_generator_not_detected_for_real_generator(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "x = ','.join(str(i) for i in xs)\n",
+    )
+
+    assert "STR-029" not in rule_ids
