@@ -13,6 +13,8 @@ from astanalyzer.engine import (
     run_rules_on_project_report,
 )
 
+import astanalyzer.rules
+
 
 @pytest.fixture
 def parse_code():
@@ -59,6 +61,10 @@ def load_project_from_code(write_source):
 
 @pytest.fixture
 def run_scan(load_project_from_code):
+    from astanalyzer.rule import Rule
+
+    print("RULE COUNT:", len(Rule.registry))
+    print("RULE IDS:", [getattr(r, "id", type(r).__name__) for r in Rule.registry])
     def _run_scan(code: str, filename: str = "a.py", *, build_plans: bool = True, build_fixes: bool = False):
         project = load_project_from_code(code, filename)
         return run_rules_on_project_report(
