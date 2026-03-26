@@ -78,6 +78,23 @@ def test_or_combines_matchers(parse_code):
 
     assert m.evaluate(fn)
 
+def test_or_left_branch_matches(parse_code):
+    tree = parse_code("def f(): pass\n")
+    fn = next(tree.get_children())
+
+    m = match("FunctionDef").or_(match("ClassDef"))
+
+    assert m.evaluate(fn)
+
+
+def test_or_both_fail(parse_code):
+    tree = parse_code("x = 1\n")
+    assign = next(tree.get_children())
+
+    m = match("FunctionDef").or_(match("ClassDef"))
+
+    assert not m.evaluate(assign)
+
 
 def test_not_negates_match_result(parse_code):
     tree = parse_code("x = 1\n")
