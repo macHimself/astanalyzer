@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import astanalyzer.rules
+
 from .engine import (
     build_patches_from_selected_json,
     get_list_of_files_in_project,
