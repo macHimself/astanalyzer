@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from astroid import parse
 
-from astanalyzer.engine import attach_tree_metadata, ModuleNode, ProjectNode
+from astanalyzer.engine import (
+    ModuleNode,
+    ProjectNode,
+    attach_tree_metadata,
+    load_project,
+    run_rules_on_project_report,
+)
 
 
 @pytest.fixture
@@ -29,3 +35,51 @@ def make_project(parse_code):
 
         return project
     return _make_project
+
+
+@pytest.fixture
+def write_source(tmp_path):
+    def _write_source(code: str, filename: str = "a.py") -> Path:
+        source = tmp_path / filename
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(code, encoding="utf-8")
+        return source
+    return _write_source
+
+
+@pytest.fixture
+def load_project_from_code(write_source):
+    def _load_project_from_code(code: str, filename: str = "a.py"):
+        source = write_source(code, filename)
+        project = load_project([str(source)])
+        project.root_dir = source.parent
+        return project
+    return _load_project_from_code
+
+
+@pytest.fixture
+def run_scan(load_project_from_code):
+    def _run_scan(code: str, filename: str = "a.py", *, build_plans: bool = True, build_fixes: bool = False):
+        project = load_project_from_code(code, filename)
+        return run_rules_on_project_report(
+            project,
+            build_plans=build_plans,
+            build_fixes=build_fixes,
+        )
+    return _run_scan
+
+
+@pytest.fixture
+def scan_rule_ids(run_scan):
+    def _scan_rule_ids(code: str, filename: str = "a.py") -> list[str]:
+        _, scan = run_scan(code, filename)
+        return [f["rule_id"] for f in scan["findings"]]
+    return _scan_rule_ids
+
+
+@pytest.fixture
+def scan_findings(run_scan):
+    def _scan_findings(code: str, filename: str = "a.py"):
+        _, scan = run_scan(code, filename)
+        return scan["findings"]
+    return _scan_findings
