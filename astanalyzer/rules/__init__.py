@@ -20,3 +20,13 @@ __all__ = [
     *dead_code_all,
     *complexity_all,
 ]
+
+def load_builtin_rules() -> None:
+    """
+    Ensure built-in rule modules are imported.
+
+    Built-in rules are imported as a side effect of importing this package,
+    so this function currently serves as an explicit public hook for callers
+    that want to make rule loading intention clear.
+    """
+    return None

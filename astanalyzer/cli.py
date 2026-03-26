@@ -15,8 +15,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import astanalyzer.rules
-
 from .engine import (
     build_patches_from_selected_json,
     get_list_of_files_in_project,
@@ -25,6 +23,8 @@ from .engine import (
 )
 from .logging_config import setup_logging
 from .report_ui import open_report_in_browser, write_report_html
+from .rule_loader import import_rules_from_path
+from .rules import load_builtin_rules
 
 log = logging.getLogger(__name__)
 
@@ -501,6 +501,15 @@ def cmd_clean(args) -> None:
     print()
 
 
+def add_rules_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--rules",
+        action="append",
+        default=[],
+        help="Path to a custom rule file or directory. Can be used multiple times.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="astanalyzer static analysis tool"
@@ -552,6 +561,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not open HTML report automatically after scan",
     )
+    add_rules_argument(scan_parser)
     scan_parser.set_defaults(func=cmd_scan)
 
     patch_parser = subparsers.add_parser("patch", help="Generate patches from selected fixes")
@@ -583,6 +593,12 @@ def main(argv: list[str] | None = None) -> int:
         log_level = "DEBUG"
 
     setup_logging(log_level)
+
+    load_builtin_rules()
+
+    for rules_path in getattr(args, "rules", []):
+        imported = import_rules_from_path(rules_path)
+        log.info("Imported %d custom rule file(s) from %s", len(imported), rules_path)
 
     log.info("astanalyzer started")
     args.func(args)
