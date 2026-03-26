@@ -542,27 +542,22 @@ class Matcher:
     # ------------------------------------------------------------------
 
     def _evaluate_core(self, node, context: dict[str, Any]) -> bool:
-        if not self._match_node_type(node):
-            return False
-        if not self._apply_captures(node, context):
-            return False
-        if not self._match_conditions(node, context):
-            return False
-        if not self._match_negative_subrules(node):
-            return False
-        if not self._match_subrules(node, context):
-            return False
-        if not self._match_descendant_rules(node, context):
-            return False
-        if not self._match_scope_rules(node, context):
-            return False
-        if not self._match_sequence_rules(node, context):
-            return False
-        if self.and_matcher and not self.and_matcher.evaluate(node, context.copy()):
-            return False
+        local_result = (
+            self._match_node_type(node)
+            and self._apply_captures(node, context)
+            and self._match_conditions(node, context)
+            and self._match_negative_subrules(node)
+            and self._match_subrules(node, context)
+            and self._match_descendant_rules(node, context)
+            and self._match_scope_rules(node, context)
+            and self._match_sequence_rules(node, context)
+            and (not self.and_matcher or self.and_matcher.evaluate(node, context.copy()))
+        )
+
         if self.or_matcher:
-            return self.or_matcher.evaluate(node, context.copy())
-        return True
+            return local_result or self.or_matcher.evaluate(node, context.copy())
+
+        return local_result
 
     def _match_node_type(self, node) -> bool:
         return node.__class__.__name__ in self._split_types(self.expected_type)
