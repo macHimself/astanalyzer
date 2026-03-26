@@ -26,6 +26,8 @@ from .matcher_ast import (
 )
 from .matcher_types import Ref
 
+from .tools import _iter_compare_pairs, _is_none_const
+
 
 def resolve_ref(matcher, value: Any, context: dict[str, Any]) -> Any:
     if not isinstance(value, Ref):
@@ -284,12 +286,14 @@ def check_compare_pairwise(matcher, node, expected, context) -> bool:
         return False
 
     found = False
-    for op_name, left_n, right_n in matcher._iter_compare_pairs(node):
+    #for op_name, left_n, right_n in matcher._iter_compare_pairs(node):
+    for op_name, left_n, right_n in _iter_compare_pairs(node):
         if op_name not in expected["op_in"]:
             continue
 
         if expected["any_side_value"] is None:
-            ok = matcher._is_none_const(left_n) or matcher._is_none_const(right_n)
+            #ok = matcher._is_none_const(left_n) or matcher._is_none_const(right_n)
+            ok = _is_none_const(left_n) or _is_none_const(right_n)
         else:
             ok = (
                 node_value(left_n) == expected["any_side_value"]

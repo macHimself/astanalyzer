@@ -1,6 +1,8 @@
 from .style import *
+from .semantic import *
 
 __all__ = [
+    # --- STYLE RULES ---
     "EmptyBlock",
     "RedundantIfElseReturn",
     "MultipleReturnsInFunction",
@@ -13,4 +15,15 @@ __all__ = [
     "MissingDocstringForFunction",
     "MissingDocstringForClass",
     "MissingDocstringForModule",
+
+    # --- SEMANTIC RULES ---
+    "AlwaysTrueConditionIf",
+    "AlwaysTrueConditionWhile",
+    "CompareToNoneUsingEq",
+    "AssignmentInCondition",
+    "RedeclaredVariable",
+    "ExceptionNotUsed",
+    "BareExcept",
+    "MutableDefaultArgument",
+    "PrintDebugStatement",
 ]

@@ -8,6 +8,7 @@ import ast
 from typing import Any
 
 from astroid import nodes as anodes
+from .tools import _iter_compare_pairs
 
 
 def children_of(node) -> list[Any]:
@@ -467,7 +468,8 @@ def test_reason(matcher, node) -> str | None:
                 return "True and X (redundant truthy operand)"
 
     if tcn == "Compare":
-        pairs = list(matcher._iter_compare_pairs(test))
+        #pairs = list(matcher._iter_compare_pairs(test))
+        pairs = list(_iter_compare_pairs(test))
         if len(pairs) == 1:
             op_name, left, right = pairs[0]
             lname = getattr(left, "name", None) or getattr(left, "id", None)
