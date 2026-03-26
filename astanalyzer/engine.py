@@ -667,7 +667,7 @@ def prepare_rule_runtime(project: ProjectNode, build_fixes: bool):
         raise ValueError("ProjectNode.root_dir is not set")
 
     project_root = Path(project_root).resolve()
-    patch_run_dir = None  # make_patch_run_dir(project_root) if build_fixes else None
+    patch_run_dir = 1  # make_patch_run_dir(project_root) if build_fixes else None
 
     return rules, rule_index, project_root, patch_run_dir
 
