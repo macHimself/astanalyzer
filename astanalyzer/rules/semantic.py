@@ -247,3 +247,16 @@ class PrintDebugStatement(Rule):
             .delete_node()
             .because("Remove debug print statement."),
         ]
+
+
+__all__ = [
+    "AlwaysTrueConditionIf",
+    "AlwaysTrueConditionWhile",
+    "CompareToNoneUsingEq",
+    "AssignmentInCondition",
+    "RedeclaredVariable",
+    "ExceptionNotUsed",
+    "BareExcept",
+    "MutableDefaultArgument",
+    "PrintDebugStatement",
+]

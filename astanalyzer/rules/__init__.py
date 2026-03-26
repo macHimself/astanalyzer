@@ -1,29 +1,13 @@
 from .style import *
 from .semantic import *
+from .security import *
+
+from .style import __all__ as style_all
+from .semantic import __all__ as semantic_all
+from .security import __all__ as security_all
 
 __all__ = [
-    # --- STYLE RULES ---
-    "EmptyBlock",
-    "RedundantIfElseReturn",
-    "MultipleReturnsInFunction",
-    "LineTooLong",
-    "FunctionNameNotSnakeCase",
-    "ClassNameNotPascalCase",
-    "ConstantNotUppercase",
-    "TrailingWhitespace",
-    "MissingBlankLineBetweenFunctions",
-    "MissingDocstringForFunction",
-    "MissingDocstringForClass",
-    "MissingDocstringForModule",
-
-    # --- SEMANTIC RULES ---
-    "AlwaysTrueConditionIf",
-    "AlwaysTrueConditionWhile",
-    "CompareToNoneUsingEq",
-    "AssignmentInCondition",
-    "RedeclaredVariable",
-    "ExceptionNotUsed",
-    "BareExcept",
-    "MutableDefaultArgument",
-    "PrintDebugStatement",
+    *style_all,
+    *semantic_all,
+    *security_all,
 ]

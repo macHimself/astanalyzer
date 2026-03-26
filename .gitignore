@@ -16,3 +16,8 @@ dist/
 
 # macOS
 .DS_Store
+report.html
+scan_report.json
+*.patch
+astanalyzer-selected.json
+*.log
