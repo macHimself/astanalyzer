@@ -441,6 +441,11 @@ def cmd_apply(args) -> None:
         print()
         return
 
+    if args.check:
+        print("Check only mode enabled. No patches were applied.")
+        print()
+        return
+
     apply_ok, apply_failed = apply_all_patches_from_cwd()
 
     print()
@@ -574,6 +579,11 @@ def build_parser() -> argparse.ArgumentParser:
     patch_parser.set_defaults(func=cmd_patch)
 
     apply_parser = subparsers.add_parser("apply", help="Apply existing .patch files")
+    apply_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Only verify patch files, do not apply them",
+    )
     apply_parser.set_defaults(func=cmd_apply)
 
     return parser
