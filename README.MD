@@ -135,7 +135,7 @@ patch files
 
 are moved to: 
 ```bash
-used_runs/<timestamp>/
+used_patches/<timestamp>/
 ```
 
 ### Clean workspace
@@ -151,7 +151,7 @@ selected JSON
 scan report
 HTML report
 patch files
-and used_runs/
+and used_patches/
 
 ---
 

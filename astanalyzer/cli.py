@@ -35,7 +35,7 @@ def now_stamp() -> str:
 
 def get_archive_root(base_dir: Path | None = None) -> Path:
     root = base_dir or Path.cwd()
-    archive_root = root / "used_runs"
+    archive_root = root / "used_patches"
     archive_root.mkdir(parents=True, exist_ok=True)
     return archive_root
 
@@ -134,7 +134,7 @@ def clean_working_artifacts(
             removed_paths.append(patch)
 
     if include_archive:
-        archive_root = root / "used_runs"
+        archive_root = root / "used_patches"
         if archive_root.exists() and archive_root.is_dir():
             log.debug("Removing archive directory: %s", archive_root)
             shutil.rmtree(archive_root)
@@ -547,7 +547,7 @@ def build_parser() -> argparse.ArgumentParser:
     clean_parser.add_argument(
         "--include-archive",
         action="store_true",
-        help="Delete the used_runs archive too",
+        help="Delete the used_patches archive too",
     )
     clean_parser.add_argument(
         "--verbose-list",
