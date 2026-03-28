@@ -56,7 +56,13 @@ class FixerBuilder(ProposalBuilder, FixerActionsMixin):
 
         for action in self.actions:
             if hasattr(action, "kind") and hasattr(action, "params"):
-                actions.append({"op": action.kind, **action.params})
+                params = dict(action.params)
+
+                if "text" in params and callable(params["text"]):
+                    params.pop("text")
+                    params["summary"] = f"{action.kind} with generated text"
+
+                actions.append({"op": action.kind, **params})
             elif isinstance(action, tuple) and action:
                 actions.append({"op": action[0]})
             else:
@@ -102,6 +108,8 @@ class FixerBuilder(ProposalBuilder, FixerActionsMixin):
         return self
 
     def comment_before(self, text: str) -> "FixerBuilder":
+        self.actions.append(FixAction("comment_before", {"text": text}))
+        return self
         self.actions.append(FixAction("comment_before", {"text": text}))
         return self
 
@@ -279,6 +287,30 @@ class FixerBuilder(ProposalBuilder, FixerActionsMixin):
             suggestion_lines.insert(0, f"{indent}{text}")
 
         self.custom_actions.append((_apply, {}))
+
+        if callable(text_builder):
+            self.actions.append(
+                FixAction(
+                    "insert_comment",
+                    {
+                        "summary": "Insert a generated explanatory comment before the function",
+                    },
+                )
+            )
+        else:
+            text = text_builder
+            if text and not text.lstrip().startswith("#"):
+                text = f"# {text}"
+
+            self.actions.append(
+                FixAction(
+                    "insert_comment",
+                    {
+                        "text": text or "",
+                    },
+                )
+            )
+
         return self
 
     def __str__(self) -> str:
