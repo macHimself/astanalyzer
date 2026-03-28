@@ -102,7 +102,46 @@ class TooDeepNesting(Rule):
         ]
 
 
+class FunctionTooLong(Rule):
+    """
+    Function is too long.
+
+    Long functions are harder to read, understand, test, and maintain. They often
+    indicate that multiple responsibilities are combined into a single unit.
+
+    Consider breaking the function into smaller, focused helper functions.
+    """
+    id = "STRUCTURE-002"
+    title = "Too long function"
+    MAX_LINES = 40
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLEXITY
+    node_type = {NodeType.FUNCTION_DEF, NodeType.ASYNC_FUNCTION_DEF}
+
+    def __init__(self):
+        super().__init__()
+        self.matchers = [
+            match("FunctionDef|AsyncFunctionDef").satisfies(
+                lambda node: hasattr(node, "lineno")
+                and hasattr(node, "end_lineno")
+                and (node.end_lineno - node.lineno + 1) > self.MAX_LINES
+            )
+        ]
+        self.fixer_builders = [
+            fix()
+            .insert_comment(
+                lambda node: (
+                    f"# Function is longer than {self.MAX_LINES} lines. "
+                    "Consider refactoring it into smaller helper functions "
+                    "or splitting it by responsibility."
+                )
+            )
+            .because("Long functions are harder to read, test, and maintain.")
+        ]
+
+
 __all__ = [
     "TooManyArguments",
     "TooDeepNesting",
+    "FunctionTooLong",
 ]
