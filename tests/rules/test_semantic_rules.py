@@ -5,7 +5,7 @@ def test_compare_to_none_using_eq_matches(scan_rule_ids):
         "        return True\n",
     )
 
-    assert "CMP-001" in rule_ids
+    assert "SEM-003" in rule_ids
 
 
 def test_compare_to_none_using_is_does_not_match(scan_rule_ids):
@@ -15,7 +15,7 @@ def test_compare_to_none_using_is_does_not_match(scan_rule_ids):
         "        return True\n",
     )
 
-    assert "CMP-001" not in rule_ids
+    assert "SEM-003" not in rule_ids
 
 
 def test_always_true_condition_if_matches(scan_rule_ids):
@@ -25,7 +25,7 @@ def test_always_true_condition_if_matches(scan_rule_ids):
         "        return 1\n",
     )
 
-    assert "COND-001" in rule_ids
+    assert "SEM-001" in rule_ids
 
 
 def test_always_true_condition_while_matches(scan_rule_ids):
@@ -35,7 +35,7 @@ def test_always_true_condition_while_matches(scan_rule_ids):
         "        break\n",
     )
 
-    assert "COND-003" in rule_ids
+    assert "SEM-002" in rule_ids
 
 
 def test_assignment_in_condition_matches(scan_rule_ids):
@@ -45,7 +45,7 @@ def test_assignment_in_condition_matches(scan_rule_ids):
         "        return x\n",
     )
 
-    assert "ASSIGN-001" in rule_ids
+    assert "SEM-004" in rule_ids
 
 
 def test_redeclared_variable_matches(scan_rule_ids):
@@ -56,7 +56,7 @@ def test_redeclared_variable_matches(scan_rule_ids):
         "    return x\n",
     )
 
-    assert "VAR-002" in rule_ids
+    assert "SEM-005" in rule_ids
 
 
 def test_exception_not_used_matches(scan_rule_ids):
@@ -67,7 +67,7 @@ def test_exception_not_used_matches(scan_rule_ids):
         "    print('fail')\n",
     )
 
-    assert "EXC-015" in rule_ids
+    assert "SEM-006" in rule_ids
 
 
 def test_exception_not_used_ignored_for_underscore(scan_rule_ids):
@@ -78,7 +78,7 @@ def test_exception_not_used_ignored_for_underscore(scan_rule_ids):
         "    print('fail')\n",
     )
 
-    assert "EXC-015" not in rule_ids
+    assert "SEM-006" not in rule_ids
 
 
 def test_bare_except_matches(scan_rule_ids):
@@ -89,7 +89,7 @@ def test_bare_except_matches(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "EXC-001" in rule_ids
+    assert "SEM-007" in rule_ids
 
 
 def test_mutable_default_argument_matches(scan_rule_ids):
@@ -98,7 +98,7 @@ def test_mutable_default_argument_matches(scan_rule_ids):
         "    return items\n",
     )
 
-    assert "ARG-017" in rule_ids
+    assert "SEM-008" in rule_ids
 
 
 def test_mutable_default_argument_not_detected_for_none(scan_rule_ids):
@@ -107,7 +107,7 @@ def test_mutable_default_argument_not_detected_for_none(scan_rule_ids):
         "    return items\n",
     )
 
-    assert "ARG-017" not in rule_ids
+    assert "SEM-008" not in rule_ids
 
 
 def test_print_debug_statement_matches(scan_rule_ids):
@@ -116,7 +116,7 @@ def test_print_debug_statement_matches(scan_rule_ids):
         "    print('debug')\n",
     )
 
-    assert "DBG-023" in rule_ids
+    assert "SEM-009" in rule_ids
 
 
 def test_print_debug_statement_not_detected_without_print(scan_rule_ids):
@@ -125,4 +125,4 @@ def test_print_debug_statement_not_detected_without_print(scan_rule_ids):
         "    return 'debug'\n",
     )
 
-    assert "DBG-023" not in rule_ids
+    assert "SEM-009" not in rule_ids

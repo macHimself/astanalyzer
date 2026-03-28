@@ -4,7 +4,7 @@ def test_missing_docstring_detected(scan_rule_ids):
         "    return 1\n",
     )
 
-    assert "STYLE-002" in rule_ids
+    assert "STYLE-010" in rule_ids
 
 
 def test_missing_docstring_not_detected_when_present(scan_rule_ids):
@@ -14,7 +14,7 @@ def test_missing_docstring_not_detected_when_present(scan_rule_ids):
         '    return 1\n',
     )
 
-    assert "STYLE-002" not in rule_ids
+    assert "STYLE-011" not in rule_ids
 
 
 def test_missing_class_docstring_detected(scan_rule_ids):
@@ -23,7 +23,7 @@ def test_missing_class_docstring_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "STYLE-003" in rule_ids
+    assert "STYLE-011" in rule_ids
 
 
 def test_missing_module_docstring_detected(scan_rule_ids):
@@ -31,7 +31,7 @@ def test_missing_module_docstring_detected(scan_rule_ids):
         "x = 1\n",
     )
 
-    assert "STYLE-023" in rule_ids
+    assert "STYLE-012" in rule_ids
 
 
 def test_function_name_not_snake_case_detected(scan_rule_ids):
@@ -40,7 +40,7 @@ def test_function_name_not_snake_case_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "NAM-018" in rule_ids
+    assert "STYLE-005" in rule_ids
 
 
 def test_function_name_snake_case_not_detected(scan_rule_ids):
@@ -49,7 +49,7 @@ def test_function_name_snake_case_not_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "NAM-018" not in rule_ids
+    assert "STYLE-005" not in rule_ids
 
 
 def test_class_name_not_pascal_case_detected(scan_rule_ids):
@@ -58,7 +58,7 @@ def test_class_name_not_pascal_case_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "NAM-019" in rule_ids
+    assert "STYLE-006" in rule_ids
 
 
 def test_class_name_pascal_case_not_detected(scan_rule_ids):
@@ -67,7 +67,7 @@ def test_class_name_pascal_case_not_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "NAM-019" not in rule_ids
+    assert "STYLE-006" not in rule_ids
 
 
 def test_constant_not_uppercase_detected(scan_rule_ids):
@@ -75,7 +75,7 @@ def test_constant_not_uppercase_detected(scan_rule_ids):
         "my_constant = 1\n",
     )
 
-    assert "NAM-020" in rule_ids
+    assert "STYLE-007" in rule_ids
 
 
 def test_constant_uppercase_not_detected(scan_rule_ids):
@@ -83,7 +83,7 @@ def test_constant_uppercase_not_detected(scan_rule_ids):
         "MY_CONSTANT = 1\n",
     )
 
-    assert "NAM-020" not in rule_ids
+    assert "STYLE-007" not in rule_ids
 
 
 def test_trailing_whitespace_detected(scan_rule_ids):
@@ -91,7 +91,7 @@ def test_trailing_whitespace_detected(scan_rule_ids):
         "x = 1   \n",
     )
 
-    assert "STYLE-021" in rule_ids
+    assert "STYLE-008" in rule_ids
 
 
 def test_missing_blank_line_between_functions_detected(scan_rule_ids):
@@ -102,7 +102,7 @@ def test_missing_blank_line_between_functions_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "STYLE-022" in rule_ids
+    assert "STYLE-009" in rule_ids
 
 
 def test_line_too_long_detected(scan_rule_ids):
@@ -111,7 +111,7 @@ def test_line_too_long_detected(scan_rule_ids):
         long_line,
     )
 
-    assert "STYLE-017" in rule_ids
+    assert "STYLE-004" in rule_ids
 
 
 def test_multiple_returns_detected(scan_rule_ids):
@@ -122,7 +122,7 @@ def test_multiple_returns_detected(scan_rule_ids):
         "    return 2\n",
     )
 
-    assert "FUNC-001" in rule_ids
+    assert "STYLE-003" in rule_ids
 
 
 def test_redundant_else_after_return_detected(scan_rule_ids):
@@ -134,7 +134,7 @@ def test_redundant_else_after_return_detected(scan_rule_ids):
         "        return 2\n",
     )
 
-    assert "COND-002" in rule_ids
+    assert "STYLE-002" in rule_ids
 
 
 def test_empty_block_detected(scan_rule_ids):
@@ -143,4 +143,4 @@ def test_empty_block_detected(scan_rule_ids):
         "    pass\n",
     )
 
-    assert "BLK-001" in rule_ids
+    assert "STYLE-001" in rule_ids

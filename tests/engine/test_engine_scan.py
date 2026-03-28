@@ -26,5 +26,5 @@ def BadName():
 
     rule_ids = {f["rule_id"] for f in scan["findings"]}
 
-    assert "NAM-018" in rule_ids
-    assert "COND-001" in rule_ids
+    assert "STYLE-005" in rule_ids
+    assert "SEM-001" in rule_ids

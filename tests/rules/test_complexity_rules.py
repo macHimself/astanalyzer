@@ -4,7 +4,7 @@ def test_too_many_arguments_matches(scan_rule_ids):
         "    return a\n",
     )
 
-    assert "COMPLEX-001" in rule_ids
+    assert "CX-001" in rule_ids
 
 
 def test_too_many_arguments_does_not_match_small_function(scan_rule_ids):
@@ -13,7 +13,7 @@ def test_too_many_arguments_does_not_match_small_function(scan_rule_ids):
         "    return a + b\n",
     )
 
-    assert "COMPLEX-001" not in rule_ids
+    assert "CX-001" not in rule_ids
 
 
 def test_too_many_arguments_matches_async_function(scan_rule_ids):
@@ -22,7 +22,7 @@ def test_too_many_arguments_matches_async_function(scan_rule_ids):
         "    return a\n",
     )
 
-    assert "COMPLEX-001" in rule_ids
+    assert "CX-001" in rule_ids
 
 
 def test_too_many_arguments_does_not_match_exact_threshold(scan_rule_ids):
@@ -31,7 +31,7 @@ def test_too_many_arguments_does_not_match_exact_threshold(scan_rule_ids):
         "    return a\n",
     )
 
-    assert "COMPLEX-001" not in rule_ids
+    assert "CX-001" not in rule_ids
 
 
 def test_too_deep_nesting_matches_nested_ifs(scan_rule_ids):
@@ -43,7 +43,7 @@ def test_too_deep_nesting_matches_nested_ifs(scan_rule_ids):
         "                print(d)\n",
     )
 
-    assert "STRUCTURE-001" in rule_ids
+    assert "CX-002" in rule_ids
 
 
 def test_too_deep_nesting_not_detected_for_shallow_nesting(scan_rule_ids):
@@ -53,7 +53,7 @@ def test_too_deep_nesting_not_detected_for_shallow_nesting(scan_rule_ids):
         "        print(b)\n",
     )
 
-    assert "STRUCTURE-001" not in rule_ids
+    assert "CX-002" not in rule_ids
 
 
 def test_too_deep_nesting_matches_mixed_control_flow(scan_rule_ids):
@@ -65,7 +65,7 @@ def test_too_deep_nesting_matches_mixed_control_flow(scan_rule_ids):
         "                print(x, y)\n",
     )
 
-    assert "STRUCTURE-001" in rule_ids
+    assert "CX-002" in rule_ids
 
 
 def test_too_deep_nesting_matches_try_inside_if_chain(scan_rule_ids):
@@ -79,7 +79,7 @@ def test_too_deep_nesting_matches_try_inside_if_chain(scan_rule_ids):
         "            pass\n",
     )
 
-    assert "STRUCTURE-001" in rule_ids  
+    assert "CX-002" in rule_ids  
 
 
 def test_function_too_long_matches(scan_rule_ids):
@@ -90,7 +90,7 @@ def test_function_too_long_matches(scan_rule_ids):
 
     rule_ids = scan_rule_ids(source)
 
-    assert "STRUCTURE-002" in rule_ids
+    assert "CX-003" in rule_ids
 
 
 def test_function_too_long_does_not_match_short_function(scan_rule_ids):
@@ -103,7 +103,7 @@ def test_function_too_long_does_not_match_short_function(scan_rule_ids):
 
     rule_ids = scan_rule_ids(source)
 
-    assert "STRUCTURE-002" not in rule_ids
+    assert "CX-003" not in rule_ids
 
 
 def test_function_too_long_does_not_match_exact_threshold(scan_rule_ids):
@@ -114,7 +114,7 @@ def test_function_too_long_does_not_match_exact_threshold(scan_rule_ids):
 
     rule_ids = scan_rule_ids(source)
 
-    assert "STRUCTURE-002" not in rule_ids
+    assert "CX-003" not in rule_ids
 
 
 def test_function_too_long_matches_large_function(scan_rule_ids):
@@ -125,7 +125,7 @@ def test_function_too_long_matches_large_function(scan_rule_ids):
 
     rule_ids = scan_rule_ids(source)
 
-    assert "STRUCTURE-002" in rule_ids
+    assert "CX-003" in rule_ids
 
 
 def test_function_too_long_matches_async_function(scan_rule_ids):
@@ -136,4 +136,4 @@ def test_function_too_long_matches_async_function(scan_rule_ids):
 
     rule_ids = scan_rule_ids(source)
 
-    assert "STRUCTURE-002" in rule_ids
+    assert "CX-003" in rule_ids

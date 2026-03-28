@@ -34,7 +34,7 @@ class TooManyArguments(Rule):
     (e.g. a class or dataclass) or splitting the function into smaller parts.
     """
     MAX_ARGS = 5
-    id = "COMPLEX-001"
+    id = "CX-001"
     title = "Function has too many parameters"
     severity = Severity.WARNING
     category = RuleCategory.COMPLEXITY
@@ -71,7 +71,7 @@ class TooDeepNesting(Rule):
     Consider using guard clauses, early returns/continues, or extracting nested logic
     into separate functions.
     """
-    id = "STRUCTURE-001"
+    id = "CX-002"
     title = "Too deep nesting"
     MAX_DEPTH = 3
     severity = Severity.WARNING
@@ -111,7 +111,7 @@ class FunctionTooLong(Rule):
 
     Consider breaking the function into smaller, focused helper functions.
     """
-    id = "STRUCTURE-002"
+    id = "CX-003"
     title = "Too long function"
     MAX_LINES = 40
     severity = Severity.WARNING

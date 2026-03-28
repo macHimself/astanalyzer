@@ -30,7 +30,7 @@ class UnusedVariable(Rule):
 
     Consider removing the assignment or using the value if it is needed.
     """
-    id = "VAR-001"
+    id = "DEAD-001"
     title = "Unused variable"
     severity = Severity.WARNING
     category = RuleCategory.DEAD_CODE
@@ -60,7 +60,7 @@ class UnreachableCode(Rule):
 
     Consider removing or restructuring the unreachable code.
     """
-    id = "FLOW-001"
+    id = "DEAD-002"
     title = "Unreachable code after return/raise/break/continue"
     severity = Severity.WARNING
     category = RuleCategory.DEAD_CODE

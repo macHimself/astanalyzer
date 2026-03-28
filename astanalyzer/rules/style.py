@@ -56,7 +56,7 @@ class EmptyBlock(Rule):
 
     Consider adding meaningful logic or removing the block entirely.
     """
-    id = "BLK-001"
+    id = "STYLE-001"
     title = "Empty block"
     severity = Severity.WARNING
     category = RuleCategory.STYLE
@@ -95,7 +95,7 @@ class RedundantIfElseReturn(Rule):
 
     Removing the 'else' and unindenting its contents simplifies the code and improves readability.
     """
-    id = "COND-002"
+    id = "STYLE-002"
     title = "Redundant else after terminal branches"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -125,7 +125,7 @@ class MultipleReturnsInFunction(Rule):
     However, multiple returns may be acceptable if they keep the code simpler
     and more understandable.
     """
-    id = "FUNC-001"
+    id = "STYLE-003"
     title = "Function with multiple return statements"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -155,7 +155,7 @@ class LineTooLong(Rule):
 
     Consider splitting the line or using shorter expressions.
     """
-    id = "STYLE-017"
+    id = "STYLE-004"
     title = "Line too long"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -185,7 +185,7 @@ class FunctionNameNotSnakeCase(Rule):
 
     Consider renaming the function to follow snake_case.
     """
-    id = "NAM-018"
+    id = "STYLE-005"
     title = "Function name not in snake_case"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -213,7 +213,7 @@ class ClassNameNotPascalCase(Rule):
 
     Consider renaming the class to follow PascalCase.
     """
-    id = "NAM-019"
+    id = "STYLE-006"
     title = "Class name not in PascalCase"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -241,7 +241,7 @@ class ConstantNotUppercase(Rule):
 
     Consider renaming the constant to follow this convention.
     """
-    id = "NAM-020"
+    id = "STYLE-007"
     title = "Constant not in UPPER_SNAKE_CASE"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -269,7 +269,7 @@ class TrailingWhitespace(Rule):
 
     Consider removing trailing whitespace from the affected lines.
     """
-    id = "STYLE-021"
+    id = "STYLE-008"
     title = "Trailing whitespace"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -296,7 +296,7 @@ class MissingBlankLineBetweenFunctions(Rule):
 
     Consider adding a blank line before this function.
     """
-    id = "STYLE-022"
+    id = "STYLE-009"
     title = "Missing blank line(s) between definitions"
     severity = Severity.INFO
     category = RuleCategory.STYLE
@@ -324,7 +324,7 @@ class MissingDocstringForFunction(Rule):
 
     Consider adding a clear and concise docstring.
     """
-    id = "STYLE-002"
+    id = "STYLE-010"
     title = "Missing docstring for function"
     severity = Severity.WARNING
     category = RuleCategory.STYLE
@@ -352,7 +352,7 @@ class MissingDocstringForClass(Rule):
 
     Consider adding a clear and concise docstring.
     """
-    id = "STYLE-003"
+    id = "STYLE-011"
     title = "Missing docstring for class"
     severity = Severity.WARNING
     category = RuleCategory.STYLE
@@ -380,7 +380,7 @@ class MissingDocstringForModule(Rule):
 
     Consider adding a clear and concise module-level docstring.
     """
-    id = "STYLE-023"
+    id = "STYLE-012"
     title = "Missing docstring for module"
     severity = Severity.WARNING
     category = RuleCategory.STYLE

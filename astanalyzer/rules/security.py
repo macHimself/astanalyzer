@@ -40,7 +40,7 @@ class UseOfEval(Rule):
     Avoid using eval() or exec(). Prefer safer alternatives such as explicit
     parsing, dispatch tables, or controlled execution mechanisms.
     """
-    id = "SEC-030"
+    id = "SEC-001"
     title = "Use of eval()/exec()"
     severity = Severity.WARNING
     category = RuleCategory.SECURITY
@@ -92,7 +92,7 @@ class EvalLiteralParsingCandidate(Rule):
 
     Consider replacing eval() with ast.literal_eval().
     """
-    id = "SEC-035"
+    id = "SEC-002"
     title = "eval() may be replaced with ast.literal_eval()"
     severity = Severity.INFO
     category = RuleCategory.SECURITY
@@ -154,7 +154,7 @@ class UseOfOsSystem(Rule):
     Consider using the subprocess module instead, which provides safer and
     more controlled process execution.
     """
-    id = "SEC-031"
+    id = "SEC-003"
     title = "Use of os.system()"
     severity = Severity.WARNING
     category = RuleCategory.SECURITY
@@ -218,7 +218,7 @@ class HardcodedPasswordOrKey(Rule):
 
     Consider moving secrets to environment variables or a secure configuration system.
     """
-    id = "SEC-033"
+    id = "SEC-004"
     title = "Hardcoded password / key / token"
     severity = Severity.WARNING
     category = RuleCategory.SECURITY
@@ -257,7 +257,7 @@ class InsecureRandom(Rule):
 
     Consider using the secrets module or os.urandom() for secure random values.
     """
-    id = "SEC-034"
+    id = "SEC-005"
     title = "Insecure use of random module"
     severity = Severity.WARNING
     category = RuleCategory.SECURITY
@@ -293,7 +293,7 @@ class OpenWithoutWith(Rule):
 
     Consider using a context manager for safer resource handling.
     """
-    id = "RES-032"
+    id = "SEC-006"
     title = "open() used without context manager"
     severity = Severity.WARNING
     category = RuleCategory.RESOURCE

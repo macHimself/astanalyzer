@@ -54,7 +54,7 @@ class AlwaysTrueConditionIf(Rule):
 
     Consider removing the condition and keeping only the body if this behavior is intentional.
     """
-    id = "COND-001"
+    id = "SEM-001"
     title = "Condition is always true"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -81,7 +81,7 @@ class AlwaysTrueConditionWhile(Rule):
 
     Ensure that this behavior is intentional, or consider adding a proper exit condition.
     """
-    id = "COND-003"
+    id = "SEM-002"
     title = "While condition is always true"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -111,7 +111,7 @@ class CompareToNoneUsingEq(Rule):
 
     Consider replacing the comparison with 'is None' or 'is not None'.
     """
-    id = "CMP-001"
+    id = "SEM-003"
     title = "Comparison to None using == or !="
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -141,7 +141,7 @@ class AssignmentInCondition(Rule):
 
     Consider moving the assignment outside of the condition if it improves clarity.
     """
-    id = "ASSIGN-001"
+    id = "SEM-004"
     title = "Assignment in condition (walrus)"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -170,7 +170,7 @@ class RedeclaredVariable(Rule):
 
     Consider removing the unused assignment or renaming variables to clarify intent.
     """
-    id = "VAR-002"
+    id = "SEM-005"
     title = "Redeclared variable in the same scope"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -205,7 +205,7 @@ class ExceptionNotUsed(Rule):
 
     Consider removing the unused alias or using it meaningfully.
     """
-    id = "EXC-015"
+    id = "SEM-006"
     title = "Exception bound in except-clause is not used"
     severity = Severity.INFO
     category = RuleCategory.SEMANTIC
@@ -240,7 +240,7 @@ class BareExcept(Rule):
 
     Consider catching a more specific exception or using 'except Exception:' instead.
     """
-    id = "EXC-001"
+    id = "SEM-007"
     title = "Bare except clause"
     severity = Severity.INFO
     category = RuleCategory.SEMANTIC
@@ -273,7 +273,7 @@ class MutableDefaultArgument(Rule):
 
     Consider using None as the default and initializing the value inside the function.
     """
-    id = "ARG-017"
+    id = "SEM-008"
     title = "Mutable default argument"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC
@@ -301,7 +301,7 @@ class PrintDebugStatement(Rule):
 
     Consider removing the statement or replacing it with proper logging.
     """
-    id = "DBG-023"
+    id = "SEM-009"
     title = "Print debug statement"
     severity = Severity.WARNING
     category = RuleCategory.SEMANTIC

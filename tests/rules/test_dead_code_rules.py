@@ -5,7 +5,7 @@ def test_unused_variable_matches(scan_rule_ids):
         "    return 0\n",
     )
 
-    assert "VAR-001" in rule_ids
+    assert "DEAD-001" in rule_ids
 
 
 def test_unused_variable_not_detected_when_used(scan_rule_ids):
@@ -15,7 +15,7 @@ def test_unused_variable_not_detected_when_used(scan_rule_ids):
         "    return x\n",
     )
 
-    assert "VAR-001" not in rule_ids
+    assert "DEAD-001" not in rule_ids
 
 
 def test_unreachable_code_after_return_matches(scan_rule_ids):
@@ -25,7 +25,7 @@ def test_unreachable_code_after_return_matches(scan_rule_ids):
         "    x = 2\n",
     )
 
-    assert "FLOW-001" in rule_ids
+    assert "DEAD-002" in rule_ids
 
 
 def test_unreachable_code_after_raise_matches(scan_rule_ids):
@@ -35,7 +35,7 @@ def test_unreachable_code_after_raise_matches(scan_rule_ids):
         "    y = 2\n",
     )
 
-    assert "FLOW-001" in rule_ids
+    assert "DEAD-002" in rule_ids
 
 
 def test_unreachable_code_after_break_matches(scan_rule_ids):
@@ -45,7 +45,7 @@ def test_unreachable_code_after_break_matches(scan_rule_ids):
         "    print(x)\n",
     )
 
-    assert "FLOW-001" in rule_ids
+    assert "DEAD-002" in rule_ids
 
 
 def test_unreachable_code_after_continue_matches(scan_rule_ids):
@@ -55,7 +55,7 @@ def test_unreachable_code_after_continue_matches(scan_rule_ids):
         "    print(x)\n",
     )
 
-    assert "FLOW-001" in rule_ids
+    assert "DEAD-002" in rule_ids
 
 
 def test_unreachable_code_not_detected_when_no_following_statement(scan_rule_ids):
@@ -64,4 +64,4 @@ def test_unreachable_code_not_detected_when_no_following_statement(scan_rule_ids
         "    return 1\n",
     )
 
-    assert "FLOW-001" not in rule_ids
+    assert "DEAD-002" not in rule_ids

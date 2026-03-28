@@ -46,7 +46,7 @@ class PrintInListComprehension(Rule):
 
     Consider replacing this with a simple for loop for clearer and more efficient code.
     """
-    id = "COMP-024"
+    id = "PERF-001"
     title = "Print used inside list comprehension for side effects"
     severity = Severity.WARNING
     category = RuleCategory.PERFORMANCE
@@ -79,7 +79,7 @@ class UselessListComprehension(Rule):
 
     Consider using a for loop for side effects or assigning/returning the result.
     """
-    id = "COMP-025"
+    id = "PERF-002"
     title = "Useless list comprehension (unused result)"
     severity = Severity.WARNING
     category = RuleCategory.PERFORMANCE
@@ -108,7 +108,7 @@ class RedundantSortBeforeMinMax(Rule):
 
     Consider calling min() or max() directly on the iterable.
     """
-    id = "ALG-025"
+    id = "PERF-003"
     title = "Redundant sort before min/max"
     severity = Severity.WARNING
     category = RuleCategory.PERFORMANCE
@@ -136,7 +136,7 @@ class UnnecessaryCopy(Rule):
 
     Consider removing the redundant copy operation.
     """
-    id = "PERF-026"
+    id = "PERF-004"
     title = "Unnecessary copy of iterable or object"
     severity = Severity.INFO
     category = RuleCategory.PERFORMANCE
@@ -168,7 +168,7 @@ class DoubleLoopSameCollection(Rule):
 
     Consider refactoring to reduce time complexity.
     """
-    id = "PERF-027"
+    id = "PERF-005"
     title = "Nested loops over the same collection"
     severity = Severity.INFO
     category = RuleCategory.PERFORMANCE
@@ -203,7 +203,7 @@ class LoopCouldBeComprehension(Rule):
 
     Consider using a comprehension if it improves readability.
     """
-    id = "COMP-028"
+    id = "PERF-006"
     title = "Loop could be a comprehension"
     severity = Severity.INFO
     category = RuleCategory.PERFORMANCE
@@ -236,7 +236,7 @@ class JoinOnGenerator(Rule):
 
     Consider using a generator expression inside join().
     """
-    id = "STR-029"
+    id = "PERF-007"
     title = "Use generator expression in join()"
     severity = Severity.INFO
     category = RuleCategory.PERFORMANCE
