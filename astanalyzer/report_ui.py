@@ -455,10 +455,12 @@ function render() {{
     left.innerHTML = `
       <div class="title">${{escapeHtml(f.title)}}</div>
       <div class="meta">
-        <span class="pill">${{escapeHtml(f.severity)}}</span>
-        <span class="pill">${{escapeHtml(f.rule_id)}}</span>
-        <span class="pill">${{escapeHtml(f.id)}}</span>
-        <span class="pill path">${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}</span>
+      
+        <span class="pill" title="Severity level of the finding">${{escapeHtml(f.severity)}}</span>
+        <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
+        <span class="pill" title="Finding ID (unique occurrence)">${{escapeHtml(f.id)}}</span>
+        <span class="pill path" title="File and location">${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}</span>
+
       </div>
     `;
     topline.appendChild(left);
