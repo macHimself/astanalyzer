@@ -16,7 +16,7 @@ from pathlib import Path
 def build_report_html(report_data: dict) -> str:
     """Build a standalone HTML report page from scan JSON data."""
     return f"""<!doctype html>
-<html lang="cs">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -174,22 +174,22 @@ def build_report_html(report_data: dict) -> str:
 </head>
 <body>
   <header>
-    <h1>astanalyzer – výběr oprav z JSON plánu</h1>
+    <h1>astanalyzer – fix selection from JSON plan</h1>
     <div class="row">
-      <span class="pill" id="status">Načteno</span>
+      <span class="pill" id="status">Loaded</span>
       <span class="pill" id="counts">0 findings / 0 fixes selected</span>
       <span class="pill" id="sourceHint">scan_report.json</span>
-      <span class="pill" id="saveTarget">Cíl: download fallback</span>
+      <span class="pill" id="saveTarget">Target: download fallback</span>
     </div>
   </header>
 
   <main>
     <div class="toolbar">
       <input id="fileInput" type="file" accept="application/json,.json" />
-      <input id="search" type="search" placeholder="Filtrovat: soubor, rule_id, title, text…" />
-      <button id="btnPickDir">Vybrat složku</button>
-      <button id="btnSelectAll" disabled>Vybrat vše</button>
-      <button id="btnClear" disabled>Zrušit výběr</button>
+      <input id="search" type="search" placeholder="Filter: file, rule_id, title, text…" />
+      <button id="btnPickDir">Choose folder</button>
+      <button id="btnSelectAll" disabled>Select all</button>
+      <button id="btnClear" disabled>Clear selection</button>
       <button id="btnExport" disabled>Export selected.json</button>
     </div>
 
@@ -198,7 +198,7 @@ def build_report_html(report_data: dict) -> str:
   </main>
 
   <footer>
-    Stránka byla vygenerována z scan_report.json.
+    This page was generated from scan_report.json.
   </footer>
 
 <script>
@@ -242,9 +242,9 @@ function hasDirectoryPickerSupport() {{
 
 function updateSaveTargetLabel() {{
   if (state.dirHandle && state.dirHandle.name) {{
-    elSaveTarget.textContent = `Cíl: ${{state.dirHandle.name}}`;
+    elSaveTarget.textContent = `Target: ${{state.dirHandle.name}}`;
   }} else {{
-    elSaveTarget.textContent = "Cíl: download fallback";
+    elSaveTarget.textContent = "Target: download fallback";
   }}
 }}
 
@@ -477,7 +477,7 @@ function render() {{
     if (!f.fixes.length) {{
       const none = document.createElement("div");
       none.className = "fix";
-      none.textContent = "Žádné fix návrhy v tomto findingu.";
+      none.textContent = "No fix proposals in this finding.";
       fixesWrap.appendChild(none);
     }} else {{
       f.fixes.forEach(fx => {{
@@ -530,7 +530,6 @@ function render() {{
           const pre = document.createElement("div");
           pre.className = "code";
           pre.textContent = dslText;
-          fixDiv.appendChild(pre);
 
           details.appendChild(summary);
           details.appendChild(pre);
@@ -545,7 +544,7 @@ function render() {{
     elList.appendChild(card);
   }});
 
-  elStatus.textContent = state.raw ? "Načteno" : "Bez dat";
+  elStatus.textContent = state.raw ? "Loaded" : "No data";
   updateCounts();
 }}
 
@@ -566,7 +565,7 @@ function loadFromFile(file) {{
       const json = JSON.parse(reader.result);
       applyJson(json, `file: ${{file.name}}`);
     }} catch (e) {{
-      setHint("Neplatný JSON.");
+      setHint("Invalid JSON.");
       console.error(e);
     }}
   }};
@@ -577,7 +576,7 @@ async function pickDirectory() {{
   setHint("");
 
   if (!hasDirectoryPickerSupport()) {{
-    setHint("Tento prohlížeč nepodporuje výběr složky. Použije se klasické stažení souboru.");
+    setHint("This browser does not support folder selection. Standard file download will be used.");
     return;
   }}
 
@@ -585,11 +584,11 @@ async function pickDirectory() {{
     const handle = await window.showDirectoryPicker();
     state.dirHandle = handle;
     updateSaveTargetLabel();
-    setHint(`Vybraná složka: ${{handle.name}}`, "ok");
+    setHint(`Selected folder: ${{handle.name}}`, "ok");
   }} catch (err) {{
     if (err && err.name !== "AbortError") {{
       console.error(err);
-      setHint("Nepodařilo se vybrat složku.");
+      setHint("Could not select folder.");
     }}
   }}
 }}
@@ -660,15 +659,15 @@ async function exportSelected() {{
   try {{
     if (state.dirHandle && hasDirectoryPickerSupport()) {{
       await saveBlobToPickedDirectory(filename, blob);
-      setHint(`Soubor byl uložen do vybrané složky jako ${{filename}}.`, "ok");
+      setHint(`The file was saved to the selected folder as ${{filename}}.`, "ok");
       return;
     }}
 
     downloadBlob(filename, blob);
-    setHint("Prohlížeč použil klasické stažení souboru.");
+    setHint("The browser used the standard file download.");
   }} catch (err) {{
     console.error(err);
-    setHint("Přímé uložení do složky selhalo. Soubor bude stažen klasicky.");
+    setHint("Direct save to folder failed. The file will be downloaded normally.");
     downloadBlob(filename, blob);
   }}
 }}
