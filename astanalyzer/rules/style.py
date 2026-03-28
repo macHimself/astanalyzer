@@ -48,6 +48,14 @@ from ..tools import has_trailing_whitespace
 
 
 class EmptyBlock(Rule):
+    """
+    This block contains no executable logic.
+
+    Empty control structures (if, for, while, try, with, except) reduce code clarity
+    and may indicate unfinished implementation or redundant code.
+
+    Consider adding meaningful logic or removing the block entirely.
+    """
     id = "BLK-001"
     title = "Empty block"
     severity = Severity.WARNING
@@ -79,6 +87,14 @@ class EmptyBlock(Rule):
 
 
 class RedundantIfElseReturn(Rule):
+    """
+    Redundant 'else' block after a terminal statement.
+
+    When an 'if' branch ends with a terminal statement (e.g. return, raise, break),
+    the 'else' block is unnecessary because control flow will not continue past it.
+
+    Removing the 'else' and unindenting its contents simplifies the code and improves readability.
+    """
     id = "COND-002"
     title = "Redundant else after terminal branches"
     severity = Severity.INFO
@@ -99,6 +115,16 @@ class RedundantIfElseReturn(Rule):
 
 
 class MultipleReturnsInFunction(Rule):
+    """
+    Function contains multiple return statements.
+
+    Having multiple return points can make control flow harder to follow,
+    especially in more complex functions. In some cases, consolidating returns
+    into a single exit point can improve readability and maintainability.
+
+    However, multiple returns may be acceptable if they keep the code simpler
+    and more understandable.
+    """
     id = "FUNC-001"
     title = "Function with multiple return statements"
     severity = Severity.INFO
@@ -120,6 +146,15 @@ class MultipleReturnsInFunction(Rule):
 
 
 class LineTooLong(Rule):
+    """
+    Line exceeds the recommended maximum length.
+
+    Long lines reduce readability, especially in diffs, code reviews, and
+    side-by-side views. Keeping lines within a reasonable limit improves
+    clarity and consistency across the codebase.
+
+    Consider splitting the line or using shorter expressions.
+    """
     id = "STYLE-017"
     title = "Line too long"
     severity = Severity.INFO
@@ -141,6 +176,15 @@ class LineTooLong(Rule):
 
 
 class FunctionNameNotSnakeCase(Rule):
+    """
+    Function name does not follow snake_case convention.
+
+    In Python, function names should use snake_case (lowercase words separated
+    by underscores) according to PEP 8. Consistent naming improves readability,
+    predictability, and collaboration across the codebase.
+
+    Consider renaming the function to follow snake_case.
+    """
     id = "NAM-018"
     title = "Function name not in snake_case"
     severity = Severity.INFO
@@ -160,6 +204,15 @@ class FunctionNameNotSnakeCase(Rule):
 
 
 class ClassNameNotPascalCase(Rule):
+    """
+    Class name does not follow PascalCase convention.
+
+    In Python, class names should use PascalCase (also known as CapWords),
+    where each word starts with a capital letter. This follows PEP 8 and
+    helps distinguish classes from functions and variables.
+
+    Consider renaming the class to follow PascalCase.
+    """
     id = "NAM-019"
     title = "Class name not in PascalCase"
     severity = Severity.INFO
@@ -179,6 +232,15 @@ class ClassNameNotPascalCase(Rule):
 
 
 class ConstantNotUppercase(Rule):
+    """
+    Constant name does not follow UPPER_SNAKE_CASE convention.
+
+    In Python, constants should be written in UPPER_SNAKE_CASE according to
+    PEP 8. This makes them easily distinguishable from variables and signals
+    that their value is intended to remain unchanged.
+
+    Consider renaming the constant to follow this convention.
+    """
     id = "NAM-020"
     title = "Constant not in UPPER_SNAKE_CASE"
     severity = Severity.INFO
@@ -198,6 +260,15 @@ class ConstantNotUppercase(Rule):
 
 
 class TrailingWhitespace(Rule):
+    """
+    Line contains trailing whitespace.
+
+    Trailing whitespace has no functional meaning and can introduce unnecessary
+    noise in diffs, version control, and code reviews. It is generally considered
+    good practice to remove it.
+
+    Consider removing trailing whitespace from the affected lines.
+    """
     id = "STYLE-021"
     title = "Trailing whitespace"
     severity = Severity.INFO
@@ -217,6 +288,14 @@ class TrailingWhitespace(Rule):
 
 
 class MissingBlankLineBetweenFunctions(Rule):
+    """
+    Missing blank line before function definition.
+
+    According to PEP 8, top-level function definitions should be separated
+    by blank lines to improve readability and visual structure of the code.
+
+    Consider adding a blank line before this function.
+    """
     id = "STYLE-022"
     title = "Missing blank line(s) between definitions"
     severity = Severity.INFO
@@ -236,6 +315,15 @@ class MissingBlankLineBetweenFunctions(Rule):
 
 
 class MissingDocstringForFunction(Rule):
+    """
+    Function is missing a docstring.
+
+    Docstrings describe the purpose, parameters, and return values of a function.
+    Without them, the code is harder to understand, use, and maintain—especially
+    for other developers or future readers.
+
+    Consider adding a clear and concise docstring.
+    """
     id = "STYLE-002"
     title = "Missing docstring for function"
     severity = Severity.WARNING
@@ -255,6 +343,15 @@ class MissingDocstringForFunction(Rule):
 
 
 class MissingDocstringForClass(Rule):
+    """
+    Class is missing a docstring.
+
+    A class docstring should describe its purpose, responsibilities, and how it
+    is intended to be used. Without it, understanding the role of the class within
+    the system becomes harder, especially in larger codebases.
+
+    Consider adding a clear and concise docstring.
+    """
     id = "STYLE-003"
     title = "Missing docstring for class"
     severity = Severity.WARNING
@@ -274,6 +371,15 @@ class MissingDocstringForClass(Rule):
 
 
 class MissingDocstringForModule(Rule):
+    """
+    Module is missing a docstring.
+
+    A module docstring provides a high-level overview of the file’s purpose,
+    its main components, and how it should be used. Without it, understanding
+    the role of the module within the project becomes more difficult.
+
+    Consider adding a clear and concise module-level docstring.
+    """
     id = "STYLE-023"
     title = "Missing docstring for module"
     severity = Severity.WARNING

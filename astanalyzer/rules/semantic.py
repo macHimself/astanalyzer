@@ -45,6 +45,15 @@ from ..rule import Rule
 
 
 class AlwaysTrueConditionIf(Rule):
+    """
+    This condition is always true.
+
+    An always-true condition makes the surrounding 'if' statement redundant,
+    because the guarded block will always execute. This may indicate unnecessary
+    control flow, a logic mistake, or leftover debugging code.
+
+    Consider removing the condition and keeping only the body if this behavior is intentional.
+    """
     id = "COND-001"
     title = "Condition is always true"
     severity = Severity.WARNING
@@ -64,6 +73,14 @@ class AlwaysTrueConditionIf(Rule):
 
 
 class AlwaysTrueConditionWhile(Rule):
+    """
+    While loop condition is always true.
+
+    This creates a potentially infinite loop, which may lead to high CPU usage
+    or a program that never terminates unless explicitly interrupted.
+
+    Ensure that this behavior is intentional, or consider adding a proper exit condition.
+    """
     id = "COND-003"
     title = "While condition is always true"
     severity = Severity.WARNING
@@ -85,6 +102,15 @@ class AlwaysTrueConditionWhile(Rule):
 
 
 class CompareToNoneUsingEq(Rule):
+    """
+    Comparison to None using '==' or '!='.
+
+    In Python, None should be compared using 'is' or 'is not', not equality
+    operators. Using '==' or '!=' can lead to incorrect behavior if an object
+    overrides equality semantics.
+
+    Consider replacing the comparison with 'is None' or 'is not None'.
+    """
     id = "CMP-001"
     title = "Comparison to None using == or !="
     severity = Severity.WARNING
@@ -107,6 +133,14 @@ class CompareToNoneUsingEq(Rule):
 
 
 class AssignmentInCondition(Rule):
+    """
+    Assignment inside a condition using the walrus operator (':=').
+
+    While valid in Python, assignments within conditions can reduce readability
+    and make the control flow harder to understand, especially in more complex expressions.
+
+    Consider moving the assignment outside of the condition if it improves clarity.
+    """
     id = "ASSIGN-001"
     title = "Assignment in condition (walrus)"
     severity = Severity.WARNING
@@ -128,6 +162,14 @@ class AssignmentInCondition(Rule):
 
 
 class RedeclaredVariable(Rule):
+    """
+    Variable is reassigned before its previous value is used.
+
+    This may indicate redundant code, a logical error, or an unintended overwrite.
+    The earlier assignment has no effect if its value is never used.
+
+    Consider removing the unused assignment or renaming variables to clarify intent.
+    """
     id = "VAR-002"
     title = "Redeclared variable in the same scope"
     severity = Severity.WARNING
@@ -154,6 +196,15 @@ class RedeclaredVariable(Rule):
 
 
 class ExceptionNotUsed(Rule):
+    """
+    Exception is assigned to a variable but never used.
+
+    Binding an exception to a name in an 'except' clause is unnecessary if the
+    variable is not used. This may indicate leftover debugging code or a missed
+    opportunity to log or handle the exception details.
+
+    Consider removing the unused alias or using it meaningfully.
+    """
     id = "EXC-015"
     title = "Exception bound in except-clause is not used"
     severity = Severity.INFO
@@ -180,6 +231,15 @@ class ExceptionNotUsed(Rule):
 
 
 class BareExcept(Rule):
+    """
+    Bare 'except:' clause catches all exceptions.
+
+    Using a bare 'except:' will catch all exceptions, including system-exiting
+    ones like KeyboardInterrupt and SystemExit. This can hide bugs and make
+    debugging difficult.
+
+    Consider catching a more specific exception or using 'except Exception:' instead.
+    """
     id = "EXC-001"
     title = "Bare except clause"
     severity = Severity.INFO
@@ -204,6 +264,15 @@ class BareExcept(Rule):
 
 
 class MutableDefaultArgument(Rule):
+    """
+    Function uses a mutable object as a default argument.
+
+    Mutable default arguments (e.g. lists, dictionaries) are evaluated only once
+    at function definition time, not each time the function is called. This can
+    lead to unexpected behavior, as the same object is reused across calls.
+
+    Consider using None as the default and initializing the value inside the function.
+    """
     id = "ARG-017"
     title = "Mutable default argument"
     severity = Severity.WARNING
@@ -224,6 +293,14 @@ class MutableDefaultArgument(Rule):
 
 
 class PrintDebugStatement(Rule):
+    """
+    Debug print statement detected.
+
+    Using print() for debugging can leave unwanted output in production code,
+    make logs inconsistent, and expose internal details during execution.
+
+    Consider removing the statement or replacing it with proper logging.
+    """
     id = "DBG-023"
     title = "Print debug statement"
     severity = Severity.WARNING

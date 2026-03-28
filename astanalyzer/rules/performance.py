@@ -37,6 +37,15 @@ from ..tools import (
 
 
 class PrintInListComprehension(Rule):
+    """
+    Print is used inside a list comprehension for side effects.
+
+    List comprehensions are intended for creating lists, not for executing side effects.
+    Using them with functions like print() reduces readability and may create unnecessary
+    intermediate lists.
+
+    Consider replacing this with a simple for loop for clearer and more efficient code.
+    """
     id = "COMP-024"
     title = "Print used inside list comprehension for side effects"
     severity = Severity.WARNING
@@ -62,6 +71,14 @@ class PrintInListComprehension(Rule):
 
 
 class UselessListComprehension(Rule):
+    """
+    List comprehension result is computed but never used.
+
+    List comprehensions are intended to create lists. If the result is not used,
+    this leads to unnecessary computation and may indicate a misuse for side effects.
+
+    Consider using a for loop for side effects or assigning/returning the result.
+    """
     id = "COMP-025"
     title = "Useless list comprehension (unused result)"
     severity = Severity.WARNING
@@ -82,6 +99,15 @@ class UselessListComprehension(Rule):
 
 
 class RedundantSortBeforeMinMax(Rule):
+    """
+    Redundant use of sorted() before min() or max().
+
+    Calling sorted() before min() or max() is unnecessary, as these functions
+    already iterate over the data to find the result. Sorting adds extra
+    computational overhead without any benefit.
+
+    Consider calling min() or max() directly on the iterable.
+    """
     id = "ALG-025"
     title = "Redundant sort before min/max"
     severity = Severity.WARNING
@@ -101,6 +127,15 @@ class RedundantSortBeforeMinMax(Rule):
 
 
 class UnnecessaryCopy(Rule):
+    """
+    Unnecessary copy of iterable or object detected.
+
+    Creating a copy without a clear reason introduces extra memory usage and
+    computational overhead. In many cases, the original object can be used directly
+    without affecting correctness.
+
+    Consider removing the redundant copy operation.
+    """
     id = "PERF-026"
     title = "Unnecessary copy of iterable or object"
     severity = Severity.INFO
@@ -123,6 +158,16 @@ class UnnecessaryCopy(Rule):
 
 
 class DoubleLoopSameCollection(Rule):
+    """
+    Nested loops iterate over the same collection.
+
+    This pattern often leads to quadratic time complexity (O(n²)) and may cause
+    performance issues on larger datasets. In many cases, the logic can be
+    rewritten using a single pass, indexing, or more efficient data structures
+    such as sets or dictionaries.
+
+    Consider refactoring to reduce time complexity.
+    """
     id = "PERF-027"
     title = "Nested loops over the same collection"
     severity = Severity.INFO
@@ -149,6 +194,15 @@ class DoubleLoopSameCollection(Rule):
 
 
 class LoopCouldBeComprehension(Rule):
+    """
+    Loop can be expressed as a comprehension.
+
+    In some cases, loops that build collections can be rewritten using list,
+    set, or dictionary comprehensions. This often results in more concise and
+    idiomatic Python code.
+
+    Consider using a comprehension if it improves readability.
+    """
     id = "COMP-028"
     title = "Loop could be a comprehension"
     severity = Severity.INFO
@@ -173,6 +227,15 @@ class LoopCouldBeComprehension(Rule):
 
 
 class JoinOnGenerator(Rule):
+    """
+    join() builds an unnecessary intermediate list.
+
+    When passing values to join(), a generator expression is usually more efficient
+    than a list comprehension or list(...) wrapper, because it avoids creating
+    an extra temporary list in memory.
+
+    Consider using a generator expression inside join().
+    """
     id = "STR-029"
     title = "Use generator expression in join()"
     severity = Severity.INFO

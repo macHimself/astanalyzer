@@ -22,6 +22,14 @@ from ..rule import Rule
 
 
 class UnusedVariable(Rule):
+    """
+    Assigned variable is never used.
+
+    This may indicate dead code, a mistake, or leftover debugging logic.
+    Keeping unused variables reduces code clarity and may hide logical issues.
+
+    Consider removing the assignment or using the value if it is needed.
+    """
     id = "VAR-001"
     title = "Unused variable"
     severity = Severity.WARNING
@@ -44,6 +52,14 @@ class UnusedVariable(Rule):
 
 
 class UnreachableCode(Rule):
+    """
+    Unreachable code detected after a terminal statement.
+
+    Code appearing after return, raise, break, or continue will never be executed.
+    This may indicate a logical error, leftover code, or incorrect control flow.
+
+    Consider removing or restructuring the unreachable code.
+    """
     id = "FLOW-001"
     title = "Unreachable code after return/raise/break/continue"
     severity = Severity.WARNING

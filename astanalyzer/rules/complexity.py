@@ -23,6 +23,16 @@ from ..tools import arg_count_gt, function_arg_count, parent_depth_at_least
 
 
 class TooManyArguments(Rule):
+    """
+    Function has too many parameters.
+
+    A large number of parameters can make a function harder to read, understand,
+    and maintain. It often indicates that the function is doing too much or that
+    related data could be grouped together.
+
+    Consider reducing the number of parameters by introducing a data structure
+    (e.g. a class or dataclass) or splitting the function into smaller parts.
+    """
     MAX_ARGS = 5
     id = "COMPLEX-001"
     title = "Function has too many parameters"
@@ -51,6 +61,16 @@ class TooManyArguments(Rule):
 
 
 class TooDeepNesting(Rule):
+    """
+    Code is nested too deeply.
+
+    Deep nesting increases cognitive complexity and makes the code harder to read,
+    reason about, and maintain. It often indicates that the logic could be simplified
+    or reorganized.
+
+    Consider using guard clauses, early returns/continues, or extracting nested logic
+    into separate functions.
+    """
     id = "STRUCTURE-001"
     title = "Too deep nesting"
     MAX_DEPTH = 3

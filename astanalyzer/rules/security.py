@@ -30,6 +30,16 @@ from ..rule import Rule
 
 
 class UseOfEval(Rule):
+    """
+    Use of eval() or exec() detected.
+
+    Dynamic code execution is unsafe, especially when handling untrusted input.
+    It can lead to code injection vulnerabilities and allow attackers to execute
+    arbitrary code.
+
+    Avoid using eval() or exec(). Prefer safer alternatives such as explicit
+    parsing, dispatch tables, or controlled execution mechanisms.
+    """
     id = "SEC-030"
     title = "Use of eval()/exec()"
     severity = Severity.WARNING
@@ -73,6 +83,15 @@ class UseOfEval(Rule):
 
 
 class EvalLiteralParsingCandidate(Rule):
+    """
+    This eval() call appears to be used for parsing Python literals.
+
+    Using eval() for literal parsing is unsafe, as it can execute arbitrary code.
+    If the input consists only of Python literals (e.g. strings, numbers, lists,
+    dictionaries), ast.literal_eval() provides a safe alternative.
+
+    Consider replacing eval() with ast.literal_eval().
+    """
     id = "SEC-035"
     title = "eval() may be replaced with ast.literal_eval()"
     severity = Severity.INFO
@@ -125,6 +144,16 @@ class EvalLiteralParsingCandidate(Rule):
 
 
 class UseOfOsSystem(Rule):
+    """
+    Use of os.system() or os.popen() detected.
+
+    Shell-based command execution can be unsafe, especially when handling
+    untrusted input, as it may lead to command injection vulnerabilities.
+    Additionally, these APIs are limited and less flexible.
+
+    Consider using the subprocess module instead, which provides safer and
+    more controlled process execution.
+    """
     id = "SEC-031"
     title = "Use of os.system()"
     severity = Severity.WARNING
@@ -180,6 +209,15 @@ class UseOfOsSystem(Rule):
 
 
 class HardcodedPasswordOrKey(Rule):
+    """
+    Possible hardcoded secret detected.
+
+    Storing passwords, API keys, or tokens directly in source code is insecure,
+    as it may expose sensitive data in version control or logs. This increases
+    the risk of unauthorized access.
+
+    Consider moving secrets to environment variables or a secure configuration system.
+    """
     id = "SEC-033"
     title = "Hardcoded password / key / token"
     severity = Severity.WARNING
@@ -210,6 +248,15 @@ class HardcodedPasswordOrKey(Rule):
 
 
 class InsecureRandom(Rule):
+    """
+    Insecure use of the random module.
+
+    The random module is not designed for security-sensitive purposes and may
+    produce predictable values. Using it for tokens, passwords, or security-related
+    operations can lead to vulnerabilities.
+
+    Consider using the secrets module or os.urandom() for secure random values.
+    """
     id = "SEC-034"
     title = "Insecure use of random module"
     severity = Severity.WARNING
@@ -237,6 +284,15 @@ class InsecureRandom(Rule):
 
 
 class OpenWithoutWith(Rule):
+    """
+    open() is used without a context manager.
+
+    Opening files without a context manager may lead to resource leaks if the file
+    is not properly closed, especially in case of errors. Using 'with open(...)'
+    ensures that the file is automatically closed.
+
+    Consider using a context manager for safer resource handling.
+    """
     id = "RES-032"
     title = "open() used without context manager"
     severity = Severity.WARNING
