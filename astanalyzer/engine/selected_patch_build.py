@@ -3,58 +3,67 @@ from __future__ import annotations
 import logging
 import os
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from dataclasses import dataclass
-
-from colorama import init
 
 from ..anchor import build_anchor
 from ..fixer import FixProposal, fix
 from ..ignore_rules import is_ignored_for_node
-from ..rule import Rule
 
 from .project_loader import ModuleNode, ProjectNode, get_list_of_files_in_project, load_project
 from .patch_writer import (
-    present_foundings_suggestions,
     create_diff,
     emit_patch_if_changed,
+    present_foundings_suggestions,
 )
 from .reporting import _relpath
-from .scan_runtime import prepare_rule_runtime, build_and_save_fixes
+from .scan_runtime import build_and_save_fixes, prepare_rule_runtime
 
 log = logging.getLogger(__name__)
-init(autoreset=True)
+
+
+FallbackKey = tuple[str | None, str | None, int | None, int | None, int | None, str | None]
+
+
+def _anchor_dict(item: dict[str, Any]) -> dict[str, Any]:
+    return item.get("anchor") or {}
+
+
+def _fallback_key(
+    *,
+    file_value: str | None,
+    rule_id: str | None,
+    line: int | None,
+    end_line: int | None,
+    col: int | None,
+    symbol_path: str | None,
+) -> FallbackKey:
+    return (file_value, rule_id, line, end_line, col, symbol_path)
 
 
 def _selected_fix_indexes(
     selected_data: dict[str, Any],
-) -> tuple[
-    dict[str, set[int]],
-    dict[tuple[str | None, str | None, int | None, int | None, int | None, str | None], set[int]],
-]:
+) -> tuple[dict[str, set[int]], dict[FallbackKey, set[int]]]:
     by_anchor_id: dict[str, set[int]] = defaultdict(set)
-    by_fallback: dict[
-        tuple[str | None, str | None, int | None, int | None, int | None, str | None],
-        set[int],
-    ] = defaultdict(set)
+    by_fallback: dict[FallbackKey, set[int]] = defaultdict(set)
 
     findings = selected_data.get("findings", [])
     if not isinstance(findings, list):
         return by_anchor_id, by_fallback
 
     for finding in findings:
-        rule_id = finding.get("rule_id")
-        anchor = finding.get("anchor") or {}
-        line = anchor.get("line", finding.get("start_line"))
-        symbol_path = anchor.get("symbol_path")
+        anchor = _anchor_dict(finding)
         anchor_id = anchor.get("anchor_id")
 
-        file_value = finding.get("file")
-        end_line = anchor.get("end_line", finding.get("end_line"))
-        col = anchor.get("col")
-
-        fallback_key = (file_value, rule_id, line, end_line, col, symbol_path)
+        fallback = _fallback_key(
+            file_value=finding.get("file"),
+            rule_id=finding.get("rule_id"),
+            line=anchor.get("line", finding.get("start_line")),
+            end_line=anchor.get("end_line", finding.get("end_line")),
+            col=anchor.get("col"),
+            symbol_path=anchor.get("symbol_path"),
+        )
 
         selected_fix_list = finding.get("selected_fixes")
         if selected_fix_list is None:
@@ -67,42 +76,41 @@ def _selected_fix_indexes(
             if fixer_index is None:
                 continue
 
-            by_fallback[fallback_key].add(fixer_index)
-
+            by_fallback[fallback].add(fixer_index)
             if anchor_id:
                 by_anchor_id[anchor_id].add(fixer_index)
 
     log.debug("SELECTED FIXES BY ANCHOR: %s", dict(by_anchor_id))
     log.debug("SELECTED FIXES BY FALLBACK: %s", dict(by_fallback))
-
     return by_anchor_id, by_fallback
 
 
 def _selected_actions(
     selected_data: dict[str, Any],
-) -> tuple[dict[str, list[dict[str, Any]]], dict[tuple, list[dict[str, Any]]]]:
+) -> tuple[dict[str, list[dict[str, Any]]], dict[FallbackKey, list[dict[str, Any]]]]:
     by_anchor_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    by_fallback: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
+    by_fallback: dict[FallbackKey, list[dict[str, Any]]] = defaultdict(list)
 
     for action in selected_data.get("selected_actions", []) or []:
         if not isinstance(action, dict):
             continue
 
-        anchor = action.get("anchor") or {}
+        anchor = _anchor_dict(action)
         anchor_id = anchor.get("anchor_id")
-        file_value = action.get("file") or anchor.get("file")
-        rule_id = action.get("rule_id")
-        line = anchor.get("line", action.get("start_line"))
-        end_line = anchor.get("end_line", action.get("end_line"))
-        col = anchor.get("col")
-        symbol_path = anchor.get("symbol_path")
 
-        fallback_key = (file_value, rule_id, line, end_line, col, symbol_path)
+        fallback = _fallback_key(
+            file_value=action.get("file") or anchor.get("file"),
+            rule_id=action.get("rule_id"),
+            line=anchor.get("line", action.get("start_line")),
+            end_line=anchor.get("end_line", action.get("end_line")),
+            col=anchor.get("col"),
+            symbol_path=anchor.get("symbol_path"),
+        )
 
         if anchor_id:
             by_anchor_id[anchor_id].append(action)
 
-        by_fallback[fallback_key].append(action)
+        by_fallback[fallback].append(action)
 
     return by_anchor_id, by_fallback
 
@@ -173,14 +181,13 @@ def _build_ignore_fix_proposal(match, rule_id: str) -> FixProposal | None:
 
     prev_index = lineno - 2
 
-    # Case A: existing ignore-next directly above the node -> merge into that line
     if prev_index >= 0:
         prev_line = lines[prev_index]
         merged = _merge_ignore_next_comment_line(prev_line, rule_id)
 
         if merged is not None:
             if merged == prev_line:
-                return None  # already present, nothing to do
+                return None
 
             updated_lines = lines[:]
             updated_lines[prev_index] = merged
@@ -194,12 +201,9 @@ def _build_ignore_fix_proposal(match, rule_id: str) -> FixProposal | None:
                 full_file_mode=True,
             )
 
-    # Case B: no existing ignore-next -> reuse normal fixer builder
     builder = (
         fix()
-        .insert_before(
-            text=_build_ignore_next_comment([rule_id]),
-        )
+        .insert_before(text=_build_ignore_next_comment([rule_id]))
         .because(f"Suppress finding {rule_id} for this node.")
     )
 
@@ -254,13 +258,13 @@ def _emit_selected_actions_for_match(
 @dataclass
 class SelectedPatchLookup:
     selected_anchor_ids: set[str]
-    fallback_keys: set[tuple]
+    fallback_keys: set[FallbackKey]
     selected_action_anchor_ids: set[str]
-    selected_action_fallback_keys: set[tuple]
+    selected_action_fallback_keys: set[FallbackKey]
     selected_fix_indexes_by_anchor_id: dict[str, set[int]]
-    selected_fix_indexes_by_fallback: dict[tuple, set[int]]
+    selected_fix_indexes_by_fallback: dict[FallbackKey, set[int]]
     selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]]
-    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]]
+    selected_actions_by_fallback: dict[FallbackKey, list[dict[str, Any]]]
 
 
 def _get_selected_findings(selected_data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -281,8 +285,7 @@ def _collect_selected_files(
     for item in findings + selected_actions:
         file_value = item.get("file")
         if not file_value:
-            anchor = item.get("anchor") or {}
-            file_value = anchor.get("file")
+            file_value = _anchor_dict(item).get("file")
 
         log.debug("Selected item file value: %s", file_value)
 
@@ -346,48 +349,48 @@ def _build_selected_patch_lookup(
     findings: list[dict[str, Any]],
     selected_actions: list[dict[str, Any]],
     selected_fix_indexes_by_anchor_id: dict[str, set[int]],
-    selected_fix_indexes_by_fallback: dict[tuple, set[int]],
+    selected_fix_indexes_by_fallback: dict[FallbackKey, set[int]],
     selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]],
-    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]],
+    selected_actions_by_fallback: dict[FallbackKey, list[dict[str, Any]]],
 ) -> SelectedPatchLookup:
     selected_anchor_ids: set[str] = set()
-    fallback_keys: set[tuple] = set()
+    fallback_keys: set[FallbackKey] = set()
     selected_action_anchor_ids: set[str] = set()
-    selected_action_fallback_keys: set[tuple] = set()
+    selected_action_fallback_keys: set[FallbackKey] = set()
 
     for finding in findings:
-        anchor = finding.get("anchor") or {}
+        anchor = _anchor_dict(finding)
         anchor_id = anchor.get("anchor_id")
 
         if anchor_id:
             selected_anchor_ids.add(anchor_id)
 
-        fallback = (
-            finding.get("file"),
-            finding.get("rule_id"),
-            anchor.get("line", finding.get("start_line")),
-            anchor.get("end_line", finding.get("end_line")),
-            anchor.get("col"),
-            anchor.get("symbol_path"),
+        fallback = _fallback_key(
+            file_value=finding.get("file"),
+            rule_id=finding.get("rule_id"),
+            line=anchor.get("line", finding.get("start_line")),
+            end_line=anchor.get("end_line", finding.get("end_line")),
+            col=anchor.get("col"),
+            symbol_path=anchor.get("symbol_path"),
         )
         fallback_keys.add(fallback)
 
         log.debug("Selected anchor: id=%s fallback=%s", anchor_id, fallback)
 
     for action in selected_actions:
-        anchor = action.get("anchor") or {}
+        anchor = _anchor_dict(action)
         anchor_id = anchor.get("anchor_id")
 
         if anchor_id:
             selected_action_anchor_ids.add(anchor_id)
 
-        fallback = (
-            action.get("file") or anchor.get("file"),
-            action.get("rule_id"),
-            anchor.get("line", action.get("start_line")),
-            anchor.get("end_line", action.get("end_line")),
-            anchor.get("col"),
-            anchor.get("symbol_path"),
+        fallback = _fallback_key(
+            file_value=action.get("file") or anchor.get("file"),
+            rule_id=action.get("rule_id"),
+            line=anchor.get("line", action.get("start_line")),
+            end_line=anchor.get("end_line", action.get("end_line")),
+            col=anchor.get("col"),
+            symbol_path=anchor.get("symbol_path"),
         )
         selected_action_fallback_keys.add(fallback)
 
@@ -408,7 +411,7 @@ def _build_selected_patch_lookup(
 def _resolve_selected_match(
     *,
     anchor_id: str,
-    fallback: tuple,
+    fallback: FallbackKey,
     lookup: SelectedPatchLookup,
 ) -> tuple[bool, bool, set[int] | None, list[dict[str, Any]]]:
     selected_indexes_for_match = None
@@ -481,13 +484,13 @@ def _process_selected_match(
         getattr(anchor, "symbol_path", None),
     )
 
-    fallback = (
-        rel_file,
-        rid,
-        getattr(match, "lineno", None),
-        getattr(match, "end_lineno", getattr(match, "lineno", None)),
-        getattr(match, "col_offset", None),
-        getattr(anchor, "symbol_path", None),
+    fallback = _fallback_key(
+        file_value=rel_file,
+        rule_id=rid,
+        line=getattr(match, "lineno", None),
+        end_line=getattr(match, "end_lineno", getattr(match, "lineno", None)),
+        col=getattr(match, "col_offset", None),
+        symbol_path=getattr(anchor, "symbol_path", None),
     )
 
     matched_selected_fix, matched_selected_action, selected_indexes_for_match, actions_for_match = (
@@ -635,12 +638,7 @@ def build_patches_from_selected_json(
 
         rel_file = _relpath(Path(module.filename))
 
-        log.debug(
-            "Node: %s in %s rules=%d",
-            node_type,
-            rel_file,
-            len(rules_for_type),
-        )
+        log.debug("Node: %s in %s rules=%d", node_type, rel_file, len(rules_for_type))
 
         for rule in rules_for_type:
             rid = getattr(rule, "id", None) or rule.__class__.__name__
