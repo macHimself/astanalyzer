@@ -20,7 +20,7 @@ from astroid.exceptions import AstroidSyntaxError
 from colorama import Fore, Style, init
 
 from .anchor import FindingAnchor, build_anchor
-from .fixer import FixProposal
+from .fixer import FixProposal, fix
 from .ignore_rules import is_ignored_for_node
 from .rule import Rule
 
@@ -1054,11 +1054,187 @@ def _selected_fix_indexes(
     return by_anchor_id, by_fallback
 
 
+def _selected_actions(
+    selected_data: dict[str, Any],
+) -> tuple[dict[str, list[dict[str, Any]]], dict[tuple, list[dict[str, Any]]]]:
+    by_anchor_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_fallback: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
+
+    for action in selected_data.get("selected_actions", []) or []:
+        if not isinstance(action, dict):
+            continue
+
+        anchor = action.get("anchor") or {}
+        anchor_id = anchor.get("anchor_id")
+        file_value = action.get("file") or anchor.get("file")
+        rule_id = action.get("rule_id")
+        line = anchor.get("line", action.get("start_line"))
+        end_line = anchor.get("end_line", action.get("end_line"))
+        col = anchor.get("col")
+        symbol_path = anchor.get("symbol_path")
+
+        fallback_key = (file_value, rule_id, line, end_line, col, symbol_path)
+
+        if anchor_id:
+            by_anchor_id[anchor_id].append(action)
+
+        by_fallback[fallback_key].append(action)
+
+    return by_anchor_id, by_fallback
+
+
+def _build_ignore_next_comment(rule_ids: list[str]) -> str:
+    seen = set()
+    ordered: list[str] = []
+
+    for rid in rule_ids:
+        rid = (rid or "").strip()
+        if not rid or rid in seen:
+            continue
+        seen.add(rid)
+        ordered.append(rid)
+
+    if not ordered:
+        return "# astanalyzer: ignore-next"
+
+    return "# astanalyzer: ignore-next " + ", ".join(ordered)
+
+
+def _parse_ignore_next_line_ordered(line: str) -> list[str] | None:
+    stripped = line.strip()
+
+    if "astanalyzer:" not in stripped:
+        return None
+
+    try:
+        _, rest = stripped.split("astanalyzer:", 1)
+    except ValueError:
+        return None
+
+    rest = rest.strip()
+    if not rest.startswith("ignore-next"):
+        return None
+
+    rest = rest[len("ignore-next"):].strip()
+    if not rest:
+        return []
+
+    return [part.strip() for part in rest.split(",") if part.strip()]
+
+
+def _merge_ignore_next_comment_line(line: str, rule_id: str) -> str | None:
+    ids = _parse_ignore_next_line_ordered(line)
+    if ids is None:
+        return None
+
+    if "*" in ids or rule_id in ids:
+        return line
+
+    merged = ids + [rule_id]
+
+    indent = line[: len(line) - len(line.lstrip())]
+    newline = "\n" if line.endswith("\n") else ""
+
+    return indent + _build_ignore_next_comment(merged) + newline
+
+
+def _build_ignore_fix_proposal(match, rule_id: str) -> FixProposal | None:
+    root = match.root()
+    lines = list(getattr(root, "file_by_lines", []) or [])
+    filename = str(getattr(root, "file", "unknown.py"))
+    lineno = getattr(match, "lineno", None)
+
+    if not lines or lineno is None or lineno < 1:
+        return None
+
+    prev_index = lineno - 2
+
+    # Case A: existing ignore-next directly above the node -> merge into that line
+    if prev_index >= 0:
+        prev_line = lines[prev_index]
+        merged = _merge_ignore_next_comment_line(prev_line, rule_id)
+
+        if merged is not None:
+            if merged == prev_line:
+                return None  # already present, nothing to do
+
+            updated_lines = lines[:]
+            updated_lines[prev_index] = merged
+
+            return FixProposal(
+                original="".join(lines),
+                suggestion="".join(updated_lines),
+                reason=f"Suppress finding {rule_id} for this node.",
+                lineno=1,
+                filename=filename,
+                full_file_mode=True,
+            )
+
+    # Case B: no existing ignore-next -> reuse normal fixer builder
+    builder = (
+        fix()
+        .insert_before(
+            text=_build_ignore_next_comment([rule_id]),
+        )
+        .because(f"Suppress finding {rule_id} for this node.")
+    )
+
+    return builder.build(node=match)
+
+
+def _emit_selected_actions_for_match(
+    *,
+    actions_for_match: list[dict[str, Any]],
+    match,
+    module: ModuleNode,
+    patch_run_dir: Path | None,
+    patch_counter: int,
+    project_root: Path,
+) -> int:
+    for action in actions_for_match:
+        action_type = action.get("type")
+
+        if action_type != "ignore_finding":
+            log.warning("Unsupported selected action type: %s", action_type)
+            continue
+
+        rule_id = action.get("rule_id")
+        if not rule_id:
+            log.warning("ignore_finding action missing rule_id: %s", action)
+            continue
+
+        fix_proposal = _build_ignore_fix_proposal(match, rule_id)
+        if fix_proposal is None:
+            continue
+
+        present_foundings_suggestions(fix_proposal)
+        create_diff(fix_proposal)
+
+        out_path = emit_patch_if_changed(
+            fix=fix_proposal,
+            match=match,
+            module=module,
+            patch_run_dir=patch_run_dir,
+            patch_index=patch_counter + 1,
+            rule_id=f"{rule_id}-IGNORE",
+            rule_title=f"Ignore {rule_id}",
+            project_root=project_root,
+        )
+
+        if out_path is not None:
+            patch_counter += 1
+
+    return patch_counter
+
+
 def build_patches_from_selected_json(
     selected_data: dict[str, Any],
     base_dir: Path | None = None,
 ) -> tuple[Path | None, int]:
     selected_fix_indexes_by_anchor_id, selected_fix_indexes_by_fallback = _selected_fix_indexes(
+        selected_data
+    )
+    selected_actions_by_anchor_id, selected_actions_by_fallback = _selected_actions(
         selected_data
     )
     log.debug("PATCH BUILD START")
@@ -1072,9 +1248,13 @@ def build_patches_from_selected_json(
     files: list[Path] = []
     seen = set()
 
-    for f in findings:
-        file_value = f.get("file")
-        log.debug("Finding file value: %s", file_value)
+    for item in findings + (selected_data.get("selected_actions", []) or []):
+        file_value = item.get("file")
+        if not file_value:
+            anchor = item.get("anchor") or {}
+            file_value = anchor.get("file")
+
+        log.debug("Selected item file value: %s", file_value)
 
         if not file_value:
             continue
@@ -1130,6 +1310,8 @@ def build_patches_from_selected_json(
 
     selected_anchor_ids = set()
     fallback_keys = set()
+    selected_action_anchor_ids = set()
+    selected_action_fallback_keys = set()
 
     for f in findings:
         anchor = f.get("anchor") or {}
@@ -1149,6 +1331,26 @@ def build_patches_from_selected_json(
         fallback_keys.add(fallback)
 
         log.debug("Selected anchor: id=%s fallback=%s", anchor_id, fallback)
+
+    for action in selected_data.get("selected_actions", []) or []:
+        anchor = action.get("anchor") or {}
+        anchor_id = anchor.get("anchor_id")
+
+        if anchor_id:
+            selected_action_anchor_ids.add(anchor_id)
+
+        fallback = (
+            action.get("file") or anchor.get("file"),
+            action.get("rule_id"),
+            anchor.get("line", action.get("start_line")),
+            anchor.get("end_line", action.get("end_line")),
+            anchor.get("col"),
+            anchor.get("symbol_path"),
+        )
+        selected_action_fallback_keys.add(fallback)
+
+        log.debug("Selected action anchor: id=%s fallback=%s", anchor_id, fallback)
+
 
     log.debug("Anchor IDs loaded: %d", len(selected_anchor_ids))
 
@@ -1217,17 +1419,30 @@ def build_patches_from_selected_json(
                 )
 
                 selected_indexes_for_match = None
-                matched_selected = False
+                actions_for_match: list[dict[str, Any]] = []
+
+                matched_selected_fix = False
+                matched_selected_action = False
 
                 if anchor.anchor_id in selected_anchor_ids:
-                    log.debug("Anchor matched by ID")
-                    matched_selected = True
+                    log.debug("Anchor matched selected fix by ID")
+                    matched_selected_fix = True
                     selected_indexes_for_match = selected_fix_indexes_by_anchor_id.get(anchor.anchor_id)
 
                 elif fallback in fallback_keys:
-                    log.debug("Anchor matched by fallback")
-                    matched_selected = True
+                    log.debug("Anchor matched selected fix by fallback")
+                    matched_selected_fix = True
                     selected_indexes_for_match = selected_fix_indexes_by_fallback.get(fallback)
+
+                if anchor.anchor_id in selected_action_anchor_ids:
+                    log.debug("Anchor matched selected action by ID")
+                    matched_selected_action = True
+                    actions_for_match = selected_actions_by_anchor_id.get(anchor.anchor_id, [])
+
+                elif fallback in selected_action_fallback_keys:
+                    log.debug("Anchor matched selected action by fallback")
+                    matched_selected_action = True
+                    actions_for_match = selected_actions_by_fallback.get(fallback, [])
 
                 log.debug(
                     "SELECTION CHECK file=%s rule=%s anchor_id=%s line=%s end_line=%s col=%s fallback=%s anchor_hit=%s fallback_hit=%s",
@@ -1242,7 +1457,7 @@ def build_patches_from_selected_json(
                     fallback in fallback_keys,
                 )
 
-                if not matched_selected:
+                if not matched_selected_fix and not matched_selected_action:
                     log.debug(
                         "MATCH SKIPPED file=%s rule=%s line=%s end_line=%s col=%s symbol=%s",
                         rel_file,
@@ -1262,26 +1477,44 @@ def build_patches_from_selected_json(
                         getattr(match, "lineno", None),
                     )
                     continue
+                if matched_selected_fix:
+                    log.info(
+                        "Generating patch for %s:%s rule=%s selected_fixers=%s",
+                        rel_file,
+                        getattr(match, "lineno", "?"),
+                        rid,
+                        selected_indexes_for_match,
+                    )
 
-                log.info(
-                    "Generating patch for %s:%s rule=%s selected_fixers=%s",
-                    rel_file,
-                    getattr(match, "lineno", "?"),
-                    rid,
-                    selected_indexes_for_match,
-                )
+                    patch_counter = build_and_save_fixes(
+                        rule=rule,
+                        match=match,
+                        refs=refs,
+                        module=module,
+                        project=project,
+                        project_root=project_root,
+                        patch_run_dir=patch_run_dir,
+                        patch_counter=patch_counter,
+                        selected_fixer_indexes=selected_indexes_for_match,
+                    )
 
-                patch_counter = build_and_save_fixes(
-                    rule=rule,
-                    match=match,
-                    refs=refs,
-                    module=module,
-                    project=project,
-                    project_root=project_root,
-                    patch_run_dir=patch_run_dir,
-                    patch_counter=patch_counter,
-                    selected_fixer_indexes=selected_indexes_for_match,
-                )
+                if matched_selected_action and actions_for_match:
+                    log.info(
+                        "Generating selected actions for %s:%s rule=%s actions=%s",
+                        rel_file,
+                        getattr(match, "lineno", "?"),
+                        rid,
+                        [a.get("type") for a in actions_for_match],
+                    )
+
+                    patch_counter = _emit_selected_actions_for_match(
+                        actions_for_match=actions_for_match,
+                        match=match,
+                        module=module,
+                        patch_run_dir=patch_run_dir,
+                        patch_counter=patch_counter,
+                        project_root=project_root,
+                    )
 
     log.info("PATCH BUILD FINISHED patches=%d", patch_counter)
     return patch_run_dir, patch_counter

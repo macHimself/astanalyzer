@@ -124,6 +124,30 @@ def build_report_html(report_data: dict) -> str:
       line-height: 1.45;
       white-space: pre-wrap;
     }}
+    .actions {{
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }}
+    .action {{
+      border: 1px solid rgba(127,127,127,.25);
+      border-radius: 12px;
+      padding: 10px 10px;
+      display: grid;
+      gap: 6px;
+      background: color-mix(in oklab, Canvas, CanvasText 3%);
+    }}
+    .action .action-title {{
+      font-weight: 600;
+    }}
+    .action .action-reason {{
+      opacity: .85;
+      font-size: 12px;
+    }}
+    .action.ignore {{
+      opacity: 0.7;
+      border-style: dashed;
+    }}
     .fixes {{
       margin-top: 10px;
       display: grid;
@@ -136,7 +160,8 @@ def build_report_html(report_data: dict) -> str:
       display: grid;
       gap: 6px;
     }}
-    .fix label {{
+    .fix label,
+    .action label {{
       display: flex;
       gap: 10px;
       align-items: flex-start;
@@ -177,7 +202,7 @@ def build_report_html(report_data: dict) -> str:
     <h1>astanalyzer – fix selection from JSON plan</h1>
     <div class="row">
       <span class="pill" id="status">Loaded</span>
-      <span class="pill" id="counts">0 findings / 0 fixes selected</span>
+      <span class="pill" id="counts">0 findings / 0 fixes selected / 0 actions selected</span>
       <span class="pill" id="sourceHint">scan_report.json</span>
       <span class="pill" id="saveTarget">Target: download fallback</span>
     </div>
@@ -206,6 +231,7 @@ const state = {{
   raw: {json.dumps(report_data, ensure_ascii=False, indent=2)},
   findings: [],
   selected: new Map(),
+  selectedActions: new Map(),
   filter: "",
   dirHandle: null
 }};
@@ -287,8 +313,15 @@ function fixKey(finding, fix) {{
   return `${{finding.file}}::${{finding.id}}::${{fix.fix_id}}`;
 }}
 
+function actionKey(finding, actionType) {{
+  return `${{finding.file}}::${{finding.id}}::${{actionType}}`;
+}}
+
 function updateCounts() {{
-  elCounts.textContent = `${{state.findings.length}} findings / ${{state.selected.size}} fixes selected`;
+  elCounts.textContent =
+    `${{state.findings.length}} findings / ` +
+    `${{state.selected.size}} fixes selected / ` +
+    `${{state.selectedActions.size}} actions selected`;
 }}
 
 function enableButtons(enabled) {{
@@ -309,7 +342,8 @@ function matchesFilter(finding) {{
     finding.file,
     finding.message,
     ...finding.fixes.map(fx => fx.title),
-    ...finding.fixes.map(fx => fx.reason)
+    ...finding.fixes.map(fx => fx.reason),
+    "Suppress this warning"
   ].join(" ").toLowerCase();
 
   return hay.includes(q);
@@ -422,12 +456,10 @@ function buildHumanFixText(fx) {{
   if (!dslObj) return "";
 
   const lines = [];
-  const why = fx.reason || dslObj.because || "";
-
   const actions = Array.isArray(dslObj.actions) ? dslObj.actions : [];
+
   if (actions.length) {{
-    //lines.push("Proposed steps:");
-    actions.forEach((action, i) => {{
+    actions.forEach((action) => {{
       let step = describeAction(action);
       const extraNote = action?.comment ?? action?.reason ?? "";
       if (extraNote) {{
@@ -455,12 +487,10 @@ function render() {{
     left.innerHTML = `
       <div class="title">${{escapeHtml(f.title)}}</div>
       <div class="meta">
-      
         <span class="pill" title="Severity level of the finding">${{escapeHtml(f.severity)}}</span>
         <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
         <span class="pill" title="Finding ID (unique occurrence)">${{escapeHtml(f.id)}}</span>
         <span class="pill path" title="File and location">${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}</span>
-
       </div>
     `;
     topline.appendChild(left);
@@ -516,7 +546,7 @@ function render() {{
         if (humanText) {{
           const desc = document.createElement("div");
           desc.className = "desc";
-          desc.innerHTML = `${{escapeHtml(humanText)}}`;//<strong>Proposed solution:</strong>
+          desc.innerHTML = `${{escapeHtml(humanText)}}`;
           fixDiv.appendChild(desc);
         }}
 
@@ -535,7 +565,7 @@ function render() {{
 
           details.appendChild(summary);
           details.appendChild(pre);
-          //fixDiv.appendChild(details);
+          // fixDiv.appendChild(details);
         }}
 
         fixesWrap.appendChild(fixDiv);
@@ -544,6 +574,50 @@ function render() {{
 
     card.appendChild(fixesWrap);
     elList.appendChild(card);
+     const actionsWrap = document.createElement("div");
+    actionsWrap.className = "actions";
+
+    const ignoreDiv = document.createElement("div");
+    ignoreDiv.className = "action";
+
+    const ignoreKey = actionKey(f, "ignore_finding");
+    const ignoreChecked = state.selectedActions.has(ignoreKey);
+
+    const ignoreLabel = document.createElement("label");
+    ignoreLabel.innerHTML = `
+      <input type="checkbox" ${{ignoreChecked ? "checked" : ""}} />
+      <div>
+        <div class="action-title">Suppress this warning</div>
+        <div class="action-reason">
+          Use only if the code is intentional.   
+          
+        </div>
+      </div>
+    `;
+
+    const ignoreCb = ignoreLabel.querySelector("input");
+    ignoreCb.addEventListener("change", (e) => {{
+      if (e.target.checked) {{
+        state.selectedActions.set(ignoreKey, {{
+          type: "ignore_finding",
+          finding: f
+        }});
+      }} else {{
+        state.selectedActions.delete(ignoreKey);
+      }}
+      updateCounts();
+    }});
+
+    ignoreDiv.appendChild(ignoreLabel);
+
+    const ignoreDesc = document.createElement("div");
+    ignoreDesc.className = "desc";
+    ignoreDesc.textContent =
+      `Will insert an ignore marker for ${{f.rule_id}} at ${{f.file}}${{formatLines(f.start_line, f.end_line)}}.`;
+    ignoreDiv.appendChild(ignoreDesc);
+
+    actionsWrap.appendChild(ignoreDiv);
+    card.appendChild(actionsWrap);
   }});
 
   elStatus.textContent = state.raw ? "Loaded" : "No data";
@@ -554,6 +628,7 @@ function applyJson(json, source) {{
   state.raw = json;
   state.findings = normalisePlan(json);
   state.selected.clear();
+  state.selectedActions.clear();
   elSourceHint.textContent = source ?? "JSON";
   enableButtons(true);
   render();
@@ -619,6 +694,7 @@ function downloadBlob(filename, blob) {{
 
 async function exportSelected() {{
   const grouped = {{}};
+  const selectedActions = [];
 
   for (const [, v] of state.selected.entries()) {{
     const f = v.finding;
@@ -649,10 +725,28 @@ async function exportSelected() {{
     }});
   }}
 
+  for (const [, v] of state.selectedActions.entries()) {{
+    const f = v.finding;
+    selectedActions.push({{
+      type: "ignore_finding",
+      finding_id: f.id,
+      rule_id: f.rule_id,
+      title: f.title,
+      severity: f.severity,
+      file: f.file,
+      start_line: f.start_line,
+      end_line: f.end_line,
+      message: f.message,
+      anchor: f.anchor ?? null
+    }});
+  }}
+
   const out = {{
     generated_at: new Date().toISOString(),
-    selected_count: state.selected.size,
-    findings: Object.values(grouped)
+    selected_fix_count: state.selected.size,
+    selected_action_count: state.selectedActions.size,
+    findings: Object.values(grouped),
+    selected_actions: selectedActions
   }};
 
   const filename = "astanalyzer-selected.json";
@@ -700,6 +794,7 @@ btnSelectAll.addEventListener("click", () => {{
 
 btnClear.addEventListener("click", () => {{
   state.selected.clear();
+  state.selectedActions.clear();
   updateCounts();
   render();
 }});
