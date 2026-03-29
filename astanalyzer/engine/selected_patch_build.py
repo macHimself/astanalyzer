@@ -5,6 +5,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from dataclasses import dataclass
 
 from colorama import init
 
@@ -13,7 +14,7 @@ from ..fixer import FixProposal, fix
 from ..ignore_rules import is_ignored_for_node
 from ..rule import Rule
 
-from .project_loader import ModuleNode, get_list_of_files_in_project, load_project
+from .project_loader import ModuleNode, ProjectNode, get_list_of_files_in_project, load_project
 from .patch_writer import (
     present_foundings_suggestions,
     create_diff,
@@ -250,6 +251,18 @@ def _emit_selected_actions_for_match(
     return patch_counter
 
 
+@dataclass
+class SelectedPatchLookup:
+    selected_anchor_ids: set[str]
+    fallback_keys: set[tuple]
+    selected_action_anchor_ids: set[str]
+    selected_action_fallback_keys: set[tuple]
+    selected_fix_indexes_by_anchor_id: dict[str, set[int]]
+    selected_fix_indexes_by_fallback: dict[tuple, set[int]]
+    selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]]
+    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]]
+
+
 def _get_selected_findings(selected_data: dict[str, Any]) -> list[dict[str, Any]]:
     findings = selected_data.get("findings", [])
     if not isinstance(findings, list):
@@ -328,27 +341,32 @@ def _load_patch_build_project(scan_root: Path) -> ProjectNode | None:
     return project
 
 
-def _build_selected_lookup_sets(
+def _build_selected_patch_lookup(
+    *,
     findings: list[dict[str, Any]],
     selected_actions: list[dict[str, Any]],
-) -> tuple[set[str], set[tuple], set[str], set[tuple]]:
+    selected_fix_indexes_by_anchor_id: dict[str, set[int]],
+    selected_fix_indexes_by_fallback: dict[tuple, set[int]],
+    selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]],
+    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]],
+) -> SelectedPatchLookup:
     selected_anchor_ids: set[str] = set()
     fallback_keys: set[tuple] = set()
     selected_action_anchor_ids: set[str] = set()
     selected_action_fallback_keys: set[tuple] = set()
 
-    for f in findings:
-        anchor = f.get("anchor") or {}
+    for finding in findings:
+        anchor = finding.get("anchor") or {}
         anchor_id = anchor.get("anchor_id")
 
         if anchor_id:
             selected_anchor_ids.add(anchor_id)
 
         fallback = (
-            f.get("file"),
-            f.get("rule_id"),
-            anchor.get("line", f.get("start_line")),
-            anchor.get("end_line", f.get("end_line")),
+            finding.get("file"),
+            finding.get("rule_id"),
+            anchor.get("line", finding.get("start_line")),
+            anchor.get("end_line", finding.get("end_line")),
             anchor.get("col"),
             anchor.get("symbol_path"),
         )
@@ -375,11 +393,15 @@ def _build_selected_lookup_sets(
 
         log.debug("Selected action anchor: id=%s fallback=%s", anchor_id, fallback)
 
-    return (
-        selected_anchor_ids,
-        fallback_keys,
-        selected_action_anchor_ids,
-        selected_action_fallback_keys,
+    return SelectedPatchLookup(
+        selected_anchor_ids=selected_anchor_ids,
+        fallback_keys=fallback_keys,
+        selected_action_anchor_ids=selected_action_anchor_ids,
+        selected_action_fallback_keys=selected_action_fallback_keys,
+        selected_fix_indexes_by_anchor_id=selected_fix_indexes_by_anchor_id,
+        selected_fix_indexes_by_fallback=selected_fix_indexes_by_fallback,
+        selected_actions_by_anchor_id=selected_actions_by_anchor_id,
+        selected_actions_by_fallback=selected_actions_by_fallback,
     )
 
 
@@ -387,14 +409,7 @@ def _resolve_selected_match(
     *,
     anchor_id: str,
     fallback: tuple,
-    selected_anchor_ids: set[str],
-    fallback_keys: set[tuple],
-    selected_action_anchor_ids: set[str],
-    selected_action_fallback_keys: set[tuple],
-    selected_fix_indexes_by_anchor_id: dict[str, set[int]],
-    selected_fix_indexes_by_fallback: dict[tuple, set[int]],
-    selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]],
-    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]],
+    lookup: SelectedPatchLookup,
 ) -> tuple[bool, bool, set[int] | None, list[dict[str, Any]]]:
     selected_indexes_for_match = None
     actions_for_match: list[dict[str, Any]] = []
@@ -402,23 +417,23 @@ def _resolve_selected_match(
     matched_selected_fix = False
     matched_selected_action = False
 
-    if anchor_id in selected_anchor_ids:
+    if anchor_id in lookup.selected_anchor_ids:
         log.debug("Anchor matched selected fix by ID")
         matched_selected_fix = True
-        selected_indexes_for_match = selected_fix_indexes_by_anchor_id.get(anchor_id)
-    elif fallback in fallback_keys:
+        selected_indexes_for_match = lookup.selected_fix_indexes_by_anchor_id.get(anchor_id)
+    elif fallback in lookup.fallback_keys:
         log.debug("Anchor matched selected fix by fallback")
         matched_selected_fix = True
-        selected_indexes_for_match = selected_fix_indexes_by_fallback.get(fallback)
+        selected_indexes_for_match = lookup.selected_fix_indexes_by_fallback.get(fallback)
 
-    if anchor_id in selected_action_anchor_ids:
+    if anchor_id in lookup.selected_action_anchor_ids:
         log.debug("Anchor matched selected action by ID")
         matched_selected_action = True
-        actions_for_match = selected_actions_by_anchor_id.get(anchor_id, [])
-    elif fallback in selected_action_fallback_keys:
+        actions_for_match = lookup.selected_actions_by_anchor_id.get(anchor_id, [])
+    elif fallback in lookup.selected_action_fallback_keys:
         log.debug("Anchor matched selected action by fallback")
         matched_selected_action = True
-        actions_for_match = selected_actions_by_fallback.get(fallback, [])
+        actions_for_match = lookup.selected_actions_by_fallback.get(fallback, [])
 
     return (
         matched_selected_fix,
@@ -438,14 +453,7 @@ def _process_selected_match(
     patch_run_dir: Path | None,
     patch_counter: int,
     rel_file: str,
-    selected_anchor_ids: set[str],
-    fallback_keys: set[tuple],
-    selected_action_anchor_ids: set[str],
-    selected_action_fallback_keys: set[tuple],
-    selected_fix_indexes_by_anchor_id: dict[str, set[int]],
-    selected_fix_indexes_by_fallback: dict[tuple, set[int]],
-    selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]],
-    selected_actions_by_fallback: dict[tuple, list[dict[str, Any]]],
+    lookup: SelectedPatchLookup,
 ) -> int:
     rid = getattr(rule, "id", None) or rule.__class__.__name__
     match = match_result.node
@@ -486,14 +494,7 @@ def _process_selected_match(
         _resolve_selected_match(
             anchor_id=anchor.anchor_id,
             fallback=fallback,
-            selected_anchor_ids=selected_anchor_ids,
-            fallback_keys=fallback_keys,
-            selected_action_anchor_ids=selected_action_anchor_ids,
-            selected_action_fallback_keys=selected_action_fallback_keys,
-            selected_fix_indexes_by_anchor_id=selected_fix_indexes_by_anchor_id,
-            selected_fix_indexes_by_fallback=selected_fix_indexes_by_fallback,
-            selected_actions_by_anchor_id=selected_actions_by_anchor_id,
-            selected_actions_by_fallback=selected_actions_by_fallback,
+            lookup=lookup,
         )
     )
 
@@ -506,8 +507,8 @@ def _process_selected_match(
         getattr(match, "end_lineno", None),
         getattr(match, "col_offset", None),
         fallback,
-        anchor.anchor_id in selected_anchor_ids,
-        fallback in fallback_keys,
+        anchor.anchor_id in lookup.selected_anchor_ids,
+        fallback in lookup.fallback_keys,
     )
 
     if not matched_selected_fix and not matched_selected_action:
@@ -583,6 +584,7 @@ def build_patches_from_selected_json(
     selected_actions_by_anchor_id, selected_actions_by_fallback = _selected_actions(
         selected_data
     )
+
     log.debug("PATCH BUILD START")
 
     findings = _get_selected_findings(selected_data)
@@ -611,14 +613,16 @@ def build_patches_from_selected_json(
     log.debug("Rule index size: %d", len(rule_index))
     log.debug("Patch output directory: %s", patch_run_dir)
 
-    (
-        selected_anchor_ids,
-        fallback_keys,
-        selected_action_anchor_ids,
-        selected_action_fallback_keys,
-    ) = _build_selected_lookup_sets(findings, selected_actions)
+    lookup = _build_selected_patch_lookup(
+        findings=findings,
+        selected_actions=selected_actions,
+        selected_fix_indexes_by_anchor_id=selected_fix_indexes_by_anchor_id,
+        selected_fix_indexes_by_fallback=selected_fix_indexes_by_fallback,
+        selected_actions_by_anchor_id=selected_actions_by_anchor_id,
+        selected_actions_by_fallback=selected_actions_by_fallback,
+    )
 
-    log.debug("Anchor IDs loaded: %d", len(selected_anchor_ids))
+    log.debug("Anchor IDs loaded: %d", len(lookup.selected_anchor_ids))
 
     patch_counter = 0
 
@@ -661,14 +665,7 @@ def build_patches_from_selected_json(
                     patch_run_dir=patch_run_dir,
                     patch_counter=patch_counter,
                     rel_file=rel_file,
-                    selected_anchor_ids=selected_anchor_ids,
-                    fallback_keys=fallback_keys,
-                    selected_action_anchor_ids=selected_action_anchor_ids,
-                    selected_action_fallback_keys=selected_action_fallback_keys,
-                    selected_fix_indexes_by_anchor_id=selected_fix_indexes_by_anchor_id,
-                    selected_fix_indexes_by_fallback=selected_fix_indexes_by_fallback,
-                    selected_actions_by_anchor_id=selected_actions_by_anchor_id,
-                    selected_actions_by_fallback=selected_actions_by_fallback,
+                    lookup=lookup,
                 )
 
     log.info("PATCH BUILD FINISHED patches=%d", patch_counter)
