@@ -5,13 +5,14 @@ from pathlib import Path
 import pytest
 from astroid import parse
 
-from astanalyzer.engine import (
+from astanalyzer.engine.project_loader import (
     ModuleNode,
     ProjectNode,
     attach_tree_metadata,
     load_project,
-    run_rules_on_project_report,
 )
+
+from astanalyzer.engine.scan_runtime import run_rules_on_project_report
 
 import astanalyzer.rules
 
