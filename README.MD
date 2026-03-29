@@ -93,6 +93,26 @@ scan_report.json, report.html (interactive UI for selecting fixes)
 
 Open `report.html`, select desired fixes, and export the selection.
 
+#### Report UI features
+
+The generated HTML report is a standalone static page. It does not require a backend server and can be opened directly in a browser.
+
+Each finding card shows:
+- finding title
+- severity
+- rule ID
+- finding ID
+- file path and line range
+- message/description
+- available fix proposals
+- optional suppression action
+
+The page also provides:
+- text filtering
+- bulk selection
+- clearing current selection
+- exporting the chosen fixes into a JSON plan for later patch generation
+
 ### Generate patches
 ```bash
 astanalyzer patch
