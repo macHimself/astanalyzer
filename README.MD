@@ -657,6 +657,17 @@ def f():
 
 ---
 
+### DEAD-003 – Unused assignment (keep value)
+**Severity:** warning  
+
+```python
+def f():
+    x = print("hello")
+    return 1
+```
+
+---
+
 ## CX – Complexity Rules
 
 ### CX-001 – TooManyArguments
