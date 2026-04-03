@@ -1,5 +1,12 @@
 """
-AST helpers for matcher internals.
+Internal AST helper utilities used by the matcher DSL.
+
+This module provides low-level helper functions for traversing AST nodes,
+resolving attributes, inspecting calls and assignments, working with sibling
+relationships, and evaluating matcher-specific structural conditions.
+
+The helpers in this module are primarily intended for internal matcher
+implementation and rule evaluation rather than direct public use.
 """
 
 from __future__ import annotations
@@ -11,11 +18,30 @@ from astroid import nodes as anodes
 from .tools import _iter_compare_pairs
 
 
+# ===== Traversal helpers =====
 def children_of(node) -> list[Any]:
+    """Return direct child nodes of an AST node, or an empty list if unavailable."""
     return list(getattr(node, "get_children", lambda: [])())
 
 
 def walk(matcher, root, max_depth: int | None = None):
+    """
+    Traverse an AST subtree in depth-first order.
+
+    The function yields pairs of `(node, depth)` starting from the given root.
+    It supports both a single root node and a list or tuple of root nodes.
+    Already visited objects are skipped to avoid repeated traversal.
+
+    Args:
+        matcher: Matcher instance requesting the traversal. Included for
+            interface consistency with other matcher helpers.
+        root: Root AST node or sequence of nodes to traverse.
+        max_depth (int | None): Optional maximum traversal depth. If provided,
+            descendants deeper than this limit are not visited.
+
+    Yields:
+        tuple[Any, int]: Traversed node and its depth relative to the root.
+    """
     if root is None:
         return
 
@@ -48,12 +74,19 @@ def walk(matcher, root, max_depth: int | None = None):
 
 
 def get_descendants(matcher, node, depth):
+    """
+    Return descendant nodes up to the given depth.
+
+    The root node itself is excluded from the result.
+    """
     if depth <= 0:
         return []
     return [n for n, d in walk(matcher, node, max_depth=depth) if d > 0]
 
 
+# ===== Parent / sibling helpers =====
 def siblings_after(node):
+    """Return sibling nodes that appear after the given node in the parent body."""
     parent = getattr(node, "parent", None)
     body = getattr(parent, "body", None)
     if not isinstance(body, list):
@@ -66,6 +99,7 @@ def siblings_after(node):
 
 
 def siblings(node):
+    """Return the parent body list containing the given node, if available."""
     parent = getattr(node, "parent", None)
     body = getattr(parent, "body", None)
     if not isinstance(body, list):
@@ -73,7 +107,8 @@ def siblings(node):
     return body
 
 
-def next_sibling(node):
+def next_sibling(node: Any) -> Any | None:
+    """Return the next sibling of the given node, or None if there is none."""
     body = siblings(node)
     if not body:
         return None
@@ -85,6 +120,7 @@ def next_sibling(node):
 
 
 def previous_sibling(node):
+    """Return the previous sibling of the given node, or None if there is none."""
     body = siblings(node)
     if not body:
         return None
@@ -96,6 +132,7 @@ def previous_sibling(node):
 
 
 def later_in_block(node):
+    """Return all sibling nodes that appear later in the same parent block."""
     body = siblings(node)
     if not body:
         return []
@@ -106,7 +143,13 @@ def later_in_block(node):
     return body[idx + 1:]
 
 
-def split_types(t) -> set[str]:
+# ===== Type selector helpers =====
+def split_types(t: Any) -> set[str]:
+    """
+    Find the nearest parent whose class name matches the requested type selector.
+
+    If `parent_type` is None, the direct parent is returned.
+    """
     if isinstance(t, str) and "|" in t:
         return {x.strip() for x in t.split("|") if x.strip()}
     if isinstance(t, str):
@@ -114,11 +157,28 @@ def split_types(t) -> set[str]:
     return set()
 
 
-def find_parent(node):
+def find_parent(node: Any) -> Any | None:
+    """Return the direct parent of a node, or None if not available."""
     return getattr(node, "parent", None)
 
 
 def find_parent_of_type(node, parent_type: str | None):
+    """
+    Find the nearest parent node matching the given type selector.
+
+    If `parent_type` is provided, the function walks up the parent chain
+    and returns the first ancestor whose class name matches the selector.
+    The selector may contain multiple types separated by '|'.
+
+    If `parent_type` is None, the direct parent is returned.
+
+    Args:
+        node: AST node to start from.
+        parent_type (str | None): Type selector (e.g. "If|For") or None.
+
+    Returns:
+        The matching parent node, or None if no match is found.
+    """
     if parent_type is None:
         return getattr(node, "parent", None)
 
@@ -134,10 +194,33 @@ def find_parent_of_type(node, parent_type: str | None):
 
 
 def has_parent_type(node, parent_type) -> bool:
+    """
+    Extract a docstring from a node using several compatible access strategies.
+
+    Supports astroid-style doc nodes, direct `doc` attributes, and the
+    standard library `ast.get_docstring` fallback.
+    """
     return find_parent_of_type(node, parent_type) is not None
 
 
+# ===== Attribute resolution helpers =====
 def get_doc(n):
+    """
+    Extract a docstring from a node using multiple compatible strategies.
+
+    The function attempts to retrieve a docstring in the following order:
+    1. astroid-specific `doc_node.value`
+    2. direct `doc` attribute
+    3. standard library `ast.get_docstring`
+
+    Returns None if no docstring is available or extraction fails.
+
+    Args:
+        n: AST node (astroid or standard AST).
+
+    Returns:
+        str | None: Extracted docstring or None.
+    """
     doc_node = getattr(n, "doc_node", None)
     if doc_node is not None:
         value = getattr(doc_node, "value", None)
@@ -158,6 +241,12 @@ def get_doc(n):
 
 
 def attr_from(obj, part):
+    """
+    Resolve one step of a dotted matcher attribute path.
+
+    Supports special handling for docstrings, numeric list indexes,
+    and regular object attributes.
+    """
     if obj is None:
         return None
     if part == "doc":
@@ -169,6 +258,12 @@ def attr_from(obj, part):
 
 
 def get_attr(node, dotted):
+    """
+    Resolve a dotted matcher attribute path from a node.
+
+    Double underscores are treated as path separators. If the final value
+    is an astroid Name node, its identifier is returned instead of the node.
+    """
     cur = node
     for part in dotted.replace("__", ".").split("."):
         cur = attr_from(cur, part)
@@ -180,6 +275,13 @@ def get_attr(node, dotted):
 
 
 def resolve_arg_value(matcher, node, attr):
+    """
+    Resolve a synthetic matcher attribute targeting a call argument.
+
+    This helper interprets attributes such as '__arg_0_name__' or
+    '__arg_1_func__' and extracts the requested value from the corresponding
+    positional argument of a call-like node.
+    """
     try:
         _, _, rest = attr.partition("__arg_")
         index_str, _, kind_part = rest.partition("_")
@@ -201,7 +303,13 @@ def resolve_arg_value(matcher, node, attr):
     return get_attr(arg, kind)
 
 
+# ===== Call inspection helpers =====
 def get_call_name(node):
+    """
+    Return the simple function name of a call node.
+
+    For example, returns 'print' for `print(x)` and 'append' for `obj.append(x)`.
+    """
     if node.__class__.__name__ != "Call":
         return None
 
@@ -223,6 +331,12 @@ def get_call_name(node):
 
 
 def get_call_qual(node):
+    """
+    Return the qualified function path of a call node, if available.
+
+    For example, returns 'os.path.join' for `os.path.join(...)`.
+    Simple calls such as `print(...)` return their direct name.
+    """
     if node.__class__.__name__ != "Call":
         return None
 
@@ -259,7 +373,13 @@ def get_call_qual(node):
     return ".".join(reversed(parts))
 
 
+# ===== Literal and structural query helpers =====
 def is_string_literal(value, *, non_empty: bool = True) -> bool:
+    """
+    Return True if the value represents a string or bytes literal node.
+
+    Optionally requires the literal to be non-empty after stripping.
+    """
     if value is None:
         return False
 
@@ -275,6 +395,7 @@ def is_string_literal(value, *, non_empty: bool = True) -> bool:
 
 
 def contains_type(matcher, root, type_in: str, *, max_depth: int | None = None) -> bool:
+    """Return True if the subtree contains any node matching the given type selector."""
     allowed = split_types(type_in)
     for n, _depth in walk(matcher, root, max_depth=max_depth):
         if n.__class__.__name__ in allowed:
@@ -283,6 +404,7 @@ def contains_type(matcher, root, type_in: str, *, max_depth: int | None = None) 
 
 
 def contains_name(matcher, root, name: str) -> bool:
+    """Return True if the subtree contains a name node with the given identifier."""
     if not name:
         return False
     for n, _ in walk(matcher, root):
@@ -294,6 +416,7 @@ def contains_name(matcher, root, name: str) -> bool:
 
 
 def contains_call_name(matcher, root, names) -> bool:
+    """Return True if the subtree contains a call whose simple name matches one of the given names."""
     names = set(names)
     for n, _ in walk(matcher, root):
         if n.__class__.__name__ == "Call":
@@ -304,6 +427,7 @@ def contains_call_name(matcher, root, names) -> bool:
 
 
 def iter_function_defaults(fn):
+    """Return all non-None positional and keyword default values of a function node."""
     args = getattr(fn, "args", None)
     if not args:
         return []
@@ -312,7 +436,13 @@ def iter_function_defaults(fn):
     return [d for d in (defaults + kw_defaults) if d is not None]
 
 
+# ===== Assignment analysis helpers =====
 def get_constant_target_name(node) -> str | None:
+    """
+    Return the assigned target name for simple constant-like assignments.
+
+    Supports Assign and AnnAssign nodes and returns the first target name when available.
+    """
     cname = node.__class__.__name__
     if cname == "Assign":
         targets = getattr(node, "targets", []) or []
@@ -331,6 +461,11 @@ def get_constant_target_name(node) -> str | None:
 
 
 def get_assign_target_name(node) -> str | None:
+    """
+    Return a readable target name for an assignment node.
+
+    Supports simple variable assignments as well as attribute assignmentsc such as `obj.attr`.
+    """
     cname = node.__class__.__name__
 
     if cname == "Assign":
@@ -362,6 +497,7 @@ def get_assign_target_name(node) -> str | None:
 
 
 def node_reads_name(matcher, root, name: str) -> bool:
+    """Return True if the subtree reads the given identifier via a Name node."""
     for n, _ in walk(matcher, root):
         if n.__class__.__name__ == "Name":
             ident = getattr(n, "name", None) or getattr(n, "id", None)
@@ -371,6 +507,12 @@ def node_reads_name(matcher, root, name: str) -> bool:
 
 
 def find_previous_overwritten_assign(matcher, node):
+    """
+    Find an earlier assignment to the same target that is overwritten without being used.
+
+    The search is limited to the same parent block. If the assigned name is read
+    between the previous assignment and the current one, no match is returned.
+    """
     if node.__class__.__name__ != "Assign":
         return None
 
@@ -406,10 +548,12 @@ def find_previous_overwritten_assign(matcher, node):
 
 
 def is_overwritten_without_use(matcher, node) -> bool:
+    """Return True if the assignment overwrites an earlier unused assignment in the same block."""
     return find_previous_overwritten_assign(matcher, node) is not None
 
 
 def except_bound_name(node) -> str | None:
+    """Return the bound exception variable name from an ExceptHandler node, if present."""
     if node.__class__.__name__ != "ExceptHandler":
         return None
 
@@ -424,6 +568,13 @@ def except_bound_name(node) -> str | None:
 
 
 def test_reason(matcher, node) -> str | None:
+    """
+    Explain why an If or While condition appears trivially truthy.
+
+    Returns a human-readable reason for simple tautological conditions,
+    such as literal truthy values, redundant boolean expressions,
+    or self-comparisons like `x == x`.
+    """
     ntype = node.__class__.__name__
     if ntype not in ("If", "While"):
         return None
@@ -480,7 +631,14 @@ def test_reason(matcher, node) -> str | None:
     return None
 
 
+# ===== Value extraction helpers =====
 def node_value(n):
+    """
+    Extract a comparable value representation from a node or literal.
+
+    This helper normalizes constants, names, attributes, and primitive values
+    into a simpler form for matcher comparisons.
+    """
     if n is None:
         return None
 
@@ -501,6 +659,12 @@ def node_value(n):
 
 
 def collect_used_names(matcher, tree):
+    """
+    Collect identifier-like names used within a subtree.
+
+    Includes variable names, accessed attribute names, and callable names
+    referenced by call nodes.
+    """
     used = set()
     for n, _ in walk(matcher, tree):
         if isinstance(n, anodes.Name):
@@ -515,6 +679,12 @@ def collect_used_names(matcher, tree):
 
 
 def value_of(obj):
+    """
+    Extract a simplified value from common astroid node types.
+
+    Supports constants, names, attributes, and legacy value-like attributes
+    such as `value`, `n`, and `s`.
+    """
     if obj is None:
         return None
     if isinstance(obj, anodes.Const):

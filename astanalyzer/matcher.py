@@ -74,25 +74,19 @@ log = logging.getLogger(__name__)
 
 
 class Matcher:
-    """Chainable matcher for astroid nodes.
+    """
+    Chainable matcher for astroid nodes.
 
-    A matcher represents a set of constraints that an AST node must satisfy.
-    Constraints may target:
+    A matcher represents a declarative set of constraints that an AST node
+    must satisfy. Constraints may target node type, attributes, parent
+    relationships, descendants, sibling order, or custom predicates.
 
-    - node type
-    - attributes
-    - parent relationships
-    - descendants
-    - sibling order
-    - custom predicates
-
-    Matchers are designed to be composed fluently:
+    Matchers are designed to be composed fluently, for example:
 
         match("If").where("test", ...).with_descendant(match("Call"))
 
-    The matcher API is intended for rule authors who want to describe static
-    analysis patterns declaratively instead of implementing traversal logic
-    manually.
+    The API is intended for rule authors who want to describe static analysis
+    patterns declaratively instead of implementing traversal logic manually.
     """
 
     def __init__(self, node_type: NodeSelectorInput):
@@ -119,9 +113,7 @@ class Matcher:
         self.scope_rules: list[dict[str, Any]] = []
         self.sequence_rules: list[dict[str, Any]] = []
 
-    # ------------------------------------------------------------------
-    # DSL / builder API
-    # ------------------------------------------------------------------
+    # ===== DSL / builder API =====
 
     def and_(self, other_matcher: "Matcher") -> "Matcher":
         self.and_matcher = other_matcher
@@ -148,6 +140,11 @@ class Matcher:
         return self
 
     def max_depth(self, n: int = 1) -> "Matcher":
+        """
+        Require the matcher to find a matching descendant within the given depth.
+
+        This is primarily used to limit nested child matching depth.
+        """
         nested = Matcher(self.expected_type)
         nested.depth = n
         self.max_depth_limit = n
@@ -155,10 +152,18 @@ class Matcher:
         return self
 
     def capture(self, name: str, path: str | None = None) -> "Matcher":
+        """
+        Capture the current node or one of its attributes into the match context.
+
+        Captured values can later be referenced by name in other matcher conditions.
+        """
         self.captures.append((name, path))
         return self
 
     def capture_parent(self, name: str, parent_type: str | None = None) -> "Matcher":
+        """
+        Capture the direct parent or nearest matching parent into the match context.
+        """
         self.conditions.append(
             {
                 "__capture_parent__": {
@@ -349,6 +354,12 @@ class Matcher:
         return self
 
     def where_compare(self, *, op_in=None, any_side_value=object()) -> "Matcher":
+        """
+        Add a comparison-wide condition for Compare nodes.
+
+        Supports filtering by operator type and by whether any comparison side
+        matches a specific value.
+        """
         self.conditions.append(
             {
                 "__cmp__": {
@@ -360,6 +371,11 @@ class Matcher:
         return self
 
     def where_compare_pairwise(self, *, op_in, any_side_value) -> "Matcher":
+        """
+        Add a stricter pairwise comparison condition for Compare nodes.
+
+        All relevant comparison pairs must satisfy the requested operator and value rule.
+        """
         self.conditions.append(
             {
                 "__cmp_pair__": {
@@ -377,6 +393,9 @@ class Matcher:
         in_: str | None = None,
         max_depth: int | None = None,
     ) -> "Matcher":
+        """
+        Require the node or one of its sub-attributes to contain a node of the given type.
+        """
         self.conditions.append(
             {
                 "__contains__": {
@@ -427,9 +446,7 @@ class Matcher:
     def same_iter_as_ancestor(self, ancestor_name: str) -> "Matcher":
         return self.where_same_text("iter", ref(f"{ancestor_name}.iter"))
 
-    # ------------------------------------------------------------------
-    # DSL sugar
-    # ------------------------------------------------------------------
+    # ===== DSL sugar =====
 
     def line_too_long(self, max_len: int = 100) -> "Matcher":
         return self.where("__custom_condition__", lambda node: has_long_lines(node, max_len))
@@ -500,11 +517,10 @@ class Matcher:
     def unnecessary_copy(self) -> "Matcher":
         return self.where("__custom_condition__", self._is_unnecessary_copy_call)
 
-    # ------------------------------------------------------------------
-    # Public execution API
-    # ------------------------------------------------------------------
+    # ===== Public execution API =====
 
     def matches(self, node: nodes.NodeNG) -> bool:
+        """Return True if the node satisfies this matcher."""
         return self.evaluate(node, {})
 
     def find_matches(self, tree):
@@ -522,9 +538,15 @@ class Matcher:
         return matches
 
     def evaluate(self, node, context: dict[str, Any] | None = None) -> bool:
+        """Evaluate this matcher against a node using an optional match context."""
         return self.match_result(node, context) is not None
 
     def match_result(self, node, context: dict[str, Any] | None = None) -> MatchResult | None:
+        """
+        Evaluate this matcher and return a structured match result on success.
+
+        The returned result contains the matched node and captured references.
+        """
         local_ctx = {} if context is None else dict(context)
 
         result = self._evaluate_core(node, local_ctx)
@@ -537,9 +559,7 @@ class Matcher:
         refs = {k: v for k, v in local_ctx.items() if k not in {"module", "project"}}
         return MatchResult(node=node, refs=refs)
 
-    # ------------------------------------------------------------------
-    # Core matching
-    # ------------------------------------------------------------------
+    # ===== Core matching =====
 
     def _evaluate_core(self, node, context: dict[str, Any]) -> bool:
         local_result = (
@@ -681,9 +701,7 @@ class Matcher:
 
         return True
 
-    # ------------------------------------------------------------------
-    # Delegates: condition logic
-    # ------------------------------------------------------------------
+    # ===== Delegates: condition logic =====
 
     def _evaluate_condition(self, node, attr, expected, context: dict[str, Any]) -> bool:
         return evaluate_condition(self, node, attr, expected, context)
@@ -703,9 +721,7 @@ class Matcher:
     def _expr_text(self, value: Any) -> str | None:
         return expr_text(value)
 
-    # ------------------------------------------------------------------
-    # Delegates: AST helpers
-    # ------------------------------------------------------------------
+    # ===== Delegates: AST helpers =====
 
     def _children_of(self, node) -> list[Any]:
         return children_of(node)
@@ -767,9 +783,7 @@ class Matcher:
     def _collect_used_names(self, tree):
         return collect_used_names(self, tree)
 
-    # ------------------------------------------------------------------
-    # Local helpers still kept here
-    # ------------------------------------------------------------------
+    # ===== Local helpers still kept here =====
 
     def _is_unnecessary_copy_call(self, node) -> bool:
         return is_unnecessary_copy_call(self, node)
@@ -784,14 +798,13 @@ class Matcher:
 
 
 def match(node_type: NodeSelectorInput) -> Matcher:
-    """Create a matcher for the given node selector.
+    """
+    Create a matcher for the given node selector.
 
-    Args:
-        node_type: Selector describing accepted AST node types. This may be
-            a node class, a string such as ``"If"``, or a union such as
-            ``"If|For|While"``.
+    The selector may be a node class, a string such as `"If"`,
+    or a union such as `"If|For|While"`.
 
     Returns:
-        A new ``Matcher`` instance.
+        Matcher: A new matcher instance.
     """
     return Matcher(node_type)

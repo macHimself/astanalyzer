@@ -1,5 +1,14 @@
 """
 Condition evaluation helpers for matcher internals.
+
+This module implements the internal evaluation logic used by the matcher DSL.
+It resolves references captured during matching, evaluates regular and special
+matcher conditions, and provides specialised checks for structural patterns
+such as parent relationships, comparisons, assignments, exception bindings,
+default arguments, and mutable defaults.
+
+The helpers in this module are intended for internal matcher execution rather
+than direct public use.
 """
 
 from __future__ import annotations
@@ -29,7 +38,18 @@ from .matcher_types import Ref
 from .tools import _iter_compare_pairs, _is_none_const
 
 
+# ===== Reference and value normalization helpers =====
 def resolve_ref(matcher, value: Any, context: dict[str, Any]) -> Any:
+    """
+    Resolve a matcher reference against the current captured context.
+
+    If `value` is a `Ref`, the referenced object is looked up in the
+    match context. Dotted references such as `ref("x.name")` are resolved
+    by first loading the captured base object and then reading the nested
+    attribute path.
+
+    Non-reference values are returned unchanged.
+    """
     if not isinstance(value, Ref):
         return value
 
@@ -46,6 +66,13 @@ def resolve_ref(matcher, value: Any, context: dict[str, Any]) -> Any:
 
 
 def expr_text(value: Any) -> str | None:
+    """
+    Convert an expression-like object into a normalized text representation.
+
+    Supports plain strings, AST nodes exposing `as_string()`, identifier-like
+    nodes, and attribute-like nodes. Returns None only when no meaningful text
+    representation can be produced.
+    """
     if value is None:
         return None
 
@@ -73,6 +100,18 @@ def expr_text(value: Any) -> str | None:
 
 
 def compare(matcher, actual, expected, node, context: dict[str, Any] | None = None) -> bool:
+    """
+    Compare an actual value against an expected matcher condition.
+
+    The expected value may be:
+    - a captured reference (`Ref`)
+    - a predicate object
+    - a collection of allowed values
+    - special string sentinels such as 'any' or 'none'
+    - a plain value compared using equality
+
+    Returns True when the condition is satisfied.
+    """
     context = {} if context is None else context
     expected = resolve_ref(matcher, expected, context)
 
@@ -94,7 +133,15 @@ def compare(matcher, actual, expected, node, context: dict[str, Any] | None = No
     return actual == expected
 
 
+# ===== Condition evaluation entry points =====
 def evaluate_condition(matcher, node, attr, expected, context: dict[str, Any]) -> bool:
+    """
+    Evaluate a matcher condition against a node attribute or special condition.
+
+    Regular attributes are resolved using `get_attr`. Attributes starting
+    with '__' are treated as special matcher conditions and delegated to
+    `evaluate_special_condition`.
+    """
     if attr.startswith("__"):
         return evaluate_special_condition(matcher, node, attr, expected, context)
 
@@ -103,6 +150,13 @@ def evaluate_condition(matcher, node, attr, expected, context: dict[str, Any]) -
 
 
 def evaluate_special_condition(matcher, node, attr, expected, context: dict[str, Any]) -> bool:
+    """
+    Evaluate a matcher-specific special condition.
+
+    Special conditions are internal matcher attributes such as `__cmp__`,
+    `__contains__`, `__has_parent__`, or synthetic call and argument helpers.
+    The evaluation is delegated to registered handler functions.
+    """
     handlers = special_handlers(matcher)
 
     if attr in handlers:
@@ -122,6 +176,13 @@ def evaluate_special_condition(matcher, node, attr, expected, context: dict[str,
 
 
 def special_handlers(matcher):
+    """
+    Return the registry of special matcher condition handlers.
+
+    The returned mapping connects internal matcher attribute names
+    (for example `__cmp__` or `__exists__`) to the corresponding
+    condition evaluation functions.
+    """
     return {
         "__has_parent__": lambda n, e, c: check_has_parent(matcher, n, e, c),
         "__missing_parent__": lambda n, e, c: check_missing_parent(matcher, n, e, c),
@@ -152,7 +213,9 @@ def special_handlers(matcher):
     }
 
 
+# ===== Generic attribute and relationship checks =====
 def check_len(matcher, node, expected, context) -> bool:
+    """Check whether the length of a resolved attribute matches the expected value."""
     value = get_attr(node, expected["attr"])
     try:
         return len(value) == expected["expected"]
@@ -161,6 +224,7 @@ def check_len(matcher, node, expected, context) -> bool:
 
 
 def check_node_type(matcher, node, expected, context) -> bool:
+    """Check whether a resolved attribute has one of the expected node types."""
     value = get_attr(node, expected["attr"])
     if value is None:
         return False
@@ -169,6 +233,7 @@ def check_node_type(matcher, node, expected, context) -> bool:
 
 
 def check_capture_parent(matcher, node, expected, context) -> bool:
+    """Capture the direct or typed parent of the node into the match context."""
     parent_type = expected.get("type")
     parent = find_parent_of_type(node, parent_type) if parent_type else find_parent(node)
     if parent is None:
@@ -178,6 +243,7 @@ def check_capture_parent(matcher, node, expected, context) -> bool:
 
 
 def check_capture_ancestor(matcher, node, expected, context) -> bool:
+    """Capture the nearest matching ancestor into the match context."""
     ancestor = find_parent_of_type(node, expected["type"])
     if ancestor is None:
         return False
@@ -186,32 +252,38 @@ def check_capture_ancestor(matcher, node, expected, context) -> bool:
 
 
 def check_same(matcher, node, expected, context) -> bool:
+    """Check whether a node attribute equals a previously captured reference value."""
     left_value = get_attr(node, expected["left"])
     right_value = resolve_ref(matcher, expected["right"], context)
     return left_value == right_value
 
 
 def check_not_same(matcher, node, expected, context) -> bool:
+    """Check whether a node attribute differs from a previously captured reference value."""
     left_value = get_attr(node, expected["left"])
     right_value = resolve_ref(matcher, expected["right"], context)
     return left_value != right_value
 
 
 def check_same_text(matcher, node, expected, context) -> bool:
+    """Compare two values by their normalized text representation."""
     left_value = get_attr(node, expected["left"])
     right_value = resolve_ref(matcher, expected["right"], context)
     return expr_text(left_value) == expr_text(right_value)
 
 
 def check_has_parent(matcher, node, expected, context) -> bool:
+    """Compare two values by their normalized text representation."""
     return matcher._has_parent_type(node, expected)
 
 
 def check_missing_parent(matcher, node, expected, context) -> bool:
+    """Check whether the node does not have a parent matching the given type selector."""
     return not matcher._has_parent_type(node, expected)
 
 
 def check_custom_condition(matcher, node, expected, context) -> bool:
+    """Evaluate a user-supplied custom condition safely."""
     try:
         return bool(expected(node))
     except Exception:
@@ -219,21 +291,26 @@ def check_custom_condition(matcher, node, expected, context) -> bool:
 
 
 def check_exists(matcher, node, expected, context) -> bool:
+    """Check whether the requested attribute exists on the node."""
     return get_attr(node, expected) is not None
 
 
 def check_missing_attr(matcher, node, expected, context) -> bool:
+    """Check whether the requested attribute is missing on the node."""
     return get_attr(node, expected) is None
 
 
 def check_regex(matcher, node, expected, context) -> bool:
+    """Check whether the string form of an attribute matches a regular expression."""
     value = get_attr(node, expected["attr"])
     if value is None:
         return False
     return re.search(expected["pattern"], str(value)) is not None
 
 
+# ===== Structural and semantic matcher checks =====
 def check_target_contains_any(matcher, node, expected, context) -> bool:
+    """Check whether an assignment target name contains any of the expected substrings."""
     target = get_assign_target_name(node)
     if not target:
         return False
@@ -242,11 +319,13 @@ def check_target_contains_any(matcher, node, expected, context) -> bool:
 
 
 def check_value_is_string_literal(matcher, node, expected, context) -> bool:
+    """Check whether the node value is a string literal, optionally requiring it to be non-empty."""
     value = getattr(node, "value", None)
     return is_string_literal(value, non_empty=bool(expected))
 
 
 def check_test_reason(matcher, node, expected, context) -> bool:
+    """Check whether a condition produces the expected tautology reason."""
     reason = test_reason(matcher, node)
     if expected == "any":
         return reason is not None
@@ -256,6 +335,12 @@ def check_test_reason(matcher, node, expected, context) -> bool:
 
 
 def check_compare(matcher, node, expected, context) -> bool:
+    """
+    Check whether a comparison node satisfies a comparison-wide condition.
+
+    Supports filtering by operator type and by whether any side of any
+    comparison pair matches a specific normalized value.
+    """
     if node.__class__.__name__ != "Compare":
         return False
 
@@ -282,6 +367,12 @@ def check_compare(matcher, node, expected, context) -> bool:
 
 
 def check_compare_pairwise(matcher, node, expected, context) -> bool:
+    """
+    Check whether every relevant comparison pair satisfies the expected condition.
+
+    This is stricter than `check_compare`: once a relevant comparison pair is
+    encountered, all such pairs must match the expected operator and value rule.
+    """
     if node.__class__.__name__ != "Compare":
         return False
 
@@ -309,6 +400,7 @@ def check_compare_pairwise(matcher, node, expected, context) -> bool:
 
 
 def check_contains(matcher, node, expected, context) -> bool:
+    """Check whether a node or one of its sub-attributes contains a node of the requested type."""
     start = node
     if expected.get("in"):
         start = get_attr(node, expected["in"])
@@ -316,6 +408,7 @@ def check_contains(matcher, node, expected, context) -> bool:
 
 
 def check_assign_target_name(matcher, node, expected, context) -> bool:
+    """Check the normalized target name of an assignment node."""
     tname = get_assign_target_name(node)
     if expected == "any":
         return bool(tname)
@@ -325,6 +418,12 @@ def check_assign_target_name(matcher, node, expected, context) -> bool:
 
 
 def check_overwritten_without_use(matcher, node, expected, context) -> bool:
+    """
+    Check whether the assignment overwrites an earlier unused assignment.
+
+    When successful, the previous assignment is captured into the context
+    as `previous_assign`.
+    """
     previous_assign = find_previous_overwritten_assign(matcher, node)
     if previous_assign is None:
         return False
@@ -333,6 +432,11 @@ def check_overwritten_without_use(matcher, node, expected, context) -> bool:
 
 
 def check_except_binds_name(matcher, node, expected, context) -> bool:
+    """
+    Check whether an exception handler binds a name and capture it.
+
+    The captured name is stored in the match context as `except_name`.
+    """
     name = except_bound_name(node)
     if not name:
         return False
@@ -343,6 +447,7 @@ def check_except_binds_name(matcher, node, expected, context) -> bool:
 
 
 def check_body_missing_name(matcher, node, expected, context) -> bool:
+    """Check whether the handler body does not reference the bound exception name."""
     if node.__class__.__name__ != "ExceptHandler":
         return False
 
@@ -355,18 +460,27 @@ def check_body_missing_name(matcher, node, expected, context) -> bool:
 
 
 def check_defaults_contain_type(matcher, node, expected, context) -> bool:
+    """Check whether any function default value contains a node of the given type."""
     if node.__class__.__name__ != "FunctionDef":
         return False
     return any(contains_type(matcher, d, expected) for d in iter_function_defaults(node))
 
 
 def check_defaults_contain_call(matcher, node, expected, context) -> bool:
+    """Check whether any function default value contains a call with one of the given names."""
     if node.__class__.__name__ != "FunctionDef":
         return False
     return any(contains_call_name(matcher, d, expected) for d in iter_function_defaults(node))
 
 
+# ===== Mutable default argument helpers =====
 def mutable_default_factory(matcher, node) -> str | None:
+    """
+    Return a readable factory-like representation for a mutable default value.
+
+    Recognizes list, dict, set, and simple constructor call forms such as
+    `list()`, `dict()`, and `set()`.
+    """
     if node is None:
         return None
 
@@ -394,6 +508,13 @@ def mutable_default_factory(matcher, node) -> str | None:
 
 
 def check_mutable_default_argument(matcher, node, expected, context) -> bool:
+    """
+    Detect a mutable default argument in a function definition.
+
+    When a mutable default is found, the function captures related metadata
+    such as the argument name, default expression, default node, and argument kind
+    into the match context.
+    """
     if node.__class__.__name__ != "FunctionDef":
         return False
 
@@ -432,7 +553,15 @@ def check_mutable_default_argument(matcher, node, expected, context) -> bool:
     return False
 
 
+# ===== Copy-pattern helpers =====
 def is_unnecessary_copy_call(matcher, node) -> bool:
+    """
+    Return True if the call appears to create a redundant copy.
+
+    Detects cases such as wrapping a collection literal or repeating the same
+    collection constructor, for example `list([...])`, `set({...})`,
+    or `list(list(x))`.
+    """
     if node.__class__.__name__ != "Call":
         return False
 
