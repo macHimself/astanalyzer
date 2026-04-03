@@ -91,20 +91,6 @@ def resolve_node_selector(sel: NodeSelectorInput) -> Set[NodeCls]:
             dom, member = s.split(":", 1)
             dom = dom.strip()
             member = member.strip()
-
-            # domains = {
-            #     "loop": K.loop,
-            #     "assignment": K.assignment,
-            #     "scope": K.scope,
-            #     "import": K.import_,
-            #     "terminator": K.terminator,
-            #     "expr": K.expr,
-            #     "collection": K.collection,
-            #     "comprehension": K.comprehension,
-            #     "control_flow": K.control_flow,
-            #     "pattern": K.pattern,
-            # }
-            # d = domains.get(dom)
             d = DOMAIN_SELECTORS.get(dom)
             if d is None:
                 log.debug("Unknown domain selector: %r", dom)
@@ -118,22 +104,8 @@ def resolve_node_selector(sel: NodeSelectorInput) -> Set[NodeCls]:
             return {cls}
 
         # 4.2) Domain whole syntax: "loop" -> K.loop (volitelné, ale fajn pro kompatibilitu)
-        # domains_whole = {
-        #     "loop": K.loop,
-        #     "assignment": K.assignment,
-        #     "scope": K.scope,
-        #     "import": K.import_,
-        #     "terminator": K.terminator,
-        #     "expr": K.expr,
-        #     "collection": K.collection,
-        #     "comprehension": K.comprehension,
-        #     "control_flow": K.control_flow,
-        #     "pattern": K.pattern,
-        # }
         if s in DOMAIN_SELECTORS:
             return set(DOMAIN_SELECTORS[s].resolve())
-        #if s in domains_whole:
-        #    return set(domains_whole[s].resolve())
 
         # 4.3) Concrete class name: "If", "For", "FunctionDef", ...
         cls = getattr(nodes, s, None)
