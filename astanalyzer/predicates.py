@@ -4,16 +4,19 @@ Predicate DSL used by Matcher.where(...).
 This module defines reusable predicate objects that can be passed as
 `expected` values to Matcher.where(...) conditions.
 
+Predicates encapsulate reusable comparison logic and allow expressive,
+composable conditions in matcher definitions.
+
 Each Predicate implements:
 
     __call__(actual, node) -> bool
 
 Where:
-    actual: The resolved attribute value from the matched node
-    node:   The full AST/astroid node currently being evaluated
+    actual: value resolved from the node attribute
+    node:   the full AST/astroid node being evaluated
 
 Predicates must be side-effect free and exception-safe.
-Any exception during evaluation should result in False.
+Any exception during evaluation must result in False.
 """
 
 import re
@@ -23,17 +26,25 @@ log = logging.getLogger(__name__)
 
 
 class Predicate:
-    """Base class for attribute comparison predicates.
+    """
+    Predicate DSL used by Matcher.where(...).
 
-    Subclasses must implement:
+    This module defines reusable predicate objects that can be passed as
+    `expected` values to Matcher.where(...) conditions.
+
+    Predicates encapsulate reusable comparison logic and allow expressive,
+    composable conditions in matcher definitions.
+
+    Each Predicate implements:
 
         __call__(actual, node) -> bool
 
     Where:
-        actual: value extracted from node via Matcher._get_attr(...)
-        node:   full node object (astroid or ast)
+        actual: value resolved from the node attribute
+        node:   the full AST/astroid node being evaluated
 
-    Predicates may ignore `node` if not needed.
+    Predicates must be side-effect free and exception-safe.
+    Any exception during evaluation must result in False.
     """
 
     def __call__(self, actual, node):
@@ -45,25 +56,28 @@ class Predicate:
 
 
 class ANY(Predicate):
-    """Predicate that always returns True.
+    """
+    Predicate that always returns True.
 
     Useful as a wildcard in Matcher.where(...).
+
+    Example:
+        where("name", ANY())
     """
+
 
     def __call__(self, actual, node):
         return True
 
 
 class EXISTS(Predicate):
-    """True if attribute exists and is not empty (when sized).
+    """"
+    True if attribute exists and is non-empty when sized.
 
     Semantics:
         - actual is not None
-        - if object has __len__, then len(actual) must be > 0
-        - otherwise any non-None object is accepted
-
-    Notes:
-        This does not trim strings (see NONEMPTY for stricter behaviour).
+        - if object defines __len__, then len(actual) > 0
+        - otherwise any non-None value is accepted
     """
 
     def __call__(self, actual, node):
@@ -73,16 +87,17 @@ class EXISTS(Predicate):
 
 
 class NONEMPTY(Predicate):
-    """True if attribute is non-empty.
+    """
+    True if attribute is non-empty.
+
+    Example:
+        where("name", NONEMPTY())
 
     Semantics:
         - None -> False
         - str -> True if stripped string is non-empty
         - collections -> True if len(...) > 0
-        - other objects -> True unless len(...) raises
-
-    Notes:
-        More strict than EXISTS for strings.
+        - other objects -> True unless length check fails
     """
 
     def __call__(self, actual, node):
@@ -97,10 +112,11 @@ class NONEMPTY(Predicate):
 
 
 class REGEX(Predicate):
-    """True if string attribute matches given regular expression.
+    """
+    True if string attribute matches a regular expression.
 
-    Args:
-        pattern: Regular expression pattern (compiled with re.compile).
+    Example:
+        where("name", REGEX(r"^test_"))
 
     Semantics:
         - actual must be str
@@ -116,14 +132,15 @@ class REGEX(Predicate):
 
 
 class IN_(Predicate):
-    """True if attribute value is in a given collection.
+    """
+    True if attribute value is in a given collection.
 
-    Args:
-        values: Iterable of allowed values (converted to set internally).
+    Example:
+        where("name", IN_(["foo", "bar"]))
 
     Semantics:
         - actual in values
-        - False if actual is not hashable or not present
+        - returns False if actual is not present
     """
 
     def __init__(self, values):
@@ -134,18 +151,19 @@ class IN_(Predicate):
 
 
 class OP(Predicate):
-    """Generic comparison predicate.
+    """
+    Generic comparison predicate.
 
     Example:
-        OP('>', 10)
-        OP('==', 'foo')
+        OP(">", 10)
+        OP("==", "foo")
 
     Supported operators:
         '==', '!=', '>', '>=', '<', '<='
 
     Semantics:
-        - Attempts comparison between `actual` and `self.value`
-        - Returns False on any exception (TypeError, KeyError, etc.)
+        - compares actual with provided value
+        - returns False if comparison raises an exception
     """
 
     def __init__(self, op: str, value):
@@ -167,14 +185,15 @@ class OP(Predicate):
 
 
 class TYPE(Predicate):
-    """True if attribute is an AST/astroid node of given class name.
+    """
+    True if attribute is an AST/astroid node of given type.
 
-    Args:
-        typename: Class name string (e.g., "Name", "Call").
+    Example:
+        where("value", TYPE("Call"))
 
     Semantics:
-        - getattr(actual, "__class__").__name__ must equal typename
-        - Returns False if actual has no __class__
+        - compares class name of actual to expected type name
+        - returns False if actual has no class
     """
 
     def __init__(self, typename: str):
@@ -185,19 +204,16 @@ class TYPE(Predicate):
 
 
 class VAL_EQ(Predicate):
-    """Compare normalized value of AST node to expected literal.
+    """
+    Compare normalized value of AST node to expected literal.
 
-    This predicate uses Matcher._value_of(...) to extract a comparable
-    Python value from astroid/builtin AST nodes.
-
-    Examples:
+    Example:
         VAL_EQ(42)
         VAL_EQ("foo")
 
     Semantics:
-        - Extract normalized value via `_value_of(actual)`
-        - Compare equality to provided value
-        - Returns False on mismatch
+        - extracts comparable value from AST node
+        - compares equality with provided value
     """
 
     def __init__(self, value):
@@ -207,6 +223,36 @@ class VAL_EQ(Predicate):
         from .matcher import _value_of
         return _value_of(actual) == self.value
     
+
+class NOT(Predicate):
+    """
+    Negation predicate.
+
+    Wraps another predicate and inverts its result.
+
+    This allows composition of predicate logic inside Matcher.where(...)
+    without modifying the original predicate.
+
+    Example:
+        where("name", NOT(REGEX(r"^test_")))
+
+    Semantics:
+        - Returns the logical negation of the wrapped predicate
+        - Returns False if the wrapped predicate raises an exception
+
+    Args:
+        pred (Predicate): Predicate to negate.
+    """
+    def __init__(self, pred: Predicate):
+        self.pred = pred
+
+    def __call__(self, actual, node):
+        try:
+            return not self.pred(actual, node)
+        except Exception as e:
+            log.debug("Predicate NOT failed: %s", e)
+            return False        
+
 
 def arg_count_gt(
     limit: int,
@@ -218,31 +264,19 @@ def arg_count_gt(
     include_kwarg: bool = False,
 ):
     """
-    Build a safe predicate that matches function-like nodes whose argument count
-    is greater than `limit`.
+    Build a predicate that matches functions with more than `limit` arguments.
 
-    Designed for astroid nodes (FunctionDef/Lambda), but written defensively:
-    missing attributes result in False rather than exceptions.
+    Example:
+        where("__custom_condition__", arg_count_gt(3))
 
-    Parameters
-    ----------
-    limit:
-        The threshold; predicate returns True if arg_count > limit.
-    include_posonly:
-        Count positional-only args when available (py3.8+ style).
-    include_args:
-        Count regular positional args (node.args.args).
-    include_kwonly:
-        Count keyword-only args (node.args.kwonlyargs).
-    include_vararg:
-        Count vararg (*args) as 1 if present.
-    include_kwarg:
-        Count kwarg (**kwargs) as 1 if present.
+    Semantics:
+        - counts selected argument kinds on function-like nodes
+        - returns True if total count > limit
+        - returns False if node has no arguments or structure is missing
 
-    Returns
-    -------
-    Callable[[Any], bool]
-        A predicate suitable for `where("__custom_condition__", predicate)`.
+    Notes:
+        - supports fine-grained control over which argument types are counted
+        - safe for incomplete or non-function nodes (no exceptions raised)
     """
     def _predicate(node):
         args_obj = getattr(node, "args", None)
@@ -281,24 +315,25 @@ def arg_count_gt(
 
 def parent_depth_at_least(types, min_depth: int):
     """
-    Build a predicate that checks whether a node is nested inside
-    ancestors of given types at least `min_depth` times.
+    Build a predicate that matches nodes nested inside specific parent types.
 
-    Parameters
-    ----------
-    types : str | Iterable[str]
-        Node type name(s). Can be:
-          - single string: "If"
-          - pipe string: "If|For|While"
-          - iterable of strings: ("If", "For")
-    min_depth : int
-        Minimum required nesting depth.
+    Example:
+        where("__custom_condition__", parent_depth_at_least("If", 2))
+        where("__custom_condition__", parent_depth_at_least("If|For", 1))
 
-    Returns
-    -------
-    Callable[[Any], bool]
-        Predicate suitable for use with
-        where("__custom_condition__", ...).
+    Semantics:
+        - walks up the parent chain
+        - counts how many ancestors match given types
+        - returns True if depth >= min_depth
+
+    Args:
+        types:
+            Node type(s) to match. Can be:
+                - single string ("If")
+                - union string ("If|For|While")
+                - iterable of strings
+        min_depth:
+            Minimum required nesting depth
     """
     if isinstance(types, str):
         if "|" in types:
@@ -318,16 +353,3 @@ def parent_depth_at_least(types, min_depth: int):
         return depth >= min_depth
 
     return _predicate
-
-
-class NOT(Predicate):
-    def __init__(self, pred: Predicate):
-        self.pred = pred
-
-    def __call__(self, actual, node):
-        try:
-            return not self.pred(actual, node)
-        except Exception:
-            return False
-        
-
