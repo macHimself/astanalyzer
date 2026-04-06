@@ -1,3 +1,18 @@
+"""
+Patch building from selected scan results.
+
+This module rebuilds patch proposals from user-selected findings and actions
+stored in exported scan JSON. It resolves selected findings back to AST nodes,
+matches them against loaded rules, and emits patches only for the chosen fixes
+or actions.
+
+The workflow includes:
+- extracting selected fix indexes and actions from JSON
+- resolving files and project root
+- rebuilding the project AST
+- locating candidate nodes using anchors or fallback keys
+- generating selected fix patches and action-based patches
+"""
 from __future__ import annotations
 
 import logging
@@ -28,6 +43,12 @@ FallbackKey = tuple[str | None, str | None, int | None, int | None, int | None, 
 
 @dataclass
 class SelectedPatchLookup:
+    """
+    Lookup structure for resolving selected fixes and actions.
+
+    Stores anchor-based and fallback-based mappings used to decide whether
+    a matched node should produce a selected fix patch or selected action patch.
+    """
     selected_anchor_ids: set[str]
     fallback_keys: set[FallbackKey]
     selected_action_anchor_ids: set[str]
@@ -39,6 +60,9 @@ class SelectedPatchLookup:
 
 
 def _anchor_dict(item: dict[str, Any]) -> dict[str, Any]:
+    """
+    Return the embedded anchor dictionary from a selected item, or an empty dict.
+    """
     return item.get("anchor") or {}
 
 
@@ -51,12 +75,22 @@ def _fallback_key(
     col: int | None,
     symbol_path: str | None,
 ) -> FallbackKey:
+    """
+    Build a fallback lookup key for matching selected findings without a stable anchor.
+    """
     return (file_value, rule_id, line, end_line, col, symbol_path)
 
 
+# ===== Lookup extraction helpers =====
 def _selected_fix_indexes(
     selected_data: dict[str, Any],
 ) -> tuple[dict[str, set[int]], dict[FallbackKey, set[int]]]:
+    """
+    Extract selected fixer indexes grouped by anchor id and fallback key.
+
+    This allows patch generation to target only the fixers explicitly chosen
+    in the selected findings JSON.
+    """
     by_anchor_id: dict[str, set[int]] = defaultdict(set)
     by_fallback: dict[FallbackKey, set[int]] = defaultdict(set)
 
@@ -96,6 +130,11 @@ def _selected_fix_indexes(
 def _selected_actions(
     selected_data: dict[str, Any],
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[FallbackKey, list[dict[str, Any]]]]:
+    """
+    Extract selected action items grouped by anchor id and fallback key.
+
+    Actions represent non-standard patch operations such as suppressing a finding.
+    """
     by_anchor_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
     by_fallback: dict[FallbackKey, list[dict[str, Any]]] = defaultdict(list)
 
@@ -123,7 +162,9 @@ def _selected_actions(
     return by_anchor_id, by_fallback
 
 
+# ===== Ignore action helpers =====
 def _build_ignore_next_comment(rule_ids: list[str]) -> str:
+    """Build a normalized `ignore-next` comment for one or more rule identifiers."""
     seen = set()
     ordered: list[str] = []
 
@@ -141,6 +182,11 @@ def _build_ignore_next_comment(rule_ids: list[str]) -> str:
 
 
 def _parse_ignore_next_line_ordered(line: str) -> list[str] | None:
+    """
+    Parse an existing `astanalyzer: ignore-next` comment line into ordered rule ids.
+
+    Returns None if the line does not contain an ignore-next directive.
+    """
     stripped = line.strip()
 
     if "astanalyzer:" not in stripped:
@@ -163,6 +209,12 @@ def _parse_ignore_next_line_ordered(line: str) -> list[str] | None:
 
 
 def _merge_ignore_next_comment_line(line: str, rule_id: str) -> str | None:
+    """
+    Merge a rule id into an existing `ignore-next` directive line.
+
+    Returns the updated line, the original line if no change is needed,
+    or None if the line is not an ignore-next directive.
+    """
     ids = _parse_ignore_next_line_ordered(line)
     if ids is None:
         return None
@@ -179,6 +231,12 @@ def _merge_ignore_next_comment_line(line: str, rule_id: str) -> str | None:
 
 
 def _build_ignore_fix_proposal(match, rule_id: str) -> FixProposal | None:
+    """
+    Build a fix proposal that suppresses a finding using an `ignore-next` comment.
+
+    If a compatible ignore directive already exists on the previous line,
+    the rule id is merged into it. Otherwise, a new ignore comment is inserted.
+    """
     root = match.root()
     lines = list(getattr(root, "file_by_lines", []) or [])
     filename = str(getattr(root, "file", "unknown.py"))
@@ -227,6 +285,12 @@ def _emit_selected_actions_for_match(
     patch_counter: int,
     project_root: Path,
 ) -> int:
+    """
+    Emit patch proposals for selected non-fixer actions attached to a match.
+
+    Currently supports action-driven suppression via ignore comments.
+    Returns the updated patch counter.
+    """
     for action in actions_for_match:
         action_type = action.get("type")
 
@@ -253,7 +317,6 @@ def _emit_selected_actions_for_match(
             patch_run_dir=patch_run_dir,
             patch_index=patch_counter + 1,
             rule_id=f"{rule_id}-IGNORE",
-            rule_title=f"Ignore {rule_id}",
             project_root=project_root,
         )
 
@@ -263,7 +326,9 @@ def _emit_selected_actions_for_match(
     return patch_counter
 
 
+# ===== Selected file and project loading helpers =====
 def _get_selected_findings(selected_data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the selected findings list from JSON, validating its basic structure."""
     findings = selected_data.get("findings", [])
     if not isinstance(findings, list):
         raise ValueError("'findings' must be a list")
@@ -275,6 +340,9 @@ def _collect_selected_files(
     selected_actions: list[dict[str, Any]],
     base_dir: Path | None,
 ) -> list[Path]:
+    """
+    Collect unique file paths referenced by selected findings and actions.
+    """
     files: list[Path] = []
     seen: set[Path] = set()
 
@@ -298,6 +366,12 @@ def _collect_selected_files(
 
 
 def _derive_scan_root(files: list[Path]) -> Path | None:
+    """
+    Derive a common scan root from the selected file set.
+
+    For a single file, the parent directory is used. For multiple files,
+    the common filesystem path is used.
+    """
     if not files:
         return None
 
@@ -311,6 +385,11 @@ def _derive_scan_root(files: list[Path]) -> Path | None:
 
 
 def _normalize_final_newlines(paths: list[Path]) -> None:
+    """
+    Ensure all selected project files end with a trailing newline.
+
+    This helps stabilize diff generation and patch application.
+    """
     for p in paths:
         try:
             text = p.read_text(encoding="utf-8")
@@ -322,6 +401,9 @@ def _normalize_final_newlines(paths: list[Path]) -> None:
 
 
 def _load_patch_build_project(scan_root: Path) -> ProjectNode | None:
+    """
+    Load the project used for rebuilding selected patches from the derived scan root.
+    """
     all_project_files = [Path(p).resolve() for p in get_list_of_files_in_project(str(scan_root))]
     log.debug("Project files to load: %s", all_project_files)
 
@@ -336,6 +418,7 @@ def _load_patch_build_project(scan_root: Path) -> ProjectNode | None:
     return project
 
 
+# ===== Lookup resolution helpers =====
 def _build_selected_patch_lookup(
     *,
     findings: list[dict[str, Any]],
@@ -345,6 +428,9 @@ def _build_selected_patch_lookup(
     selected_actions_by_anchor_id: dict[str, list[dict[str, Any]]],
     selected_actions_by_fallback: dict[FallbackKey, list[dict[str, Any]]],
 ) -> SelectedPatchLookup:
+    """
+    Build the combined lookup structure used to resolve selected fixes and actions.
+    """
     selected_anchor_ids: set[str] = set()
     fallback_keys: set[FallbackKey] = set()
     selected_action_anchor_ids: set[str] = set()
@@ -404,6 +490,11 @@ def _resolve_selected_match(
     fallback: FallbackKey,
     lookup: SelectedPatchLookup,
 ) -> tuple[bool, bool, set[int] | None, list[dict[str, Any]]]:
+    """
+    Resolve whether a matched node corresponds to a selected fix and/or selected action.
+
+    Returns booleans for fix/action match, selected fixer indexes, and matching actions.
+    """
     selected_indexes_for_match = None
     actions_for_match: list[dict[str, Any]] = []
 
@@ -433,6 +524,7 @@ def _resolve_selected_match(
 
 
 def _module_by_rel_file(project: ProjectNode, rel_file: str) -> ModuleNode | None:
+    """Find a loaded project module by its report-relative file path."""
     for module in project.modules:
         if _relpath(Path(module.filename)) == rel_file:
             return module
@@ -440,12 +532,14 @@ def _module_by_rel_file(project: ProjectNode, rel_file: str) -> ModuleNode | Non
 
 
 def _rule_map_by_id(rules: list[Any]) -> dict[str, Any]:
+    """Build a lookup map from rule id to rule instance."""
     return {
         (getattr(rule, "id", None) or rule.__class__.__name__): rule
         for rule in rules
     }
 
 
+# ===== Candidate resolution helpers =====
 def _candidate_nodes_for_anchor(
     *,
     project: ProjectNode,
@@ -454,6 +548,11 @@ def _candidate_nodes_for_anchor(
     rule_id: str,
     anchor_data: dict[str, Any],
 ) -> list[Any]:
+    """
+    Find candidate AST nodes matching anchor metadata for a selected finding or action.
+
+    Matching may use node type, line range, column, symbol path, and anchor id.
+    """
     expected_type = anchor_data.get("node_type")
     expected_line = anchor_data.get("line")
     expected_end_line = anchor_data.get("end_line")
@@ -495,6 +594,9 @@ def _selected_target_items(
     findings: list[dict[str, Any]],
     selected_actions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    """
+    Combine selected findings and actions into a deduplicated processing list.
+    """
     items: list[dict[str, Any]] = []
     seen: set[Any] = set()
 
@@ -523,6 +625,7 @@ def _selected_target_items(
     return items
 
 
+# ===== Patch processing helpers =====
 def _process_candidate_node(
     *,
     rule,
@@ -535,6 +638,12 @@ def _process_candidate_node(
     rel_file: str,
     lookup: SelectedPatchLookup,
 ) -> int:
+    """
+    Process one candidate AST node against a rule and emit any selected patches.
+
+    Generates patches only for selected fixers and selected actions that match
+    the rebuilt anchor or fallback identity.
+    """
     rid = getattr(rule, "id", None) or rule.__class__.__name__
 
     matches = rule.match_node(
@@ -629,6 +738,9 @@ def _process_selected_target(
     patch_counter: int,
     lookup: SelectedPatchLookup,
 ) -> int:
+    """
+    Resolve a selected finding or action to candidate nodes and process them for patch generation.
+    """
     anchor = _anchor_dict(item)
     rel_file = item.get("file") or anchor.get("file")
     rule_id = item.get("rule_id")
@@ -679,10 +791,23 @@ def _process_selected_target(
     return patch_counter
 
 
+# ===== Public entry point =====
 def build_patches_from_selected_json(
     selected_data: dict[str, Any],
     base_dir: Path | None = None,
 ) -> tuple[Path | None, int]:
+    """
+    Rebuild patch files from selected findings and actions stored in scan JSON.
+
+    The function reloads the affected project, resolves selected findings back
+    to AST nodes using anchors or fallback keys, and generates patch files only
+    for explicitly selected fixers or actions.
+
+    Returns:
+        tuple[Path | None, int]:
+            - Patch output directory, or None if patch generation could not run
+            - Number of emitted patch files
+    """
     selected_fix_indexes_by_anchor_id, selected_fix_indexes_by_fallback = _selected_fix_indexes(
         selected_data
     )

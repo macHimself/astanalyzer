@@ -1,3 +1,19 @@
+"""
+Rule execution and reporting pipeline for project analysis.
+
+This module coordinates the main analysis workflow over a loaded project.
+It is responsible for:
+
+- indexing rules by node type
+- walking parsed AST nodes
+- evaluating matching rules
+- building findings and optional fix plans
+- generating patch outputs when fixes are enabled
+- producing aggregated analysis reports and scan JSON output
+
+The functions in this module form the bridge between parsed project data,
+rule evaluation, fix generation, and final reporting.
+"""
 from __future__ import annotations
 
 import logging
@@ -23,12 +39,14 @@ from .patch_writer import (
 )
 
 log = logging.getLogger(__name__)
-init(autoreset=True)
 
 
 def build_rule_index_by_node_type(rules):
     """
-    Build an index of rules keyed by AST node type names.
+    Build a lookup index mapping AST node type names to matching rules.
+
+    The index is populated from rule matchers and optional `node_type`
+    declarations to speed up rule dispatch during project traversal.
     """
     index = defaultdict(list)
 
@@ -61,6 +79,9 @@ def build_rule_index_by_node_type(rules):
 
 
 def debug_walk(project: ProjectNode, limit=10):
+    """
+    Log a short preview of traversed AST nodes for debugging purposes.
+    """
     for i, (module, node) in enumerate(project.walk_all_nodes()):
         if i >= limit:
             break
@@ -69,7 +90,12 @@ def debug_walk(project: ProjectNode, limit=10):
         log.debug("%s %s %s", module.filename, lineno, node_type)
 
 
-def profile_analysis2(enabled: bool = False):
+def profile_analysis(enabled: bool = False):
+    """
+    Return a decorator that measures and logs function execution time.
+
+    When disabled, the original function is returned unchanged.
+    """
     def decorator(fn):
         if not enabled:
             return fn
@@ -88,6 +114,12 @@ def profile_analysis2(enabled: bool = False):
 
 
 def prepare_rule_runtime(project: ProjectNode, build_fixes: bool):
+    """
+    Prepare shared runtime state for rule execution.
+
+    Returns loaded rules, rule index, resolved project root, and patch
+    output configuration used during analysis.
+    """
     rules = list(Rule.registry)
     rule_index = build_rule_index_by_node_type(rules)
 
@@ -102,13 +134,19 @@ def prepare_rule_runtime(project: ProjectNode, build_fixes: bool):
 
 
 def build_finding(rule, match, module: ModuleNode, project_root: Path | None = None) -> Finding:
+    """
+    Build a normalized finding object from a matched rule result.
+
+    The finding includes rule metadata, source location, message,
+    and a stable anchor used for later identification.
+    """
     rid = getattr(rule, "id", None) or rule.__class__.__name__
     cat = getattr(rule, "category", "uncategorized")
     sev = getattr(rule, "severity", "info")
     title = getattr(rule, "title", None) or rid
 
     file_str = (
-        _relpath(Path(module.filename), project_root)
+        _relpath(Path(module.filename))
         if project_root is not None
         else Path(module.filename).as_posix()
     )
@@ -141,6 +179,7 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
 
 
 def attach_fixers_to_finding(finding: Finding, rule) -> None:
+    """Attach rule-defined fixer builders to a finding as available fix options."""
     for fixer in getattr(rule, "fixer_builders", []) or []:
         finding.fixes.append(fixer)
 
@@ -157,6 +196,13 @@ def build_and_save_fixes(
     patch_counter: int,
     selected_fixer_indexes: set[int] | None = None,
 ) -> int:
+    """
+    Build fix proposals for a matched rule and emit patch files when applicable.
+
+    Only valid `FixProposal` objects are processed. Generated suggestions are
+    previewed, diffed, and optionally written as patch files. The updated patch
+    counter is returned.
+    """
     rid = getattr(rule, "id", rule.__class__.__name__)
     title = getattr(rule, "title", None) or rid
 
@@ -197,7 +243,6 @@ def build_and_save_fixes(
                     patch_run_dir=patch_run_dir,
                     patch_index=patch_counter + 1,
                     rule_id=rid,
-                    rule_title=title,
                     project_root=project_root,
                 )
 
@@ -222,6 +267,12 @@ def process_rule_matches(
     patch_run_dir: Path | None,
     patch_counter: int,
 ) -> tuple[List[Finding], int]:
+    """
+    Process all matches of a single rule on a single AST node.
+
+    Builds findings, skips ignored matches, optionally attaches fix plans,
+    and optionally generates patch files.
+    """
     findings: List[Finding] = []
 
     matches = rule.match_node(node, ctx={"module": module, "project": project})
@@ -272,6 +323,11 @@ def run_rules_on_project_one_pass(
     build_plans: bool = True,
     build_fixes: bool = False,
 ) -> List[Finding]:
+    """
+    Run all indexed rules over the project in a single AST traversal pass.
+
+    Returns the list of collected findings.
+    """
     findings: List[Finding] = []
 
     _, rule_index, project_root, patch_run_dir = prepare_rule_runtime(project, build_fixes)
@@ -301,12 +357,18 @@ def run_rules_on_project_one_pass(
     return findings
 
 
-@profile_analysis2(enabled=True)
+@profile_analysis(enabled=True)
 def run_rules_on_project_report(
     project: ProjectNode,
     build_plans=True,
     build_fixes=False,
 ) -> tuple[AnalysisReport, dict[str, Any]]:
+    """
+    Run project analysis and return both aggregated report data and scan JSON.
+
+    The report includes timing and line metrics, while the JSON output is
+    normalized for UI and export workflows.
+    """
     report = AnalysisReport()
     report.start()
 
@@ -331,6 +393,9 @@ def run_rules_on_project_report(
 
 
 def run_rules_on_project_scan_json(project: ProjectNode) -> Dict[str, Any]:
+    """
+    Run project analysis and return only normalized scan JSON output.
+    """
     findings = run_rules_on_project_one_pass(project, build_plans=True, build_fixes=False)
 
     project_root = getattr(project, "root_dir", None)

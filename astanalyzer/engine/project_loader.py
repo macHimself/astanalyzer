@@ -1,3 +1,13 @@
+"""
+Project loading and AST preparation utilities.
+
+This module is responsible for discovering Python source files, parsing them
+into astroid module trees, attaching source-related metadata, and collecting
+parse errors encountered during loading.
+
+It also defines lightweight project and module containers used by the analysis
+engine to iterate over parsed modules and traverse their AST nodes.
+"""
 from __future__ import annotations
 
 import logging
@@ -12,14 +22,14 @@ from astroid.exceptions import AstroidSyntaxError
 from colorama import init
 
 log = logging.getLogger(__name__)
-init(autoreset=True)
 
 
 def _syntax_loc(err):
     """
-    Extract line/column from SyntaxError or AstroidSyntaxError.
+    Extract line and column information from a parsing exception.
 
-    Astroid may hide the original syntax error inside ``__cause__``.
+    Astroid may wrap the original syntax-related exception inside `__cause__`,
+    so this helper attempts to read location data from the innermost error.
     """
     base = getattr(err, "__cause__", None) or err
     lineno = getattr(base, "lineno", None)
@@ -29,7 +39,10 @@ def _syntax_loc(err):
 
 def get_list_of_files_in_project(location: str) -> List[str]:
     """
-    Collect Python files from a single file path or recursively from a directory.
+    Collect Python source files from a file path or recursively from a directory.
+
+    Hidden and ignored directories such as `.git`, virtual environments,
+    build outputs, and cache directories are skipped.
     """
     skip_dirs = {".git", ".venv", "venv", "UPOL", "dist", "build", "__pycache__"}
     file_list: List[str] = []
@@ -52,7 +65,9 @@ def get_list_of_files_in_project(location: str) -> List[str]:
 
 def git_root(start: Path | None = None) -> Path:
     """
-    Find git root by walking up to the first directory containing ``.git``.
+    Resolve the nearest Git repository root by walking upwards from the start path.
+
+    If no `.git` directory is found, the current working directory is returned.
     """
     p = (start or Path.cwd()).resolve()
 
@@ -65,7 +80,9 @@ def git_root(start: Path | None = None) -> Path:
 
 class ModuleNode:
     """
-    Parsed Python module wrapper.
+    Lightweight wrapper around a parsed Python module.
+
+    Stores the original filename together with the parsed astroid module root.
     """
 
     def __init__(self, filename: str, ast_root: nodes.Module):
@@ -75,6 +92,12 @@ class ModuleNode:
 
 @dataclass(frozen=True)
 class ParseError:
+    """
+    Structured record describing a source file parsing failure.
+
+    Stores the affected file, human-readable error message, and optional
+    source location metadata.
+    """
     file: str
     message: str
     lineno: Optional[int] = None
@@ -84,7 +107,10 @@ class ParseError:
 
 class ProjectNode:
     """
-    Container for parsed project modules and AST traversal helpers.
+    Container for parsed project modules and parse errors.
+
+    Provides helper methods for storing successfully parsed modules,
+    recording parse failures, and traversing all nodes across the project.
     """
 
     def __init__(self):
@@ -93,6 +119,7 @@ class ProjectNode:
         self.parse_errors: List[ParseError] = []
 
     def add_module(self, module: ModuleNode) -> None:
+        """Add a parsed module to the project."""
         self.modules.append(module)
 
     def add_parse_error(self, filepath: str, message: str, lineno=None, col_offset=None):
@@ -106,6 +133,11 @@ class ProjectNode:
         )
 
     def walk_astroid_tree(self, node: nodes.NodeNG):
+        """
+        Yield a depth-first traversal of an astroid subtree.
+
+        Traversal stops silently if child access fails for a node.
+        """
         yield node
         try:
             children = node.get_children()
@@ -115,12 +147,18 @@ class ProjectNode:
             yield from self.walk_astroid_tree(child)
 
     def walk_all_nodes(self):
+        """
+        Yield `(module, node)` pairs for all parsed nodes in the project.
+        """
         for module in self.modules:
             root = module.ast_root
             for node in self.walk_astroid_tree(root):
                 yield module, node
 
     def walk_all_nodes_visual(self):
+        """
+        Log and yield visual summaries of all parsed nodes for debugging purposes.
+        """
         for module in self.modules:
             root = module.ast_root
             for node in self.walk_astroid_tree(root):
@@ -137,6 +175,12 @@ class ProjectNode:
 
 
 def resolve_project_root(project_files: List[str]) -> Path | None:
+    """
+    Infer the logical project root from the loaded file set.
+
+    For a single file or a file-based common path, the nearest Git root is used.
+    Otherwise, the common filesystem path of all project files is returned.
+    """
     if not project_files:
         return None
 
@@ -149,15 +193,23 @@ def resolve_project_root(project_files: List[str]) -> Path | None:
 
 
 def read_source_file(filepath: str) -> str:
+    """Read and return UTF-8 source code from a file."""
     with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
 
 
 def parse_source(filepath: str, code: str) -> nodes.Module:
+    """Parse source code into an astroid module tree."""
     return parse(code, module_name=str(filepath))
 
 
 def attach_tree_metadata(tree: nodes.Module, filepath: str, code: str) -> None:
+    """
+    Attach source-related metadata to a parsed astroid module tree.
+
+    Metadata includes the original file path, full source text, and
+    line-preserving source split used by later analysis and patch generation.
+    """
     tree.file = filepath
     tree.file_content = code
     tree.file_by_lines = code.splitlines(keepends=True)
@@ -169,6 +221,12 @@ def handle_parse_exception(
     code: str,
     exc: Exception,
 ) -> None:
+    """
+    Convert a parsing exception into a structured project parse error.
+
+    Logs a warning with optional source snippet and stores the error
+    on the project object.
+    """
     base = getattr(exc, "__cause__", None) or exc
     lineno, col = _syntax_loc(exc)
 
@@ -198,6 +256,9 @@ def handle_parse_exception(
 
 
 def load_single_module(filepath: str) -> ModuleNode:
+    """
+    Load, parse, and wrap a single Python source file as a ModuleNode.
+    """
     code = read_source_file(filepath)
     tree = parse_source(filepath, code)
     attach_tree_metadata(tree, filepath, code)
@@ -205,6 +266,14 @@ def load_single_module(filepath: str) -> ModuleNode:
 
 
 def load_project(project_files: List[str]) -> ProjectNode:
+    """
+    Load a project from a list of Python source files.
+
+    Each file is read, parsed into an astroid module tree, enriched with
+    source metadata, and stored in the returned project container.
+    Files that cannot be read or parsed are recorded as parse errors
+    instead of aborting the whole load process.
+    """
     project = ProjectNode()
     project.root_dir = resolve_project_root(project_files)
 
@@ -228,6 +297,11 @@ def load_project(project_files: List[str]) -> ProjectNode:
 
 
 def count_lines(path: Path) -> int:
+    """
+    Count lines in a text file.
+
+    Returns 0 if the file cannot be read.
+    """
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as f:
             return sum(1 for _ in f)

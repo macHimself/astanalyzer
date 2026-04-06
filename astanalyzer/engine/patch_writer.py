@@ -1,3 +1,15 @@
+"""
+Patch generation and diff presentation helpers.
+
+This module provides small utilities for:
+- creating patch output directories
+- writing generated patch files
+- formatting and logging fix previews
+- generating and colouring unified diffs
+- emitting patch files only when a fix changes the source
+
+These helpers are primarily used by the patch-building workflow and debugging output.
+"""
 from __future__ import annotations
 
 import logging
@@ -17,7 +29,10 @@ init(autoreset=True)
 
 def _slug(s: str, max_len: int = 60) -> str:
     """
-    Convert text to a filesystem-safe slug.
+    Convert text into a filesystem-safe slug.
+
+    Non-alphanumeric characters are replaced with hyphens and the result
+    is lowercased and truncated to the requested maximum length.
     """
     s = (s or "").strip().lower()
     s = re.sub(r"[^a-z0-9]+", "-", s)
@@ -27,7 +42,10 @@ def _slug(s: str, max_len: int = 60) -> str:
 
 def make_patch_run_dir(project_root: Path) -> Path:
     """
-    Create a directory for patch artefacts under ``.astanalyzer/patches``.
+    Create a timestamped directory for patch artifacts under `.astanalyzer/patches`.
+
+    The directory name includes the current timestamp and a slug derived
+    from the project root name.
     """
     base = project_root / ".astanalyzer" / "patches"
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -45,9 +63,11 @@ def write_patch(
     patch_text: str,
 ) -> Path:
     """
-    Write a patch next to the source file.
+    Write a generated patch file next to the affected source file.
 
-    ``patch_run_dir`` is currently ignored to preserve old behaviour.
+    The patch filename is derived from the source filename, rule identifier,
+    and patch index. The `patch_run_dir` parameter is currently ignored to
+    preserve backward-compatible patch placement.
     """
     source_path = Path(rel_file)
 
@@ -64,7 +84,10 @@ def write_patch(
 
 def present_foundings_suggestions(fix: FixProposal) -> None:
     """
-    Print a formatted debug preview of a proposed fix.
+    Log a formatted preview of a proposed fix when debug logging is enabled.
+
+    The preview includes suggested replacement lines and the human-readable
+    reason associated with the fix proposal.
     """
     if log.isEnabledFor(logging.DEBUG):
         lines = []
@@ -85,6 +108,11 @@ def present_foundings_suggestions(fix: FixProposal) -> None:
 
 
 def _format_colored_diff(diff_text: str) -> str:
+    """
+    Apply ANSI colours to unified diff text for terminal-friendly output.
+
+    Added lines are coloured green, removed lines red, and hunk headers cyan.
+    """
     lines: list[str] = []
 
     for line in diff_text.splitlines():
@@ -102,7 +130,9 @@ def _format_colored_diff(diff_text: str) -> str:
 
 def create_diff(fix: FixProposal) -> None:
     """
-    Generate unified diff text for a fix proposal and store it on the object.
+    Generate unified diff text for a fix proposal and attach it to the object.
+
+    The generated diff is also logged in colourized form at debug level.
     """
     diff_text = fix.get_diff()
     fix.diff = diff_text
@@ -115,6 +145,13 @@ def create_diff(fix: FixProposal) -> None:
     )
 
 def resolve_fix_line_range(fix, match) -> tuple[int, int]:
+    """
+    Resolve the effective start and end line range for a fix proposal.
+
+    Missing line information is filled from the matched node. For empty 
+    suggestions, multi-line ranges are collapsed to a single line 
+    when appropriate.
+    """
     sline = getattr(fix, "lineno", None)
     eline = getattr(fix, "end_lineno", None)
 
@@ -137,9 +174,18 @@ def emit_patch_if_changed(
     patch_run_dir: Path | None,
     patch_index: int,
     rule_id: str,
-    rule_title: str,
     project_root: Path,
 ) -> Path | None:
+    """
+    Write a patch file for a fix proposal only if it produces a real change.
+
+    The function skips patch emission when patch output is disabled, the object
+    is not a `FixProposal`, or the suggested text is identical to the original.
+    When a change exists, a unified diff is generated and written as a patch file.
+
+    Returns:
+        Path | None: Path to the written patch file, or None if no patch was emitted.
+    """
     if patch_run_dir is None:
         return None
 
@@ -149,11 +195,8 @@ def emit_patch_if_changed(
     if fix.suggestion == fix.original:
         return None
 
-    resolve_fix_line_range(fix, match)
-
     rel_file = _relpath(
-        Path(getattr(fix, "filename", module.filename)),
-        project_root,
+        Path(getattr(fix, "filename", module.filename))
     )
 
     return write_patch(

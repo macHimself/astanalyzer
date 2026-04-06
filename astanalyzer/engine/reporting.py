@@ -1,25 +1,30 @@
+"""
+Reporting models and serialization helpers for analysis results.
+
+This module defines lightweight data structures representing findings,
+rule evaluation results, and aggregated scan reports. It also provides
+helpers for converting fix builders into normalized report data and for
+serializing analysis output to text, JSON, and CSV formats.
+"""
 from __future__ import annotations
 
 import csv
 import io
 import json
-import logging
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from colorama import init
-
 from ..anchor import FindingAnchor
-
-log = logging.getLogger(__name__)
-init(autoreset=True)
 
 @dataclass
 class Finding:
     """
-    Represents a single rule finding detected during a project scan.
+    Structured representation of a single issue detected during analysis.
+
+    A finding describes where the issue was found, which rule produced it,
+    how severe it is, and which optional fixes or anchors are associated with it.
     """
 
     file: Path
@@ -37,7 +42,10 @@ class Finding:
 @dataclass
 class RuleResult:
     """
-    Minimal intermediate result of evaluating a single rule on a node.
+    Minimal intermediate result produced when a rule matches a node.
+
+    This lightweight structure is later converted into a full `Finding`
+    object for reporting.
     """
 
     rule_id: str
@@ -49,7 +57,11 @@ class RuleResult:
 @dataclass
 class AnalysisReport:
     """
-    Aggregates analysis metrics and findings for a single scan run.
+    Aggregated report for a single analysis run.
+
+    Tracks basic scan metrics such as analyzed files, lines of code,
+    elapsed time, and all findings collected during the run. The report
+    can be exported in text, JSON, and CSV forms.
     """
 
     files_analyzed: int = 0
@@ -59,23 +71,36 @@ class AnalysisReport:
     _t1: float = field(default=0.0, init=False, repr=False)
 
     def start(self) -> None:
+        """Start timing the analysis run."""
         self._t0 = time.perf_counter()
 
     def stop(self) -> None:
+        """Stop timing the analysis run."""
         self._t1 = time.perf_counter()
 
     @property
+    def is_running(self) -> bool:
+        return self._t1 == 0.0
+    
+    @property
     def elapsed(self) -> float:
-        return max(0.0, (self._t1 or time.time()) - self._t0)
+        if self._t0 == 0:
+            return 0.0
+
+        end = time.perf_counter() if self.is_running else self._t1
+        return max(0.0, end - self._t0)
 
     def add_file(self, path: Path, line_count: int) -> None:
+        """Record one analyzed file and its line count."""
         self.files_analyzed += 1
         self.lines_analyzed += line_count
 
     def add_findings(self, items: Iterable[Finding]) -> None:
+        """Append multiple findings to the report."""
         self.findings.extend(items)
 
     def to_text(self) -> str:
+        """Render the analysis report as a human-readable text summary."""
         by_cat: Dict[str, int] = {}
         for f in self.findings:
             by_cat[f.category] = by_cat.get(f.category, 0) + 1
@@ -104,6 +129,7 @@ class AnalysisReport:
         )
 
     def to_json(self, indent: int = 2) -> str:
+        """Serialize the analysis report to JSON."""
         return json.dumps(
             {
                 "files": self.files_analyzed,
@@ -134,6 +160,7 @@ class AnalysisReport:
         )
 
     def to_csv(self) -> str:
+        """Serialize findings to CSV format."""
         buf = io.StringIO()
         writer = csv.writer(buf)
         writer.writerow(["file", "line", "rule_id", "category", "message", "anchor_id"])
@@ -151,10 +178,14 @@ class AnalysisReport:
         return buf.getvalue()
 
     def save_csv(self, path: Path) -> None:
+        """Write the report CSV representation to a file."""
         path.write_text(self.to_csv(), encoding="utf-8")
 
 
 def convert_results(filename: str, results: Iterable[RuleResult]) -> List[Finding]:
+    """
+    Convert intermediate rule results for a file into full finding objects.
+    """
     p = Path(filename)
     out: List[Finding] = []
     for r in results:
@@ -172,7 +203,10 @@ def convert_results(filename: str, results: Iterable[RuleResult]) -> List[Findin
 
 def fixer_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
     """
-    Convert a fixer builder into a normalized fix dictionary for report JSON.
+    Convert a fixer-like object into a normalized fix dictionary.
+
+    Supports multiple fixer representations by probing common conversion
+    methods and attributes such as `to_dict()`, `dsl`, and `to_json()`.
     """
     dsl: Optional[Dict[str, Any]] = None
 
@@ -213,13 +247,16 @@ def fixer_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
 
 
 def plan_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
-    """
-    Backward-compatible alias for converting a plan/fixer to normalized JSON.
-    """
+    """Backward-compatible alias for `fixer_to_fix_dict`."""
     return fixer_to_fix_dict(fixer, fix_id=fix_id)
 
 
-def _relpath(p: Path, root: Path | None = None) -> str:
+def _relpath(p: Path) -> str:
+    """
+    Return a project-friendly relative path when possible.
+
+    Falls back to the original path representation if relative conversion fails.
+    """
     try:
         cwd = Path.cwd().resolve()
         return p.resolve().relative_to(cwd).as_posix()
@@ -228,6 +265,12 @@ def _relpath(p: Path, root: Path | None = None) -> str:
 
 
 def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, Any]:
+    """
+    Build normalized scan report JSON from collected findings.
+
+    Assigns stable report-local finding and fix identifiers and converts
+    associated fix builders into their serialized report representation.
+    """
     out: Dict[str, Any] = {"findings": []}
 
     f_counter = 0
@@ -254,7 +297,7 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
                 "rule_id": f.rule_id,
                 "title": f.title or f.rule_id,
                 "severity": f.severity,
-                "file": _relpath(f.file, project_root),
+                "file": _relpath(f.file),
                 "start_line": start_line,
                 "end_line": end_line,
                 "message": f.message or "",
