@@ -1,5 +1,5 @@
 from astanalyzer.matcher import match
-from astanalyzer.matcher_types import MatchResult
+from astanalyzer.matcher import MatchResult
 
 
 def test_matcher_matches_node_type(parse_code):

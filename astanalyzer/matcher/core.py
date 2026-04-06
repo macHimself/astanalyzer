@@ -25,7 +25,7 @@ from typing import Any
 
 from astroid import nodes
 
-from .matcher_ast import (
+from .ast import (
     children_of,
     collect_used_names,
     contains_type,
@@ -47,7 +47,7 @@ from .matcher_ast import (
     split_types,
     walk,
 )
-from .matcher_conditions import (
+from .conditions import (
     compare,
     evaluate_condition,
     evaluate_special_condition,
@@ -56,10 +56,10 @@ from .matcher_conditions import (
     resolve_ref,
     special_handlers,
 )
-from .matcher_types import MatchResult, Ref, ref
-from .node_selector import NodeSelectorInput, resolve_node_selector
-from .predicates import Predicate
-from .tools import (
+from .types import MatchResult, Ref, ref
+from ..node_selector import NodeSelectorInput, resolve_node_selector
+from ..predicates import Predicate
+from ..tools import (
     _is_none_const,
     _iter_compare_pairs,
     has_long_lines,
@@ -464,7 +464,7 @@ class Matcher:
         return self.where("__custom_condition__", is_unused_assign)
 
     def missing_blank_before(self) -> "Matcher":
-        from .tools import missing_blank_before_def
+        from ..tools import missing_blank_before_def
         return self.where("__custom_condition__", missing_blank_before_def)
 
     def missing_docstring(self) -> "Matcher":

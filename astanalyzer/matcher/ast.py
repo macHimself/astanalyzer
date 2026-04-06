@@ -15,7 +15,7 @@ import ast
 from typing import Any
 
 from astroid import nodes as anodes
-from .tools import _iter_compare_pairs
+from ..tools import _iter_compare_pairs
 
 
 # ===== Traversal helpers =====

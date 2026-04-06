@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .matcher_ast import (
+from .ast import (
     contains_call_name,
     contains_name,
     contains_type,
@@ -33,9 +33,9 @@ from .matcher_ast import (
     node_value,
     test_reason,
 )
-from .matcher_types import Ref
+from .types import Ref
 
-from .tools import _iter_compare_pairs, _is_none_const
+from ..tools import _iter_compare_pairs, _is_none_const
 
 
 # ===== Reference and value normalization helpers =====
@@ -115,7 +115,7 @@ def compare(matcher, actual, expected, node, context: dict[str, Any] | None = No
     context = {} if context is None else context
     expected = resolve_ref(matcher, expected, context)
 
-    from .predicates import Predicate
+    from ..predicates import Predicate
 
     if isinstance(expected, Predicate):
         return expected(actual, node)
