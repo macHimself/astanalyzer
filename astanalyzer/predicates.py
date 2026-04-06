@@ -81,9 +81,11 @@ class EXISTS(Predicate):
     """
 
     def __call__(self, actual, node):
-        return actual is not None and (
-            len(actual) if hasattr(actual, "__len__") else True
-        )
+        if actual is None:
+            return False
+        if hasattr(actual, "__len__"):
+            return len(actual) > 0
+        return True
 
 
 class NONEMPTY(Predicate):
@@ -206,23 +208,23 @@ class TYPE(Predicate):
 class VAL_EQ(Predicate):
     """
     Compare normalized value of AST node to expected literal.
-
-    Example:
-        VAL_EQ(42)
-        VAL_EQ("foo")
-
-    Semantics:
-        - extracts comparable value from AST node
-        - compares equality with provided value
     """
 
     def __init__(self, value):
         self.value = value
 
     def __call__(self, actual, node):
-        from .matcher import _value_of
-        return _value_of(actual) == self.value
-    
+        try:
+            if actual is None:
+                normalized = None
+            elif hasattr(actual, "value"):
+                normalized = actual.value
+            else:
+                normalized = actual
+            return normalized == self.value
+        except Exception:
+            return False
+        
 
 class NOT(Predicate):
     """
