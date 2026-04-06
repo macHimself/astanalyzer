@@ -1,3 +1,25 @@
+"""
+Dynamic loading of user-defined rule modules.
+
+This module provides utilities for importing external Python files
+containing custom analysis rules into the astanalyzer runtime.
+
+Rules are imported dynamically using importlib to ensure that:
+- each file is loaded as a unique module
+- name collisions are avoided
+- modules can be loaded from arbitrary filesystem locations
+
+Supported inputs:
+- a single .py file
+- a directory (recursively scanned for .py files)
+
+Imported modules are executed on load, allowing them to register rules
+via side effects (e.g. class registration, decorators, metaclasses).
+
+Notes:
+- Files starting with '_' are ignored when scanning directories.
+- Each imported file is assigned a unique module name based on its path.
+"""
 from __future__ import annotations
 
 import importlib.util
@@ -6,6 +28,16 @@ from pathlib import Path
 
 
 def _import_python_file(file_path: Path) -> None:
+    """
+    Import a Python file as a uniquely named module.
+
+    The module name is generated from the file name and its absolute path
+    to avoid collisions when importing multiple user rule files.
+
+    Side Effects:
+        - Executes the module code
+        - Registers it in sys.modules
+    """
     module_name = f"astanalyzer_user_rules_{file_path.stem}_{abs(hash(file_path.resolve()))}"
 
     spec = importlib.util.spec_from_file_location(module_name, str(file_path))
