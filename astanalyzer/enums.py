@@ -107,6 +107,4 @@ class NodeType(StrEnum):
     LIST_COMP = "ListComp"
     SET_COMP = "SetComp"
     DICT_COMP = "DictComp"
-    GENERATOR_EXP = "GeneratorExp"
-
-    
+    GENERATOR_EXP = "GeneratorExp"   
