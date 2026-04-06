@@ -1,39 +1,42 @@
 """
-Naming convention utility helpers.
+Utility helpers used by style, structure, and fix-related rules.
 
-This module provides simple regex-based checks for common identifier
-naming styles used in Python code analysis:
+This module provides small reusable functions for:
+- naming convention checks
+- empty block and redundant control-flow detection
+- return-count and line-length analysis
+- whitespace and formatting helpers
+- small predicate factories used in matcher conditions
 
-  - snake_case  (e.g. my_function_name)
-  - PascalCase  (e.g. MyClassName)
-
-These helpers are typically used inside rules validating style constraints.
+Most helpers are intended for internal rule implementation rather than
+direct public use.
 """
 
 from __future__ import annotations
-from typing import Iterable, Tuple, List, Optional
+
 import re
-
-import logging
-log = logging.getLogger(__name__)
-
+from typing import Iterable, Tuple, List
 
 #: Compiled regex for snake_case identifiers.
 #: Pattern: lowercase letters, digits and underscores,
 #: must start with a lowercase letter or underscore.
 SNAKE = re.compile(r'^[a-z_][a-z0-9_]*$')
 
-#: Compiled regex for PascalCase (CamelCase starting uppercase).
+#: Compiled regex for PascalCase (PASCALCase starting uppercase).
 #: Pattern: must start with uppercase letter,
 #: followed by alphanumeric characters only.
-CAMEL = re.compile(r'^[A-Z][a-zA-Z0-9]*$')
+PASCAL = re.compile(r'^[A-Z][a-zA-Z0-9]*$')
 
 BLOCK_TYPES = ("If", "For", "While", "Try", "With", "ExceptHandler")
 
 TERMINAL = {"Return", "Raise", "Break", "Continue"}
 
+STOP_TYPES = {"FunctionDef", "AsyncFunctionDef", "ClassDef"}
+
 _TRAIL_RE = re.compile(r"[ \t]+$")
 
+
+# ===== Naming helpers =====
 def is_snake(name: str) -> bool:
     """Return True if `name` follows snake_case convention.
 
@@ -50,7 +53,7 @@ def is_snake(name: str) -> bool:
     return bool(SNAKE.match(name))
 
 
-def is_camel(name: str) -> bool:
+def is_pascal(name: str) -> bool:
     """Return True if `name` follows PascalCase convention.
 
     Args:
@@ -61,36 +64,14 @@ def is_camel(name: str) -> bool:
 
     Notes:
         This function checks for leading uppercase character. It does not
-        distinguish between CamelCase and PascalCase variants beyond that.
+        distinguish between PASCALCase and PascalCase variants beyond that.
     """
-    return bool(CAMEL.match(name))
+    return bool(PASCAL.match(name))
 
 
-def _is_unused(self, node):
-    """
-    Vrátí True, pokud proměnná je definována, ale nikde jinde v těle funkce / bloku
-    se na ni neodkazuje.
-    """
-    name = getattr(node.targets[0], "name", None) if getattr(node, "targets", None) else None
-    if not name:
-        return False
-
-    # Get parrent (blok)
-    parent = getattr(node, "parent", None)
-    if not parent or not hasattr(parent, "body"):
-        return False
-
-    # check body for use
-    for child in parent.body:
-        if child is node:
-            continue
-        text = getattr(child, "as_string", lambda: "")()
-        if name in text:
-            return False  # used
-    return True  # never used
-
-
+# ===== Assignment / usage helpers =====
 def is_unused_assign(node) -> bool:
+    """Return True if a simple assignment target is not referenced later in the same block."""
     targets = getattr(node, "targets", None)
     if not targets or len(targets) != 1:
         return False
@@ -112,12 +93,15 @@ def is_unused_assign(node) -> bool:
 
     return True
 
+
+# ===== Loop and comprehension helpers =====
 def loop_comprehension_suggestion(for_node):
     """
-    Returns (kind, suggestion_str) or (None, None)
-    kind in {"list","set","dict"}
-    suggestion_str example:
-      "result = [f(x) for x in xs if cond]"
+    Suggest a list, set, or dict comprehension replacement for a simple loop.
+
+    Returns:
+        tuple[str | None, str | None]:
+            Pair of (kind, suggestion), or (None, None) if no safe rewrite pattern is found.
     """
     def s(n): return (getattr(n, "as_string", None) or (lambda: ""))()
 
@@ -223,11 +207,16 @@ def loop_comprehension_suggestion(for_node):
 
     return (None, None)
 
+
 def is_loop_comprehension_candidate(for_node) -> bool:
+    """Return True if the loop can be rewritten as a comprehension."""
     kind, sug = loop_comprehension_suggestion(for_node)
     return bool(kind and sug)
 
+
+# ===== Empty block helpers =====
 def is_noop_stmt(stmt) -> bool:
+    """Return True if the statement is effectively a no-op, such as pass or a docstring-only expression."""
     if stmt.__class__.__name__ == "Pass":
         return True
     if stmt.__class__.__name__ == "Expr":
@@ -237,14 +226,19 @@ def is_noop_stmt(stmt) -> bool:
 
     return False
 
+
 def is_empty_seq(seq) -> bool:
+    """Return True if the sequence is empty or contains only no-op statements."""
     if not seq:
         return True
     return all(is_noop_stmt(s) for s in seq)
 
+
 def iter_relevant_bodies(node) -> Iterable[Tuple[str, list]]:
     """
-    Returns block that are empty
+    Yield named statement bodies relevant for empty-block analysis.
+
+    Examples include `body`, `orelse`, exception handler bodies, and `finalbody`.
     """
     if hasattr(node, "body"):
         yield ("body", getattr(node, "body") or [])
@@ -260,7 +254,9 @@ def iter_relevant_bodies(node) -> Iterable[Tuple[str, list]]:
             yield (f"handler[{i}]", getattr(h, "body", []) or [])
         yield ("finalbody", getattr(node, "finalbody", []) or [])
 
+
 def is_empty_block(node) -> bool:
+    """Return True if any relevant body of the node is empty or contains only no-op statements."""
     if node.__class__.__name__ not in BLOCK_TYPES:
         return False
     for _, seq in iter_relevant_bodies(node):
@@ -268,25 +264,30 @@ def is_empty_block(node) -> bool:
             return True
     return False
 
+
 def empty_parts(node) -> List[str]:
+    """Return names of block parts that are empty or contain only no-op statements."""
     parts: List[str] = []
     for name, seq in iter_relevant_bodies(node):
         if is_empty_seq(seq):
             parts.append(name)
     return parts
 
+
+# ===== Control-flow helpers =====
 def is_terminal_stmt(stmt) -> bool:
     return stmt.__class__.__name__ in TERMINAL
+
 
 def body_ends_terminal(seq) -> bool:
     seq = seq or []
     return bool(seq) and is_terminal_stmt(seq[-1])
 
+
 def has_redundant_else_after_terminal(node) -> bool:
     """
-    True if:
-    - if-else and if-body end terminal, or
-    - if/elif/.../else where if + all elif ends terminal.
+    Return True if an if/elif/else chain contains an unnecessary else branch
+    after a terminal statement.
     """
     if node.__class__.__name__ != "If":
         return False
@@ -313,13 +314,11 @@ def has_redundant_else_after_terminal(node) -> bool:
         cur = tail[0]
 
 
-STOP_TYPES = {"FunctionDef", "AsyncFunctionDef", "ClassDef"}
-
 def count_returns_in_function(node, *, stop_after: int | None = None) -> int:
     """
-    Returns #of returns in functions
-    Don't check nested functions FunctionDef/AsyncFunctionDef/ClassDef.
-    Uses get_children()
+    Count return statements inside a function while ignoring nested scopes.
+
+    Nested functions and classes are not traversed.
     """
     if node.__class__.__name__ not in {"FunctionDef", "AsyncFunctionDef"}:
         return 0
@@ -351,14 +350,19 @@ def count_returns_in_function(node, *, stop_after: int | None = None) -> int:
 
 
 def has_multiple_returns(node) -> bool:
+    """Return True if the function contains at least two return statements."""
     return count_returns_in_function(node, stop_after=2) >= 2
 
 
+# ===== File content and line helpers =====
 def get_file_content_from_node(node) -> str | None:
+    """Return cached source file content from the node root, if available."""
     root = node.root() if hasattr(node, "root") else None
     return getattr(root, "file_content", None)
 
+
 def long_line_numbers(node, max_len: int) -> list[int]:
+    """Return source line numbers whose length exceeds the given limit."""
     content = get_file_content_from_node(node)
     if not content:
         return []
@@ -368,11 +372,19 @@ def long_line_numbers(node, max_len: int) -> list[int]:
             nums.append(i)
     return nums
 
+
 def has_long_lines(node, max_len: int) -> bool:
+    """Return True if the source file contains any line longer than the given limit."""
     return bool(long_line_numbers(node, max_len))
 
 
+# ===== Constant and whitespace helpers =====
 def is_module_constant(node) -> bool:
+    """
+    Return True if the node represents a simple module-level constant assignment.
+
+    Dunder names are excluded.
+    """
     parent = getattr(node, "parent", None)
     if not parent or parent.__class__.__name__ != "Module":
         return False
@@ -403,13 +415,17 @@ def is_module_constant(node) -> bool:
         "Tuple", "List", "Set", "Dict"
     )
 
+
 def has_trailing_whitespace(module_node) -> bool:
+    """Return True if the module source contains trailing whitespace."""
     content = getattr(module_node.root(), "file_content", None)
     if not content:
         return False
     return any(_TRAIL_RE.search(line) for line in content.splitlines())
 
+
 def trailing_whitespace_comment(module_node) -> str:
+    """Build a human-readable comment describing lines with trailing whitespace."""
     content = getattr(module_node.root(), "file_content", None) or ""
     lines = content.splitlines()
     hits = [str(i) for i, line in enumerate(lines, 1) if _TRAIL_RE.search(line)]
@@ -418,7 +434,11 @@ def trailing_whitespace_comment(module_node) -> str:
     preview = ", ".join(hits[:15]) + (" ..." if len(hits) > 15 else "")
     return f"# Trailing whitespace detected on lines: {preview}. Remove spaces/tabs at EOL."
 
+
 def strip_trailing_whitespace(module_node, suggestion_lines, context, **kwargs):
+    """
+    Rewrite suggestion lines with trailing spaces and tabs removed from line ends.
+    """
     content = getattr(module_node.root(), "file_content", None)
     if not content:
         return
@@ -426,7 +446,10 @@ def strip_trailing_whitespace(module_node, suggestion_lines, context, **kwargs):
     context["original"][0] = content
     suggestion_lines[:] = fixed.splitlines()
 
+
+# ===== Definition spacing and docstring insertion helpers =====
 def missing_blank_before_def(node) -> bool:
+    """Return True if the definition is missing the required blank lines before it."""
     parent = getattr(node, "parent", None)
     if parent is None or not hasattr(parent, "body"):
         return False
@@ -461,12 +484,16 @@ def missing_blank_before_def(node) -> bool:
 
     return blanks < required
 
+
 def missing_blank_before_def_comment(node) -> str:
+    """Return an explanatory comment for a missing blank line before a definition."""
     parent = getattr(node, "parent", None)
     required = 1 if getattr(parent, "__class__", None).__name__ == "ClassDef" else 2
     return f"# Missing blank line(s) before this definition (PEP 8: require {required} here)."
 
+
 def insert_function_docstring(node, suggestion_lines, context, **kwargs):
+    """Insert a generated docstring into a function definition suggestion."""
     text = kwargs.get("text") or '"""TODO: Describe the function."""'
     if not suggestion_lines:
         return
@@ -484,7 +511,9 @@ def insert_function_docstring(node, suggestion_lines, context, **kwargs):
 
     suggestion_lines.insert(1, f"{indent}{text}")
 
+
 def insert_class_docstring(node, suggestion_lines, context, **kwargs):
+    """Insert a generated docstring into a class definition suggestion."""
     text = kwargs.get("text") or '"""TODO: Describe the class purpose, attributes, and usage."""'
     if not suggestion_lines:
         return
@@ -502,14 +531,24 @@ def insert_class_docstring(node, suggestion_lines, context, **kwargs):
     
     suggestion_lines.insert(1, f"{indent}{text}")
 
+
+# ===== Compare helpers =====
 def _is_none_const(n) -> bool:
+    """Return True if the node represents the literal value None."""
     return (
         n is not None
         and n.__class__.__name__ in ("Const", "Constant", "NameConstant")
         and getattr(n, "value", "___") is None
     )
 
+
 def _iter_compare_pairs(node):
+    """
+    Yield normalized comparison pairs from a Compare node.
+
+    Each yielded item is `(operator_name, left, right)`.
+    Supports both astroid-style and tuple-based comparison representations.
+    """
     if node.__class__.__name__ != "Compare":
         return
 
@@ -553,7 +592,10 @@ def _iter_compare_pairs(node):
         yield (op_name, prev, right)
         prev = right
 
+
+# ===== Predicate factory helpers =====
 def function_arg_count(node) -> int:
+    """Return the number of positional-only, positional, and keyword-only arguments of a function node."""
     args = getattr(node, "args", None)
     if args is None:
         return 0
@@ -564,14 +606,23 @@ def function_arg_count(node) -> int:
 
     return posonly + normal + kwonly
 
+
 def arg_count_gt(limit: int):
+    """
+    Build a predicate that matches functions with more than `limit` arguments.
+    """
     def _check(node) -> bool:
         if node.__class__.__name__ not in {"FunctionDef", "AsyncFunctionDef"}:
             return False
         return function_arg_count(node) > limit
     return _check
 
+
 def parent_depth_at_least(type_names: tuple[str, ...], min_depth: int):
+    """
+    Build a predicate that matches nodes nested inside the given parent types
+    at least `min_depth` times.
+    """
     allowed = set(type_names)
 
     def _check(node) -> bool:
