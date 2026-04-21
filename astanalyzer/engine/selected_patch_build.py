@@ -26,11 +26,22 @@ from ..anchor import build_anchor
 from ..fixer import FixProposal, fix
 from ..ignore_rules import is_ignored_for_node
 
-from .project_loader import ModuleNode, ProjectNode, get_list_of_files_in_project, load_project
+from .project_loader import (
+    ModuleNode, 
+    ProjectNode, 
+    get_list_of_files_in_project, 
+    load_project
+)
 from .patch_writer import (
     create_diff,
     emit_patch_if_changed,
     present_foundings_suggestions,
+)
+from .path_utils import (
+    normalize_project_root, 
+    resolve_report_file_path, 
+    to_project_relative_path, 
+    extract_file_value
 )
 from .reporting import _relpath
 from .scan_runtime import build_and_save_fixes, prepare_rule_runtime
@@ -63,7 +74,24 @@ def _anchor_dict(item: dict[str, Any]) -> dict[str, Any]:
     """
     Return the embedded anchor dictionary from a selected item, or an empty dict.
     """
-    return item.get("anchor") or {}
+    anchor = item.get("anchor")
+    if isinstance(anchor, dict):
+        out = dict(anchor)
+    else:
+        out = {}
+
+    if out.get("line") is None:
+        if out.get("start_line") is not None:
+            out["line"] = out["start_line"]
+        elif item.get("start_line") is not None:
+            out["line"] = item["start_line"]
+        elif item.get("line") is not None:
+            out["line"] = item["line"]
+
+    if out.get("file") is None and item.get("file"):
+        out["file"] = item["file"]
+
+    return out
 
 
 def _fallback_key(
@@ -338,7 +366,9 @@ def _get_selected_findings(selected_data: dict[str, Any]) -> list[dict[str, Any]
 def _collect_selected_files(
     findings: list[dict[str, Any]],
     selected_actions: list[dict[str, Any]],
-    base_dir: Path | None,
+    *,
+    project_root: Path | None,
+    report_base_dir: Path | None,
 ) -> list[Path]:
     """
     Collect unique file paths referenced by selected findings and actions.
@@ -346,17 +376,16 @@ def _collect_selected_files(
     files: list[Path] = []
     seen: set[Path] = set()
 
-    for item in findings + selected_actions:
-        file_value = item.get("file")
-        if not file_value:
-            file_value = _anchor_dict(item).get("file")
-
+    for finding in findings + selected_actions:
+        file_value = extract_file_value(finding)
         if not file_value:
             continue
 
-        p = Path(file_value)
-        if not p.is_absolute() and base_dir is not None:
-            p = (base_dir / p).resolve()
+        p = resolve_report_file_path(
+            file_value,
+            project_root=project_root,
+            report_base_dir=report_base_dir,
+        )
 
         if p not in seen:
             files.append(p)
@@ -523,10 +552,15 @@ def _resolve_selected_match(
     )
 
 
-def _module_by_rel_file(project: ProjectNode, rel_file: str) -> ModuleNode | None:
-    """Find a loaded project module by its report-relative file path."""
+def _module_by_rel_file(project: ProjectNode, file_value: str) -> ModuleNode | None:
+    """Find a loaded project module by absolute or project-relative report path."""
+    project_root = normalize_project_root(getattr(project, "root_dir", None))
+    resolved_target = resolve_report_file_path(file_value, project_root=project_root)
+
     for module in project.modules:
-        if _relpath(Path(module.filename)) == rel_file:
+        module_path = Path(module.filename).resolve()
+        module_rel = _relpath(module_path, project_root=project_root)
+        if module_path == resolved_target or module_rel == file_value:
             return module
     return None
 
@@ -742,13 +776,20 @@ def _process_selected_target(
     Resolve a selected finding or action to candidate nodes and process them for patch generation.
     """
     anchor = _anchor_dict(item)
-    rel_file = item.get("file") or anchor.get("file")
+    file_value = extract_file_value(item)
     rule_id = item.get("rule_id")
 
-    if not rel_file or not rule_id:
+    if not file_value or not rule_id:
         return patch_counter
 
-    module = _module_by_rel_file(project, rel_file)
+    project_root = normalize_project_root(getattr(project, "root_dir", None))
+    rel_file = to_project_relative_path(
+        resolve_report_file_path(file_value, project_root=project_root),
+        project_root=project_root,
+    )
+
+    module = _module_by_rel_file(project, file_value)
+
     if module is None:
         log.warning("Selected target file not found in loaded project: %s", rel_file)
         return patch_counter
@@ -795,6 +836,7 @@ def _process_selected_target(
 def build_patches_from_selected_json(
     selected_data: dict[str, Any],
     base_dir: Path | None = None,
+    project_root: Path | None = None,
 ) -> tuple[Path | None, int]:
     """
     Rebuild patch files from selected findings and actions stored in scan JSON.
@@ -820,12 +862,22 @@ def build_patches_from_selected_json(
     findings = _get_selected_findings(selected_data)
     selected_actions = selected_data.get("selected_actions", []) or []
 
-    files = _collect_selected_files(findings, selected_actions, base_dir)
+    report_project_root = normalize_project_root(selected_data.get("project_root"))
+    effective_project_root = normalize_project_root(project_root) or report_project_root
+
+    files = _collect_selected_files(
+        findings,
+        selected_actions,
+        project_root=effective_project_root,
+        report_base_dir=base_dir,
+    )
+
+    scan_root = effective_project_root or _derive_scan_root(files)
+
     if not files:
         log.warning("No files selected")
         return None, 0
 
-    scan_root = _derive_scan_root(files)
     if scan_root is None:
         log.warning("No scan root could be derived")
         return None, 0

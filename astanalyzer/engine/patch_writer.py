@@ -58,7 +58,7 @@ def write_patch(
     *,
     patch_run_dir: Path,
     rule_id: str,
-    rel_file: str,
+    source_path: Path,
     index: int,
     patch_text: str,
 ) -> Path:
@@ -66,15 +66,9 @@ def write_patch(
     Write a generated patch file next to the affected source file.
 
     The patch filename is derived from the source filename, rule identifier,
-    and patch index. The `patch_run_dir` parameter is currently ignored to
-    preserve backward-compatible patch placement.
+    and patch index. 
     """
-    source_path = Path(rel_file)
-
-    if not source_path.is_absolute():
-        source_path = (Path.cwd() / source_path).resolve()
-    else:
-        source_path = source_path.resolve()
+    source_path = Path(source_path).resolve()
 
     patch_name = f"{source_path.name}__{rule_id}__{index:04d}.patch"
     out = source_path.with_name(patch_name)
@@ -195,14 +189,12 @@ def emit_patch_if_changed(
     if fix.suggestion == fix.original:
         return None
 
-    rel_file = _relpath(
-        Path(getattr(fix, "filename", module.filename))
-    )
+    source_path = Path(getattr(fix, "filename", module.filename)).resolve()
 
     return write_patch(
         patch_run_dir=patch_run_dir,
         rule_id=rule_id,
-        rel_file=rel_file,
+        source_path=source_path,
         index=patch_index,
         patch_text=fix.get_diff(),
     )

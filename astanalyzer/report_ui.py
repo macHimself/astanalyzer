@@ -743,6 +743,7 @@ async function exportSelected() {{
 
   const out = {{
     generated_at: new Date().toISOString(),
+    project_root: state.raw?.project_root ?? null,
     selected_fix_count: state.selected.size,
     selected_action_count: state.selectedActions.size,
     findings: Object.values(grouped),
