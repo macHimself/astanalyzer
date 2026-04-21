@@ -30,6 +30,9 @@ from .engine import (
     get_list_of_files_in_project,
     load_project,
     run_rules_on_project_report,
+    normalize_project_root, 
+    resolve_report_file_path, 
+    extract_file_value
 )
 from .logging_config import setup_logging
 from .report_ui import open_report_in_browser, write_report_html
@@ -471,6 +474,7 @@ def ensure_final_newline(path: Path) -> None:
 def collect_selected_files(
     selected_data: dict[str, Any],
     base_dir: Path | None = None,
+    project_root: Path | None = None,
 ) -> list[Path]:
     """
     Extract and normalize unique file paths from selected findings data.
@@ -496,26 +500,83 @@ def collect_selected_files(
     files: list[Path] = []
     seen: set[Path] = set()
 
-    findings = selected_data.get("findings", [])
+    findings = selected_data.get("findings", []) or [] 
     if not isinstance(findings, list):
         return files
 
-    for finding in findings:
-        file_value = finding.get("file")
+    selected_actions = selected_data.get("selected_actions", []) or []
+    
+    effective_project_root = normalize_project_root(project_root) or normalize_project_root(selected_data.get("project_root"))
+
+    for item in [*findings, *selected_actions]:
+        file_value = extract_file_value(item)
         if not file_value:
             continue
 
-        p = Path(file_value)
-        if not p.is_absolute() and base_dir is not None:
-            p = (base_dir / p).resolve()
-        else:
-            p = p.resolve()
+        p = resolve_report_file_path(
+            file_value,
+            project_root=effective_project_root,
+            report_base_dir=base_dir,
+        )
 
         if p not in seen:
             seen.add(p)
             files.append(p)
 
     return files
+
+
+def check_patch_files(
+    patch_files: list[Path],
+    *,
+    display_root: Path | None = None,
+) -> tuple[int, int]:
+    """
+    Validate the given patch files using 'git apply --check'.
+
+    Each patch is checked in the context of its parent directory.
+    """
+    if not patch_files:
+        print("No patch files found.")
+        return 0, 0
+
+    ok = 0
+    failed = 0
+    root = display_root.resolve() if display_root is not None else None
+
+    print_section("ASTANALYZER PATCH CHECK")
+    if root is not None:
+        print(f"Root: {root}")
+    print(f"Patches found: {len(patch_files)}")
+
+    for patch in sorted(patch_files):
+        patch_dir = patch.parent
+
+        if root is not None:
+            try:
+                shown_path = patch.relative_to(root)
+            except ValueError:
+                shown_path = patch
+        else:
+            shown_path = patch
+
+        result = subprocess.run(
+            ["git", "apply", "--check", patch.name],
+            cwd=patch_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode == 0:
+            ok += 1
+            print(f"[OK]   {shown_path}")
+        else:
+            failed += 1
+            print(f"[FAIL] {shown_path}")
+            if result.stderr.strip():
+                print(result.stderr.strip())
+
+    return ok, failed
 
 
 def validate_path(str_path: str) -> Path:
@@ -550,7 +611,7 @@ def validate_path(str_path: str) -> Path:
     return path
 
 
-def check_all_patches() -> tuple[int, int]:
+def check_all_patches(root: Path | None = None) -> tuple[int, int]:
     """
     Validate all patch files in the working directory using 'git apply --check'.
 
@@ -576,7 +637,7 @@ def check_all_patches() -> tuple[int, int]:
         - Each patch is checked relative to its parent directory.
         - This operation does not modify any files.
     """
-    root = Path.cwd()
+    root = (root or Path.cwd()).resolve()
     patch_files = find_patch_files(root, include_archive=False)
 
     if not patch_files:
@@ -613,7 +674,7 @@ def check_all_patches() -> tuple[int, int]:
     return ok, failed
 
 
-def apply_all_patches() -> tuple[int, int]:
+def apply_all_patches(root: Path | None = None) -> tuple[int, int]:
     """
     Apply all patch files in the working directory using 'git apply'.
 
@@ -644,7 +705,7 @@ def apply_all_patches() -> tuple[int, int]:
     Requires:
         Git must be installed and available in the system PATH.
     """
-    root = Path.cwd()
+    root = (root or Path.cwd()).resolve()
     patch_files = find_patch_files(root, include_archive=False)
 
     if not patch_files:
@@ -757,7 +818,9 @@ def cmd_patch(args) -> None:
         - If no patches are generated, validation is skipped.
         - Patch validation excludes files stored in the archive directory.
     """
-    selected = resolve_selected_input(args.selected)
+    selected_arg = args.selected_path or args.selected
+    selected = resolve_selected_input(selected_arg)
+    log.info("Using selected JSON: %s", selected)
 
     try:
         data = json.loads(selected.read_text(encoding="utf-8"))
@@ -765,20 +828,28 @@ def cmd_patch(args) -> None:
         log.error("Invalid JSON in '%s': %s", selected, exc)
         sys.exit(1)
 
-    selected_files = collect_selected_files(data, base_dir=selected.parent)
+    project_root = normalize_project_root(data.get("project_root"))
+
+    selected_files = collect_selected_files(
+        data,
+        base_dir=selected.parent,
+        project_root=project_root,
+    )
     for path in selected_files:
         ensure_final_newline(path)
-
+        
     _, patch_count = build_patches_from_selected_json(
         data,
         base_dir=selected.parent,
+        project_root=project_root,
     )
 
     if patch_count == 0:
         print("No patches were generated.")
         return
 
-    ok, failed = check_all_patches()
+    check_root = project_root or selected.parent.resolve()
+    ok, failed = check_all_patches(check_root)
 
     print_section("ASTANALYZER PATCH SUMMARY")
     print(f"Patches generated: {patch_count}")
@@ -1020,6 +1091,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Selected fixes JSON file; if missing, uses local file or newest from Downloads",
     )
+    patch_parser.add_argument(
+        "--selected",
+        dest="selected_path",
+        help="Explicit path to selected JSON file",
+    ) 
     patch_parser.set_defaults(func=cmd_patch)
 
     apply_parser = subparsers.add_parser("apply", help="Apply existing .patch files")

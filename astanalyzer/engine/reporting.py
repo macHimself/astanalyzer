@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from ..anchor import FindingAnchor
+from .path_utils import to_project_relative_path
 
 @dataclass
 class Finding:
@@ -251,17 +252,9 @@ def plan_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
     return fixer_to_fix_dict(fixer, fix_id=fix_id)
 
 
-def _relpath(p: Path) -> str:
-    """
-    Return a project-friendly relative path when possible.
-
-    Falls back to the original path representation if relative conversion fails.
-    """
-    try:
-        cwd = Path.cwd().resolve()
-        return p.resolve().relative_to(cwd).as_posix()
-    except Exception:
-        return p.as_posix()
+def _relpath(p: Path, project_root: Path | None = None) -> str:
+    """Return a stable report path, relative to the project root when possible."""
+    return to_project_relative_path(p, project_root=project_root)
 
 
 def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, Any]:
@@ -271,7 +264,8 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
     Assigns stable report-local finding and fix identifiers and converts
     associated fix builders into their serialized report representation.
     """
-    out: Dict[str, Any] = {"findings": []}
+    project_root = Path(project_root).resolve()
+    out: Dict[str, Any] = {"project_root": str(project_root), "findings": []}
 
     f_counter = 0
     fx_counter = 0
@@ -297,7 +291,7 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
                 "rule_id": f.rule_id,
                 "title": f.title or f.rule_id,
                 "severity": f.severity,
-                "file": _relpath(f.file),
+                "file": _relpath(f.file, project_root=project_root),
                 "start_line": start_line,
                 "end_line": end_line,
                 "message": f.message or "",

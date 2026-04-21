@@ -146,7 +146,7 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
     title = getattr(rule, "title", None) or rid
 
     file_str = (
-        _relpath(Path(module.filename))
+        _relpath(Path(module.filename), project_root=project_root)
         if project_root is not None
         else Path(module.filename).as_posix()
     )

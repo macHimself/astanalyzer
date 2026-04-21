@@ -1,3 +1,9 @@
+from .path_utils import (
+    normalize_project_root, 
+    resolve_report_file_path, 
+    extract_file_value
+)
+
 from .project_loader import (
     ProjectNode,
     ModuleNode,
