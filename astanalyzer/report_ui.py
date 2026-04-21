@@ -12,9 +12,41 @@ import json
 import webbrowser
 from pathlib import Path
 
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
+
+
+def highlight_python_code(code: str) -> str:
+    """Return syntax-highlighted HTML for a Python code snippet."""
+    if not code:
+        return ""
+
+    return highlight(
+        code,
+        PythonLexer(),
+        HtmlFormatter(nowrap=False, cssclass="codehilite"),
+    )
+
 
 def build_report_html(report_data: dict) -> str:
     """Build a standalone HTML report page from scan JSON data."""
+    report_data = json.loads(json.dumps(report_data))
+
+    findings = report_data.get("findings", [])
+    for finding in findings:
+        snippet = finding.get("code_snippet", "") or ""
+        finding["code_snippet_html"] = highlight_python_code(snippet) if snippet else ""
+
+    safe_json = (
+        json.dumps(report_data, ensure_ascii=False, indent=2)
+        .replace("</", "<\\/")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+
+    pygments_css = HtmlFormatter(cssclass="codehilite").get_style_defs(".codehilite")
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -23,10 +55,12 @@ def build_report_html(report_data: dict) -> str:
   <title>astanalyzer – Fix Plan Picker</title>
   <style>
     :root {{ color-scheme: light dark; }}
+
     body {{
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       margin: 0;
     }}
+
     header {{
       padding: 16px 20px;
       border-bottom: 1px solid rgba(127,127,127,.25);
@@ -35,27 +69,33 @@ def build_report_html(report_data: dict) -> str:
       background: Canvas;
       z-index: 10;
     }}
+
     h1 {{
       margin: 0 0 8px;
       font-size: 18px;
     }}
+
     .row {{
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       align-items: center;
     }}
+
     .pill {{
-      padding: 6px 10px;
+      padding: 4px 8px;
       border: 1px solid rgba(127,127,127,.35);
       border-radius: 999px;
       font-size: 12px;
+      white-space: nowrap;
     }}
+
     main {{
       padding: 16px 20px;
       max-width: 1100px;
       margin: 0 auto;
     }}
+
     .toolbar {{
       display: flex;
       gap: 10px;
@@ -63,6 +103,7 @@ def build_report_html(report_data: dict) -> str:
       margin: 12px 0 18px;
       align-items: center;
     }}
+
     button, input[type="file"] {{
       border: 1px solid rgba(127,127,127,.35);
       background: transparent;
@@ -71,10 +112,12 @@ def build_report_html(report_data: dict) -> str:
       cursor: pointer;
       font: inherit;
     }}
+
     button:disabled {{
       opacity: .5;
       cursor: not-allowed;
     }}
+
     input[type="search"] {{
       border: 1px solid rgba(127,127,127,.35);
       padding: 8px 12px;
@@ -83,118 +126,333 @@ def build_report_html(report_data: dict) -> str:
       font: inherit;
       background: transparent;
     }}
+
     .grid {{
       display: grid;
       grid-template-columns: 1fr;
-      gap: 10px;
+      gap: 12px;
     }}
+
     .card {{
       border: 1px solid rgba(127,127,127,.25);
       border-radius: 14px;
-      padding: 12px 14px;
       background: color-mix(in oklab, Canvas, CanvasText 2%);
+      overflow: hidden;
     }}
-    .topline {{
+
+    .finding {{
+      border-radius: 14px;
+    }}
+
+    .finding > summary {{
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+    }}
+
+    .finding > summary::-webkit-details-marker {{
+      display: none;
+    }}
+
+    .finding > summary:hover {{
+      background: color-mix(in oklab, Canvas, CanvasText 3%);
+    }}
+
+    .summary-top {{
       display: flex;
-      gap: 12px;
       justify-content: space-between;
-      align-items: baseline;
+      gap: 12px;
+      align-items: start;
       flex-wrap: wrap;
     }}
+
+    .summary-main {{
+      min-width: 0;
+      flex: 1;
+    }}
+
     .title {{
       font-weight: 700;
+      margin-bottom: 8px;
     }}
+
     .meta {{
-      opacity: .75;
+      opacity: .8;
       font-size: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }}
+
+    .path {{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      opacity: .85;
+      word-break: break-word;
+    }}
+
+    .message {{
+      margin-top: 8px;
+      line-height: 1.45;
+      opacity: .95;
+      white-space: pre-wrap;
+    }}
+
+    .expand-hint {{
+      font-size: 12px;
+      opacity: .65;
+      white-space: nowrap;
+    }}
+
+    .detail-body {{
+    padding: 12px 16px 16px;
+    border-top: 1px solid rgba(127,127,127,.18);
+    display: grid;
+    gap: 14px;
+    }}
+
+    .section {{
+      display: grid;
+      gap: 8px;
+    }}
+
+    .section-title {{
+      font-size: 13px;
+      font-weight: 700;
+      opacity: .82;
+      margin-bottom: 2px;
+    }}
+
+    .desc {{
+      padding: 8px 10px;
+      border-left: 3px solid rgba(127,127,127,.35);
+      border-radius: 8px;
+      background: color-mix(in oklab, Canvas, CanvasText 3%);
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }}
+
+    .tech {{
+      font-size: 12px;
+      opacity: .75;
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
     }}
-    .path {{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-    }}
-    .desc {{
-      margin: 10px 0 0;
-      padding: 10px 12px;
-      border-left: 4px solid rgba(127,127,127,.45);
-      border-radius: 10px;
-      background: color-mix(in oklab, Canvas, CanvasText 4%);
-      line-height: 1.45;
-      white-space: pre-wrap;
-    }}
-    .actions {{
-      margin-top: 10px;
+
+    .fixes, .actions {{
       display: grid;
       gap: 8px;
     }}
-    .action {{
-      border: 1px solid rgba(127,127,127,.25);
-      border-radius: 12px;
-      padding: 10px 10px;
+
+    .fix, .action {{
+      border: 1px solid rgba(127,127,127,.18);
+      border-radius: 10px;
+      padding: 10px;
       display: grid;
       gap: 6px;
-      background: color-mix(in oklab, Canvas, CanvasText 3%);
+      background: color-mix(in oklab, Canvas, CanvasText 2%);
     }}
-    .action .action-title {{
-      font-weight: 600;
-    }}
-    .action .action-reason {{
-      opacity: .85;
-      font-size: 12px;
-    }}
+
     .action.ignore {{
-      opacity: 0.7;
+      opacity: .85;
       border-style: dashed;
     }}
-    .fixes {{
-      margin-top: 10px;
-      display: grid;
-      gap: 8px;
-    }}
-    .fix {{
-      border: 1px dashed rgba(127,127,127,.35);
-      border-radius: 12px;
-      padding: 10px 10px;
-      display: grid;
-      gap: 6px;
-    }}
+
     .fix label,
     .action label {{
       display: flex;
       gap: 10px;
       align-items: flex-start;
     }}
-    .fix .fix-title {{
+
+    .fix-title,
+    .action-title {{
       font-weight: 600;
     }}
-    .fix .fix-reason {{
-      opacity: .85;
+
+    .fix-reason,
+    .action-reason {{
+      opacity: .8;
       font-size: 12px;
+      line-height: 1.4;
     }}
+
     .code {{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 12px;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(127,127,127,.25);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(127,127,127,.2);
       overflow: auto;
-      background: color-mix(in oklab, Canvas, CanvasText 5%);
-      white-space: pre;
+      background: color-mix(in oklab, Canvas, CanvasText 4%);
+      white-space: pre-wrap;
+      max-height: 220px;
     }}
+
+    .nested-details {{
+      border: 1px dashed rgba(127,127,127,.28);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }}
+
+    .nested-details summary {{
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: .9;
+    }}
+
     footer {{
       padding: 18px 20px;
       opacity: .75;
       font-size: 12px;
       text-align: center;
     }}
+
     .warn {{
       color: #b45309;
     }}
+
     .ok {{
       color: #166534;
     }}
+
+    .code-wrap {{
+      overflow: auto;
+    }}
+
+    .codehilite {{
+      margin: 0;
+      background: transparent !important;
+    }}
+
+    .codehilite pre {{
+      margin: 0;
+      white-space: pre;
+      background: transparent !important;
+    }}
+
+    {pygments_css}
+
+    .code {{
+      font-size: 13px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(130,160,220,.18);
+      overflow: auto;
+      background: #0d1b2a;
+      max-height: 380px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }}
+
+    .codehilite {{
+      margin: 0;
+      background: transparent !important;
+      color: #e6edf3;
+    }}
+
+    .codehilite pre {{
+      margin: 0;
+      background: transparent !important;
+      white-space: pre;
+      color: #e6edf3;
+      line-height: 1.55;
+    }}
+
+    .codehilite,
+    .codehilite pre,
+    .codehilite code {{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }}
+
+    /* default text */
+    .codehilite .n,
+    .codehilite .nn,
+    .codehilite .nx,
+    .codehilite .p,
+    .codehilite .w {{
+      color: #e6edf3;
+    }}
+
+    /* keywords: def, if, try, except */
+    .codehilite .k,
+    .codehilite .kn,
+    .codehilite .kp,
+    .codehilite .kr {{
+      color: #ffbd59;
+      font-weight: 600;
+    }}
+
+    /* function / method names */
+    .codehilite .nf {{
+      color: #2f81f7;
+    }}
+
+    /* class names / types */
+    .codehilite .nc,
+    .codehilite .kt {{
+      color: #a5d6ff;
+    }}
+
+    /* strings and docstrings */
+    .codehilite .s,
+    .codehilite .sa,
+    .codehilite .sb,
+    .codehilite .sc,
+    .codehilite .sd,
+    .codehilite .s1,
+    .codehilite .s2,
+    .codehilite .se,
+    .codehilite .sh,
+    .codehilite .si,
+    .codehilite .sr,
+    .codehilite .ss,
+    .codehilite .dl {{
+      color: #ff8fb1;
+      font-style: italic;
+    }}
+
+    /* numbers */
+    .codehilite .m,
+    .codehilite .mb,
+    .codehilite .mf,
+    .codehilite .mh,
+    .codehilite .mi,
+    .codehilite .mo {{
+      color: #ff9e64;
+    }}
+
+    /* comments */
+    .codehilite .c,
+    .codehilite .c1,
+    .codehilite .cm,
+    .codehilite .cp,
+    .codehilite .cs {{
+      color: #8b949e;
+      font-style: italic;
+    }}
+
+    /* builtins / constants */
+    .codehilite .nb,
+    .codehilite .bp {{
+      color: #79c0ff;
+    }}
+
+    /* operators */
+    .codehilite .o,
+    .codehilite .ow {{
+      color: #c9d1d9;
+    }}
+
+    /* exceptions / special names */
+    .codehilite .ne {{
+      color: #ff7b72;
+      font-weight: 600;
+    }}
+
   </style>
 </head>
 <body>
@@ -225,10 +483,15 @@ def build_report_html(report_data: dict) -> str:
   <footer>
     This page was generated from scan_report.json.
   </footer>
-
+  <script id="report-data" type="application/json">{safe_json}</script>
 <script>
+
+const initialRaw = JSON.parse(
+  document.getElementById("report-data").textContent
+);
+
 const state = {{
-  raw: {json.dumps(report_data, ensure_ascii=False, indent=2)},
+  raw: initialRaw,
   findings: [],
   selected: new Map(),
   selectedActions: new Map(),
@@ -293,6 +556,10 @@ function normalisePlan(json) {{
       start_line: f.start_line ?? f.lineno ?? f.line ?? null,
       end_line: f.end_line ?? f.end_lineno ?? null,
       message: f.message ?? f.description ?? f.desc ?? f.details ?? f.text ?? "",
+      code_snippet: f.code_snippet ?? "",
+      code_snippet_html: f.code_snippet_html ?? "",
+      snippet_start_line: f.snippet_start_line ?? null,
+      snippet_end_line: f.snippet_end_line ?? null,
       anchor: f.anchor ?? null,
       raw_finding: f,
       fixes: Array.isArray(fixes) ? fixes.map((x, j) => ({{
@@ -480,28 +747,59 @@ function render() {{
     const card = document.createElement("div");
     card.className = "card";
 
-    const topline = document.createElement("div");
-    topline.className = "topline";
+    const details = document.createElement("details");
+    details.className = "finding";
 
-    const left = document.createElement("div");
-    left.innerHTML = `
-      <div class="title">${{escapeHtml(f.title)}}</div>
-      <div class="meta">
-        <span class="pill" title="Severity level of the finding">${{escapeHtml(f.severity)}}</span>
-        <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
-        <span class="pill" title="Finding ID (unique occurrence)">${{escapeHtml(f.id)}}</span>
-        <span class="pill path" title="File and location">${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}</span>
+    const summary = document.createElement("summary");
+    summary.innerHTML = `
+      <div class="summary-top">
+        <div class="summary-main">
+          <div class="title">${{escapeHtml(f.title)}}</div>
+
+          <div class="meta">
+            <span class="pill" title="Severity">${{escapeHtml(f.severity)}}</span>
+            <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
+          </div>
+
+          <div class="path" title="File and location">
+            ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
+          </div>
+
+        <div class="expand-hint">Show details</div>
       </div>
     `;
-    topline.appendChild(left);
-    card.appendChild(topline);
+    details.appendChild(summary);
+
+    const body = document.createElement("div");
+    body.className = "detail-body";
 
     if (f.message) {{
-      const desc = document.createElement("div");
-      desc.className = "desc";
-      desc.innerHTML = `<strong>Message:</strong> ${{escapeHtml(f.message)}}`;
-      card.appendChild(desc);
+      const messageSection = document.createElement("details");
+      messageSection.className = "nested-details";
+      messageSection.innerHTML = `
+        <summary>Rule description</summary>
+        <div class="desc">${{escapeHtml(f.message)}}</div>
+      `;
+      body.appendChild(messageSection);
     }}
+         
+
+
+
+
+    if (f.code_snippet_html) {{
+    const codeSection = document.createElement("details");
+    codeSection.className = "nested-details";
+    codeSection.innerHTML = `
+        <summary>View code context</summary>
+        <div class="code code-wrap">${{f.code_snippet_html}}</div>
+    `;
+    body.appendChild(codeSection);
+    }}
+
+    const fixesSection = document.createElement("div");
+    fixesSection.className = "section";
+    fixesSection.innerHTML = `<div class="section-title">Fix proposals</div>`;
 
     const fixesWrap = document.createElement("div");
     fixesWrap.className = "fixes";
@@ -518,19 +816,27 @@ function render() {{
         fixDiv.className = "fix";
 
         const checked = state.selected.has(k);
+        const humanText = buildHumanFixText(fx);
+        const fixReason =
+          fx.reason && fx.reason.trim() !== (f.message || "").trim()
+            ? fx.reason
+            : "";
 
-        const label = document.createElement("label");
-        label.innerHTML = `
-          <input type="checkbox" ${{checked ? "checked" : ""}} />
-          <div>
-            <div class="fix-title">${{escapeHtml(fx.title)}}</div>
-            ${{fx.reason
-              ? `<div class="fix-reason">${{escapeHtml(fx.reason)}}</div>`
-              : `<div class="fix-reason">reason: &lt;missing&gt;</div>`}}
-          </div>
+        fixDiv.innerHTML = `
+          <label>
+            <input type="checkbox" ${{checked ? "checked" : ""}} />
+            <div>
+              <div class="fix-title">${{escapeHtml(fx.title)}}</div>
+              ${{
+                fixReason
+                  ? `<div class="fix-reason">${{escapeHtml(fixReason)}}</div>`
+                  : ""
+              }}
+            </div>
+          </label>
         `;
 
-        const cb = label.querySelector("input");
+        const cb = fixDiv.querySelector("input");
         cb.addEventListener("change", (e) => {{
           if (e.target.checked) {{
             state.selected.set(k, {{ finding: f, fix: fx }});
@@ -540,13 +846,10 @@ function render() {{
           updateCounts();
         }});
 
-        fixDiv.appendChild(label);
-
-        const humanText = buildHumanFixText(fx);
-        if (humanText) {{
+        if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
           const desc = document.createElement("div");
           desc.className = "desc";
-          desc.innerHTML = `${{escapeHtml(humanText)}}`;
+          desc.textContent = humanText;
           fixDiv.appendChild(desc);
         }}
 
@@ -555,47 +858,48 @@ function render() {{
           : JSON.stringify(fx.dsl, null, 2);
 
         if (dslText && dslText !== "{{}}" && dslText !== "[]") {{
-          const details = document.createElement("details");
-          const summary = document.createElement("summary");
-          summary.textContent = "Raw detail";
-
-          const pre = document.createElement("div");
-          pre.className = "code";
-          pre.textContent = dslText;
-
-          details.appendChild(summary);
-          details.appendChild(pre);
-          // fixDiv.appendChild(details);
+          const rawDetails = document.createElement("details");
+          rawDetails.className = "nested-details";
+          rawDetails.innerHTML = `
+            <summary>Technical detail</summary>
+            <div class="code">${{escapeHtml(dslText)}}</div>
+          `;
+          fixDiv.appendChild(rawDetails);
         }}
 
         fixesWrap.appendChild(fixDiv);
       }});
     }}
 
-    card.appendChild(fixesWrap);
-    elList.appendChild(card);
-     const actionsWrap = document.createElement("div");
+    fixesSection.appendChild(fixesWrap);
+    body.appendChild(fixesSection);
+
+    const actionsSection = document.createElement("div");
+    actionsSection.className = "section";
+    actionsSection.innerHTML = `<div class="section-title">Additional actions</div>`;
+
+    const actionsWrap = document.createElement("div");
     actionsWrap.className = "actions";
 
     const ignoreDiv = document.createElement("div");
-    ignoreDiv.className = "action";
+    ignoreDiv.className = "action ignore";
 
     const ignoreKey = actionKey(f, "ignore_finding");
     const ignoreChecked = state.selectedActions.has(ignoreKey);
 
-    const ignoreLabel = document.createElement("label");
-    ignoreLabel.innerHTML = `
-      <input type="checkbox" ${{ignoreChecked ? "checked" : ""}} />
-      <div>
-        <div class="action-title">Suppress this warning</div>
-        <div class="action-reason">
-          Use only if the code is intentional.   
-          
+    ignoreDiv.innerHTML = `
+      <label>
+        <input type="checkbox" ${{ignoreChecked ? "checked" : ""}} />
+        <div>
+          <div class="action-title">Suppress this warning</div>
+          <div class="action-reason">
+            Insert ignore marker for ${{escapeHtml(f.rule_id)}} in this location.
+          </div>
         </div>
-      </div>
+      </label>
     `;
 
-    const ignoreCb = ignoreLabel.querySelector("input");
+    const ignoreCb = ignoreDiv.querySelector("input");
     ignoreCb.addEventListener("change", (e) => {{
       if (e.target.checked) {{
         state.selectedActions.set(ignoreKey, {{
@@ -608,16 +912,13 @@ function render() {{
       updateCounts();
     }});
 
-    ignoreDiv.appendChild(ignoreLabel);
-
-    const ignoreDesc = document.createElement("div");
-    ignoreDesc.className = "desc";
-    ignoreDesc.textContent =
-      `Will insert an ignore marker for ${{f.rule_id}} at ${{f.file}}${{formatLines(f.start_line, f.end_line)}}.`;
-    ignoreDiv.appendChild(ignoreDesc);
-
     actionsWrap.appendChild(ignoreDiv);
-    card.appendChild(actionsWrap);
+    actionsSection.appendChild(actionsWrap);
+    body.appendChild(actionsSection);
+
+    details.appendChild(body);
+    card.appendChild(details);
+    elList.appendChild(card);
   }});
 
   elStatus.textContent = state.raw ? "Loaded" : "No data";

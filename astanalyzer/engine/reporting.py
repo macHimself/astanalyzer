@@ -36,6 +36,10 @@ class Finding:
     line: Optional[int] = None
     end_line: Optional[int] = None
     message: Optional[str] = None
+    code_snippet: Optional[str] = None
+    snippet_start_line: Optional[int] = None
+    snippet_end_line: Optional[int] = None
+    code_snippet: Optional[str] = None
     fixes: List[Any] = field(default_factory=list)
     anchor: FindingAnchor | None = None
 
@@ -143,7 +147,11 @@ class AnalysisReport:
                         "rule_id": f.rule_id,
                         "category": f.category,
                         "line": f.line,
+                        "end_line": f.end_line,
                         "message": f.message,
+                        "code_snippet": f.code_snippet,
+                        "snippet_start_line": f.snippet_start_line,
+                        "snippet_end_line": f.snippet_end_line,
                         "anchor": asdict(f.anchor) if f.anchor else None,
                         "fixes": [
                             {
@@ -295,6 +303,10 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
                 "start_line": start_line,
                 "end_line": end_line,
                 "message": f.message or "",
+                "code_snippet": f.code_snippet or "",
+                "code_snippet": f.code_snippet,
+                "snippet_start_line": f.snippet_start_line,
+                "snippet_end_line": f.snippet_end_line,
                 "anchor": asdict(f.anchor) if f.anchor else None,
                 "fixes": fixes,
             }
