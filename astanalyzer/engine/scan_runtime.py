@@ -133,6 +133,36 @@ def prepare_rule_runtime(project: ProjectNode, build_fixes: bool):
     return rules, rule_index, project_root, patch_run_dir
 
 
+def extract_code_snippet(
+    file_path: str | Path,
+    start_line: int | None,
+    end_line: int | None,
+    context: int = 6,
+) -> tuple[str | None, int | None, int | None]:
+
+    if start_line is None:
+        return None, None, None
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        total = len(lines)
+
+        match_start = max(1, start_line)
+        match_end = max(match_start, end_line or start_line)
+
+        snippet_start = max(1, match_start - context)
+        snippet_end = min(total, match_end + context)
+
+        snippet = "".join(lines[snippet_start - 1:snippet_end])
+
+        return snippet, snippet_start, snippet_end
+
+    except Exception:
+        return None, None, None
+    
+
 def build_finding(rule, match, module: ModuleNode, project_root: Path | None = None) -> Finding:
     """
     Build a normalized finding object from a matched rule result.
@@ -165,15 +195,28 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
     if not msg:
         msg = f"{rid} matched {match.__class__.__name__}"
 
+    line = getattr(match, "lineno", None)
+    end_line = getattr(match, "end_lineno", line)
+
+    code_snippet, snippet_start, snippet_end = extract_code_snippet(
+        module.filename,
+        line,
+        end_line,
+        context=4,
+    )
+
     return Finding(
         file=Path(module.filename),
         rule_id=rid,
         category=cat,
         severity=sev,
         title=title,
-        line=getattr(match, "lineno", None),
-        end_line=getattr(match, "end_lineno", getattr(match, "lineno", None)),
+        line=line,
+        end_line=end_line,
         message=getattr(match, "message", msg),
+        code_snippet=code_snippet,
+        snippet_start_line=snippet_start,
+        snippet_end_line=snippet_end,
         anchor=anchor,
     )
 
