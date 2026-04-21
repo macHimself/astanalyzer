@@ -388,7 +388,7 @@ def build_report_html(report_data: dict) -> str:
       border-radius: 14px;
       border: 1px solid rgba(130,160,220,.18);
       overflow: auto;
-      background: #0d1b2a;
+      background: #2f3136;
       max-height: 380px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
     }}
@@ -484,7 +484,18 @@ def build_report_html(report_data: dict) -> str:
     /* builtins / constants */
     .codehilite .nb,
     .codehilite .bp {{
-      color: #79c0ff;
+      color: #a5d6ff;
+      font-weight: 500;
+    }}
+
+    .codehilite .nb,
+    .codehilite .bp,
+    .codehilite .fm,
+    .codehilite .vc,
+    .codehilite .vg,
+    .codehilite .vi {{
+      color: #b6e3ff;
+      font-weight: 500;
     }}
 
     /* operators */
@@ -500,7 +511,8 @@ def build_report_html(report_data: dict) -> str:
     }}
 
     .codehilite .hll {{
-        background: rgba(255, 214, 102, 0.10);
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: inset 3px 0 0 rgba(180, 200, 255, 0.28);
     }}
 
     .codehilite table {{
