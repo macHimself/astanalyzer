@@ -14,6 +14,17 @@ This design enables reproducible analysis, integration with CI workflows, and co
 
 Unlike traditional linters, AstAnalyzer focuses on extensibility and controlled code transformation.
 
+## Why this matters
+
+Most static analysis tools produce reports that require manual inspection
+and direct navigation to source code.
+
+AstAnalyzer introduces a review step between analysis and modification,
+where findings are presented with context and fix proposals can be selected
+before any changes are applied.
+
+This makes automated refactoring safer, more transparent, and easier to control.
+
 ## Setup (development)
 
 Create virtual environment:
@@ -95,27 +106,64 @@ scan_report.json, report.html (interactive UI for selecting fixes)
 
 ### Select fixes (UI)
 
-Open `report.html`, select desired fixes, and export the selection.
+Open `report.html`, inspect findings using the interactive UI, select desired fixes, and export the selection.
 
 #### Report UI features
 
-The generated HTML report is a standalone static page. It does not require a backend server and can be opened directly in a browser.
+The generated HTML report is a standalone interactive page with no backend dependencies.
+It can be opened directly in a browser and is designed for efficient inspection and selection
+of fix proposals.
 
-Each finding card shows:
+Each finding is displayed as a collapsible card with two levels of detail:
+
+**Collapsed view (overview):**
 - finding title
 - severity
 - rule ID
-- finding ID
 - file path and line range
-- message/description
-- available fix proposals
-- optional suppression action
 
-The page also provides:
-- text filtering
-- bulk selection
-- clearing current selection
-- exporting the chosen fixes into a JSON plan for later patch generation
+**Expanded view (details):**
+- rule description (collapsible)
+- syntax-highlighted code snippet with surrounding context
+- highlighted lines where the issue occurs
+- available fix proposals with human-readable explanations
+- optional suppression action (ignore directive)
+
+### Code snippet preview
+
+The report includes a contextual code preview:
+- shows surrounding lines around the issue
+- highlights the exact affected lines
+- uses syntax highlighting (Pygments)
+- handles truncated snippets safely
+
+This significantly improves readability compared to raw JSON output and allows
+understanding issues without opening the source file.
+
+### Fix proposals
+
+Each fix is presented with:
+- a short title
+- optional explanation (reason)
+- human-readable description of actions derived from DSL
+- expandable technical detail (raw DSL)
+
+### Additional actions
+
+Each finding supports:
+- **"Suppress this warning"** action
+  - inserts an ignore directive into the source code
+  - allows selective suppression directly from UI
+
+### Interaction features
+
+The report supports:
+- full-text filtering (rule, file, message, fix text)
+- bulk selection of fixes
+- clearing selection
+- exporting selected fixes into a JSON plan
+
+The exported JSON is then used in the patch generation step.
 
 ### Generate patches
 ```bash
