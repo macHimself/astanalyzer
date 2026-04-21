@@ -137,7 +137,7 @@ def extract_code_snippet(
     file_path: str | Path,
     start_line: int | None,
     end_line: int | None,
-    context: int = 6,
+    context: int = 4,
 ) -> tuple[str | None, int | None, int | None]:
 
     if start_line is None:
@@ -149,14 +149,26 @@ def extract_code_snippet(
 
         total = len(lines)
 
-        match_start = max(1, start_line)
-        match_end = max(match_start, end_line or start_line)
-
-        snippet_start = max(1, match_start - context)
+        snippet_start = max(1, start_line - context)
+        match_end = end_line if end_line else start_line
         snippet_end = min(total, match_end + context)
+
+        triple_count = 0
+        for i in range(snippet_start - 1, snippet_end):
+            triple_count += lines[i].count('"""')
+            triple_count += lines[i].count("'''")
+
+        if triple_count % 2 == 1:
+            for i in range(snippet_start - 2, -1, -1):
+                if '"""' in lines[i] or "'''" in lines[i]:
+                    snippet_start = i + 1
+                    break
 
         snippet = "".join(lines[snippet_start - 1:snippet_end])
 
+        if snippet_start > 1:
+            snippet = "# ... truncated ...\n" + snippet
+            
         return snippet, snippet_start, snippet_end
 
     except Exception:

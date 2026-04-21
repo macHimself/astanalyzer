@@ -17,16 +17,49 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 
 
-def highlight_python_code(code: str) -> str:
-    """Return syntax-highlighted HTML for a Python code snippet."""
+def highlight_python_code(
+    code: str,
+    snippet_start_line: int | None = None,
+    match_start_line: int | None = None,
+    match_end_line: int | None = None,
+) -> str:
+    """Return syntax-highlighted HTML for a Python code snippet with highlighted match lines."""
     if not code:
         return ""
 
-    return highlight(
-        code,
-        PythonLexer(),
-        HtmlFormatter(nowrap=False, cssclass="codehilite"),
+    lines = code.splitlines()
+
+    leading_blank_count = 0
+    for line in lines:
+        if line.strip() == "":
+            leading_blank_count += 1
+        else:
+            break
+
+    if leading_blank_count:
+        lines = lines[leading_blank_count:]
+        code = "\n".join(lines)
+
+    adjusted_snippet_start = (snippet_start_line or 1) + leading_blank_count
+
+    hl_lines: list[int] = []
+    if (
+        match_start_line is not None
+        and match_end_line is not None
+    ):
+        start_rel = max(1, match_start_line - adjusted_snippet_start + 1)
+        end_rel = max(start_rel, match_end_line - adjusted_snippet_start + 1)
+        hl_lines = list(range(start_rel, end_rel + 1))
+
+    formatter = HtmlFormatter(
+        nowrap=False,
+        cssclass="codehilite",
+        linenos="table",
+        linenostart=adjusted_snippet_start,
+        hl_lines=hl_lines,
     )
+
+    return highlight(code, PythonLexer(), formatter)
 
 
 def build_report_html(report_data: dict) -> str:
@@ -36,7 +69,20 @@ def build_report_html(report_data: dict) -> str:
     findings = report_data.get("findings", [])
     for finding in findings:
         snippet = finding.get("code_snippet", "") or ""
-        finding["code_snippet_html"] = highlight_python_code(snippet) if snippet else ""
+        snippet_start_line = finding.get("snippet_start_line")
+        match_start_line = finding.get("start_line")
+        match_end_line = finding.get("end_line")
+
+        finding["code_snippet_html"] = (
+            highlight_python_code(
+                snippet,
+                snippet_start_line=snippet_start_line,
+                match_start_line=match_start_line,
+                match_end_line=match_end_line,
+            )
+            if snippet
+            else ""
+        )
 
     safe_json = (
         json.dumps(report_data, ensure_ascii=False, indent=2)
@@ -411,7 +457,7 @@ def build_report_html(report_data: dict) -> str:
     .codehilite .sr,
     .codehilite .ss,
     .codehilite .dl {{
-      color: #ff8fb1;
+      color: #7ee787;
       font-style: italic;
     }}
 
@@ -452,6 +498,54 @@ def build_report_html(report_data: dict) -> str:
       color: #ff7b72;
       font-weight: 600;
     }}
+
+    .codehilite .hll {{
+        background: rgba(255, 214, 102, 0.10);
+    }}
+
+    .codehilite table {{
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+    }}
+
+    .codehilite td {{
+      vertical-align: top;
+      padding: 0;
+    }}
+
+    .codehilite .linenos {{
+      user-select: none;
+      opacity: 0.55;
+      color: #8b949e;
+      border-right: 1px solid rgba(255,255,255,.08);
+      padding-right: 12px;
+    }}
+
+    .codehilite .linenos pre,
+    .codehilite .code pre {{
+      margin: 0;
+      line-height: 1.55;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }}
+
+    .codehilite .code {{
+      width: 100%;
+    }}
+
+.codehilite .linenos pre {{
+  text-align: right;
+}}
+
+.codehilite .code {{
+  padding-left: 12px;
+}}
+
+.codehilite .hll {{
+  background: rgba(160, 190, 255, 0.08);
+  box-shadow: inset 3px 0 0 rgba(160, 190, 255, 0.35);
+}}
 
   </style>
 </head>
@@ -764,11 +858,18 @@ function render() {{
           <div class="path" title="File and location">
             ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
           </div>
+        </div>
 
         <div class="expand-hint">Show details</div>
       </div>
     `;
     details.appendChild(summary);
+    details.addEventListener("toggle", () => {{
+        const hint = details.querySelector(".expand-hint");
+        if (hint) {{
+            hint.textContent = details.open ? "Hide details" : "Show details";
+        }}
+    }});
 
     const body = document.createElement("div");
     body.className = "detail-body";
@@ -783,10 +884,6 @@ function render() {{
       body.appendChild(messageSection);
     }}
          
-
-
-
-
     if (f.code_snippet_html) {{
     const codeSection = document.createElement("details");
     codeSection.className = "nested-details";
