@@ -6,7 +6,11 @@ AST-based static analysis engine for Python with a declarative DSL for rules and
 
 AstAnalyzer is a static analysis engine for Python that operates on the abstract syntax tree (AST) and provides a declarative domain-specific language (DSL) for defining detection rules and code transformations.
 
-Instead of modifying code directly, it generates patch proposals that can be reviewed and applied safely. This design enables reproducible analysis, integration with CI workflows, and controlled refactoring of large codebases.
+Instead of modifying code directly, it generates fix proposals that can be reviewed and applied safely. The workflow separates analysis, selection, patch generation, and application into distinct stages.
+
+The implementation ensures consistent handling of relative and absolute paths across all stages of the pipeline. This allows patch generation to work correctly even when intermediate artifacts (such as JSON reports) are located outside of the project root, improving robustness in practical usage scenarios.
+
+This design enables reproducible analysis, integration with CI workflows, and controlled refactoring of large codebases.
 
 Unlike traditional linters, AstAnalyzer focuses on extensibility and controlled code transformation.
 
@@ -63,12 +67,12 @@ Use -vv to enable debug logging:
 ```bash
 astanalyzer -vv scan ./project
 ```
-this option is useful when you want to inspect 
-matched rules
-general fidings
-patch selection flow
-file resolution
-cleanup operations
+this option is useful when you want to inspect:
+- matched rules
+- general findings
+- patch selection flow
+- file resolution
+- cleanup operations
 
 ### Quiet mode
 Use --quiet to show only errors:
@@ -120,13 +124,22 @@ astanalyzer patch
 or explicitly:
 
 ```bash
-astanalyzer patch path/to/selected.json
+astanalyzer patch --selected path/to/selected.json
 ```
 This step:
 reads selected fixes
 builds patch files (*.patch)
 does NOT modify source code yet
 
+The patch command supports explicit input of the selected JSON file and does not require it to be located in the project root. File paths are resolved relative to the project, ensuring consistent behavior across different environments.
+
+### Path handling and robustness
+
+The tool does not assume that analysis artifacts (e.g. `scan_report.json` or selected JSON files) are located within the project root.
+
+All paths are normalized and resolved consistently during patch generation and application. This prevents failures caused by mismatched relative paths and allows flexible workflows where analysis results are stored or processed externally.
+
+This behavior was introduced to eliminate common sources of patch failure in earlier versions.
 
 ### Validate patches (dry-run)
 Validation is automatically executed during patching, but can also be done manually:
@@ -1172,11 +1185,12 @@ This modifies files directly.
 - reviewable (diff-based workflow)
 - CI-friendly (patch files are portable)
 - reversible (git handles rollback)
+- robust (handles paths and artifacts outside project root)
 
 ### Common pitfalls
 - patches fail if file changed after scan
 - missing newline at EOF can break the patch (auto-fixed)
-- relative paths must match project structure
+- mismatched relative paths may cause issues in earlier versions (now mitigated by consistent path resolution)
 - patches require a git repository (recommended)
 
 ---
