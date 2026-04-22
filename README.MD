@@ -10,7 +10,7 @@ Instead of modifying code directly, it generates fix proposals that can be revie
 
 The implementation ensures consistent handling of relative and absolute paths across all stages of the pipeline. This allows patch generation to work correctly even when intermediate artifacts (such as JSON reports) are located outside of the project root, improving robustness in practical usage scenarios.
 
-This design enables reproducible analysis, integration with CI workflows, and controlled refactoring of large codebases.
+This design enables reproducible analysis, integration with CI workflows, and controlled refactoring of large codebases. The tool provides full visibility into proposed changes through precomputed patch previews.
 
 Unlike traditional linters, AstAnalyzer focuses on extensibility and controlled code transformation.
 
@@ -22,6 +22,9 @@ and direct navigation to source code.
 AstAnalyzer introduces a review step between analysis and modification,
 where findings are presented with context and fix proposals can be selected
 before any changes are applied.
+
+Each proposal includes a preview of the exact code changes, making the process
+transparent and reducing the risk of unintended modifications.
 
 This makes automated refactoring safer, more transparent, and easier to control.
 
@@ -105,6 +108,10 @@ astanalyzer scan .
 This generates:
 - `scan_report.json`
 - `report.html` (interactive UI for selecting fixes)
+
+Each fix proposal also includes a **precomputed patch preview** (unified diff),
+allowing users to inspect the exact code changes directly in the report
+without generating patch files or modifying source code.
 
 The scan output includes structured metadata for each finding, including:
 - severity
@@ -224,7 +231,32 @@ Each fix is presented with:
 - a short title
 - optional explanation (reason)
 - human-readable description of actions derived from DSL
+- **patch preview (unified diff)**
 - expandable technical detail (raw DSL)
+
+#### Patch preview
+
+Each fix proposal includes a precomputed patch preview displayed directly in the report.
+
+The preview is generated during the scan phase and represents the exact unified diff
+that would be produced during patch generation.
+
+This allows users to:
+
+- inspect the exact code changes before selecting a fix
+- understand the scope of modifications without opening source files
+- compare multiple fix proposals quickly
+
+The preview uses a unified diff format with basic highlighting:
+
+- added lines (`+`)
+- removed lines (`-`)
+- diff metadata and context (`@@`, file headers)
+
+If a preview cannot be generated (e.g. no effective change), the UI displays
+a clear fallback message explaining the reason.
+
+The preview is a read-only artifact and does not modify code or create patch files.
 
 #### Additional actions
 
