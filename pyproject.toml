@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astanalyzer"
-version = "0.0.9"
+version = "0.1.0"
 description = "AST-based static analysis engine with DSL for Python"
 authors = [
     { name = "Martin Cech", email = "cech.martinr@outlook.com" }
