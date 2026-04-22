@@ -59,7 +59,9 @@ pip install -e .
 ```
 
 ## Usage
-By default, the tool focuses on warnings and errors in its output:
+
+By default, the tool scans the project with all loaded rules and focuses on warnings and errors in its output:
+
 ```bash
 astanalyzer scan ./project
 ```
@@ -93,6 +95,86 @@ This option is useful when you want to inspect:
 Use --quiet to show only errors:
 ```bash
 astanalyzer --quiet scan ./project
+```
+
+## Rule selection during scan
+
+AstAnalyzer allows selective execution of rules during the scan phase.
+
+This is useful when you want to:
+- focus on a specific rule
+- suppress noisy categories temporarily
+- combine broad exclusions with explicit rule overrides
+- ignore unimportant directories such as test suites
+
+### Run only selected rules
+
+Run the scan with only specific rule IDs:
+
+```bash
+astanalyzer scan . --only STYLE-010,STYLE-011
+```
+
+### Exclude selected rules
+
+Run all available rules except the excluded ones:
+
+```bash
+astanalyzer scan . --exclude SEC-003,SEC-006
+```
+
+### Run only selected categories
+
+Restrict the scan to one or more rule categories:
+
+```bash
+astanalyzer scan . --only-category STYLE,SEC
+```
+
+### Exclude selected categories
+
+Skip one or more categories during scan:
+
+```bash
+astanalyzer scan . --exclude-category STYLE
+```
+
+### Re-include specific rules after exclusion
+
+Rules excluded by `--exclude` or `--exclude-category` can be explicitly added back using `--include`:
+
+```bash
+astanalyzer scan . --exclude-category STYLE --include STYLE-010
+```
+
+### Ignore selected directories
+
+Directory names can be excluded from the scan:
+
+```bash
+astanalyzer scan . --exclude-dir tests,venv,migrations
+```
+
+### Notes on filter behavior
+
+Rule filters are applied in the following order:
+
+1. `--only`
+2. `--only-category`
+3. `--exclude`
+4. `--exclude-category`
+5. `--include`
+
+This means that `--include` can restore rules that were previously excluded.
+
+Examples:
+
+```bash
+astanalyzer scan . --only STYLE-010
+```
+
+```bash
+astanalyzer scan . --exclude-category STYLE --include STYLE-010
 ```
 
 ---
@@ -459,6 +541,7 @@ Examples:
 Rule IDs are used for:
 - identifying findings in reports
 - filtering and grouping issues
+- selecting rules from CLI (`--only`, `--exclude`, `--include`)
 - referencing rules in CI pipelines and tooling
 - mapping fixes and patches to specific rules
 ---
@@ -1291,6 +1374,7 @@ astanalyzer scan . --rules ./team_rules --rules ./personal_rules.py
 - Custom rule files are imported dynamically
 - Importing a module registers its rule classes automatically (via `Rule` metaclass)
 - The scan then runs with both built-in and custom rules
+- Custom rules can also be targeted by scan filters if they define stable rule IDs
 
 ### Notes
 
