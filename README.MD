@@ -116,6 +116,21 @@ of fix proposals.
 
 Each finding is displayed as a collapsible card with two levels of detail:
 
+### Hierarchical grouping
+
+To improve navigation in large projects, findings are grouped into a three-level hierarchy:
+
+- **Category** (e.g. STYLE, SEC, CX)
+- **Rule**
+- **Individual findings**
+
+Each level is collapsible, allowing users to quickly navigate thousands of findings.
+
+This significantly reduces cognitive load compared to a flat list and makes it easier to:
+- identify dominant problem areas
+- inspect issues per rule
+- work efficiently with large reports
+
 **Collapsed view (overview):**
 - finding title
 - severity
@@ -162,6 +177,7 @@ The report supports:
 - bulk selection of fixes
 - clearing selection
 - exporting selected fixes into a JSON plan
+- hierarchical navigation (category → rule → findings)
 
 The exported JSON is then used in the patch generation step.
 
