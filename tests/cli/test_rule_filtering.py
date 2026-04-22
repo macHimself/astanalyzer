@@ -82,6 +82,57 @@ def test_filter_rules_combines_rule_and_category_filters():
     assert result == [RuleA]
 
 
+def test_filter_rules_include_adds_rule_back_after_category_exclusion():
+    selection = build_rule_selection(
+        exclude_category="STYLE",
+        include="STYLE-002",
+    )
+    result = filter_rules(ALL_RULES, selection)
+    assert result == [RuleC, RuleA]
+
+
+def test_filter_rules_include_adds_rule_back_after_direct_exclusion():
+    selection = build_rule_selection(
+        exclude="STYLE-002",
+        include="STYLE-002",
+    )
+    result = filter_rules(ALL_RULES, selection)
+    assert result == [RuleB, RuleC, RuleA]
+
+
+def test_filter_rules_include_does_not_duplicate_existing_rule():
+    selection = build_rule_selection(include="STYLE-002")
+    result = filter_rules(ALL_RULES, selection)
+    assert result == ALL_RULES
+
+
+def test_filter_rules_include_can_restore_multiple_rules():
+    selection = build_rule_selection(
+        exclude_category="STYLE",
+        include="STYLE-002,STYLE-003",
+    )
+    result = filter_rules(ALL_RULES, selection)
+    assert result == [RuleC, RuleA, RuleB]
+
+
+def test_filter_rules_only_then_include_keeps_only_result_when_rule_already_present():
+    selection = build_rule_selection(
+        only="STYLE-002",
+        include="STYLE-002",
+    )
+    result = filter_rules(ALL_RULES, selection)
+    assert result == [RuleA]
+
+
+def test_filter_rules_only_then_exclude_category_can_end_empty():
+    selection = build_rule_selection(
+        only="STYLE-002",
+        exclude_category="STYLE",
+    )
+    with pytest.raises(RuleFilterError, match="No rules selected for scan"):
+        filter_rules(ALL_RULES, selection)
+
+
 def test_filter_rules_fails_on_unknown_only_rule():
     selection = build_rule_selection(only="STYLE-999")
     with pytest.raises(RuleFilterError, match="Unknown rule IDs in --only"):
@@ -91,6 +142,12 @@ def test_filter_rules_fails_on_unknown_only_rule():
 def test_filter_rules_fails_on_unknown_exclude_rule():
     selection = build_rule_selection(exclude="SEC-999")
     with pytest.raises(RuleFilterError, match="Unknown rule IDs in --exclude"):
+        filter_rules(ALL_RULES, selection)
+
+
+def test_filter_rules_fails_on_unknown_include_rule():
+    selection = build_rule_selection(include="STYLE-999")
+    with pytest.raises(RuleFilterError, match="Unknown rule IDs in --include"):
         filter_rules(ALL_RULES, selection)
 
 
