@@ -963,15 +963,26 @@ function buildFindingCard(f) {{
     body.appendChild(messageSection);
   }}
 
-  if (f.code_snippet_html) {{
-    const codeSection = document.createElement("details");
-    codeSection.className = "nested-details";
-    codeSection.innerHTML = `
-      <summary>View code context</summary>
-      <div class="code code-wrap">${{f.code_snippet_html}}</div>
-    `;
-    body.appendChild(codeSection);
-  }}
+if (f.code_snippet_html) {{
+  const codeSection = document.createElement("details");
+  codeSection.className = "nested-details";
+  codeSection.innerHTML = `
+    <summary>View code context</summary>
+    <div class="code code-wrap" data-snippet-loaded="false"></div>
+  `;
+
+  codeSection.addEventListener("toggle", () => {{
+    const target = codeSection.querySelector(".code-wrap");
+    if (!codeSection.open || !target || target.dataset.snippetLoaded === "true") {{
+      return;
+    }}
+
+    target.innerHTML = f.code_snippet_html;
+    target.dataset.snippetLoaded = "true";
+  }});
+
+  body.appendChild(codeSection);
+}}
 
   const fixesSection = document.createElement("div");
   fixesSection.className = "section";
@@ -1107,7 +1118,7 @@ function render() {{
   grouped.forEach((cat) => {{
     const categoryDetails = document.createElement("details");
     categoryDetails.className = "group category-group";
-    categoryDetails.open = true;
+    categoryDetails.open = false;
 
     const categoryFindingCount = cat.rules.reduce(
       (sum, rule) => sum + rule.findings.length,
@@ -1145,10 +1156,20 @@ function render() {{
       const ruleBody = document.createElement("div");
       ruleBody.className = "group-body";
 
-      rule.findings.forEach((f) => {{
-        const card = buildFindingCard(f);
-        ruleBody.appendChild(card);
-      }});
+      ruleDetails.dataset.rendered = "false";
+
+        ruleDetails.addEventListener("toggle", () => {{
+        if (!ruleDetails.open || ruleDetails.dataset.rendered === "true") {{
+            return;
+        }}
+
+        rule.findings.forEach((f) => {{
+            const card = buildFindingCard(f);
+            ruleBody.appendChild(card);
+        }});
+
+        ruleDetails.dataset.rendered = "true";
+        }});
 
       ruleDetails.appendChild(ruleBody);
       categoryBody.appendChild(ruleDetails);
