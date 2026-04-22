@@ -36,7 +36,8 @@ from .patch_writer import (
     present_foundings_suggestions,
     create_diff,
     emit_patch_if_changed,
-    build_patch_preview_data
+    build_patch_preview_data,
+    make_patch_run_dir,
 )
 
 log = logging.getLogger(__name__)
@@ -146,24 +147,26 @@ def profile_analysis(enabled: bool = False):
     return decorator
 
 
-def prepare_rule_runtime(project: ProjectNode, build_fixes: bool):
+def prepare_rule_runtime(
+    project: ProjectNode,
+    build_fixes: bool,
+    rules: list[Rule] | None = None,
+):
     """
     Prepare shared runtime state for rule execution.
 
     Returns loaded rules, rule index, resolved project root, and patch
     output configuration used during analysis.
     """
-    rules = list(Rule.registry)
-    rule_index = build_rule_index_by_node_type(rules)
-
+    active_rules = list(rules) if rules is not None else list(Rule.registry)
+    rule_index = build_rule_index_by_node_type(active_rules)
     project_root = getattr(project, "root_dir", None)
     if not project_root:
         raise ValueError("ProjectNode.root_dir is not set")
 
     project_root = Path(project_root).resolve()
-    patch_run_dir = 1  # make_patch_run_dir(project_root) if build_fixes else None
-
-    return rules, rule_index, project_root, patch_run_dir
+    patch_run_dir = make_patch_run_dir(project_root) if build_fixes else None
+    return active_rules, rule_index, project_root, patch_run_dir
 
 
 def extract_code_snippet(
@@ -461,6 +464,7 @@ def run_rules_on_project_one_pass(
     project: ProjectNode,
     build_plans: bool = True,
     build_fixes: bool = False,
+    rules: list[Rule] | None = None,
 ) -> List[Finding]:
     """
     Run all indexed rules over the project in a single AST traversal pass.
@@ -469,7 +473,11 @@ def run_rules_on_project_one_pass(
     """
     findings: List[Finding] = []
 
-    _, rule_index, project_root, patch_run_dir = prepare_rule_runtime(project, build_fixes)
+    _, rule_index, project_root, patch_run_dir = prepare_rule_runtime(
+        project,
+        build_fixes,
+        rules=rules,
+    )
     patch_counter = 0
 
     for module, node in project.walk_all_nodes():
@@ -501,6 +509,7 @@ def run_rules_on_project_report(
     project: ProjectNode,
     build_plans=True,
     build_fixes=False,
+    rules: list[Rule] | None = None,
 ) -> tuple[AnalysisReport, dict[str, Any]]:
     """
     Run project analysis and return both aggregated report data and scan JSON.
@@ -519,6 +528,7 @@ def run_rules_on_project_report(
         project,
         build_plans=build_plans,
         build_fixes=build_fixes,
+        rules=rules,
     )
 
     project_root = getattr(project, "root_dir", None)
@@ -531,11 +541,19 @@ def run_rules_on_project_report(
     return report, build_scan_json(findings, project_root=Path(project_root))
 
 
-def run_rules_on_project_scan_json(project: ProjectNode) -> Dict[str, Any]:
+def run_rules_on_project_scan_json(
+    project: ProjectNode,
+    rules: list[Rule] | None = None,
+) -> Dict[str, Any]:
     """
     Run project analysis and return only normalized scan JSON output.
     """
-    findings = run_rules_on_project_one_pass(project, build_plans=True, build_fixes=False)
+    findings = run_rules_on_project_one_pass(
+        project,
+        build_plans=True,
+        build_fixes=False,
+        rules=rules,
+    )
 
     project_root = getattr(project, "root_dir", None)
     if not project_root:
