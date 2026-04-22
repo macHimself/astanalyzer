@@ -6,7 +6,7 @@ AST-based static analysis engine for Python with a declarative DSL for rules and
 
 AstAnalyzer is a static analysis engine for Python that operates on the abstract syntax tree (AST) and provides a declarative domain-specific language (DSL) for defining detection rules and code transformations.
 
-Instead of modifying code directly, it generates fix proposals that can be reviewed and applied safely. The workflow separates analysis, selection, patch generation, and application into distinct stages.
+Instead of modifying code directly, it generates fix proposals that can be reviewed and applied safely. The workflow separates analysis, selection, patch generation, archiving, and application into distinct stages.
 
 The implementation ensures consistent handling of relative and absolute paths across all stages of the pipeline. This allows patch generation to work correctly even when intermediate artifacts (such as JSON reports) are located outside of the project root, improving robustness in practical usage scenarios.
 
@@ -179,7 +179,7 @@ astanalyzer scan . --exclude-category STYLE --include STYLE-010
 
 ---
 
-## How it works (scan -> select -> patch -> apply)
+## How it works (scan -> select -> patch -> archive/apply)
 
 AstAnalyzer supports a full workflow from analysis to automated code modification.
 
@@ -394,6 +394,24 @@ This ensures:
 - the patch can be applied cleanly
 - no conflicts exist
 
+### Archive generated artifacts without applying patches
+
+If patches were generated but should not be applied yet, the current working artifacts can be archived without modifying source code:
+
+    astanalyzer archive
+
+This moves the current analysis artifacts into a timestamped archive directory:
+- selected JSON
+- scan report
+- HTML report
+- generated patch files
+
+The archived files are stored under:
+
+    used_patches/<timestamp>/
+
+This is useful when the user wants to preserve the generated results for later review or reuse, but does not want to apply the patches immediately.
+
 ### Apply patches
 ```bash
 astanalyzer apply
@@ -403,13 +421,18 @@ If all checks pass:
 - source files are modified
 
 ### Archive run
-After a successful apply, the following artifacts are moved to:
-- selected JSON 
+
+Artifacts can be archived in two ways:
+- automatically after a successful apply
+- manually without applying patches using the archive command
+
+The following artifacts are stored in a timestamped archive directory:
+- selected JSON
 - scan report
 - HTML report
 - patch files
 
-are moved to: 
+They are moved to:
 ```bash
 used_patches/<timestamp>/
 ```
