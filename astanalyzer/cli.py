@@ -34,6 +34,13 @@ from .engine import (
     resolve_report_file_path, 
     extract_file_value
 )
+from .file_selection import parse_excluded_dir_names
+from .rule import Rule
+from .rule_filtering import (
+    RuleFilterError,
+    build_rule_selection,
+    filter_rules,
+)
 from .logging_config import setup_logging
 from .report_ui import open_report_in_browser, write_report_html
 from .rule_loader import import_rules_from_path
@@ -742,13 +749,15 @@ def apply_all_patches(root: Path | None = None) -> tuple[int, int]:
     return ok, failed
 
 
-def cmd_scan(args) -> None:
+def cmd_scan(args: argparse.Namespace) -> None:
     """
     Run static analysis for the selected path and generate output reports.
 
-    The command validates the input path, scans all discovered Python files,
+    The command validates the input path, scans discovered Python files,
     saves the analysis results as JSON and HTML reports, and prints a summary.
     If enabled, it also opens the generated HTML report in a web browser.
+
+    Rule selection and directory exclusion are resolved before scan execution.
 
     Args:
         args: Parsed CLI arguments containing the scan target and output options.
@@ -759,9 +768,31 @@ def cmd_scan(args) -> None:
         - Prints summary information to stdout.
     """
     path = validate_path(args.path)
+
     files = get_list_of_files_in_project(str(path))
+
+    excluded_dir_names = parse_excluded_dir_names(args.exclude_dir)
+    if excluded_dir_names:
+        files = [
+            file_path
+            for file_path in files
+            if not any(part in excluded_dir_names for part in Path(file_path).parts)
+        ]
+
+    if not files:
+        log.error("No files selected for scan after applying --exclude-dir.")
+        sys.exit(2)
+
     project = load_project(files)
-    report, scan = run_rules_on_project_report(project, True, False)
+
+    selected_rules = getattr(args, "selected_rules", None)
+
+    report, scan = run_rules_on_project_report(
+        project,
+        True,
+        False,
+        rules=selected_rules,
+    )
 
     json_path = Path("scan_report.json").resolve()
     json_path.write_text(
@@ -783,14 +814,14 @@ def cmd_scan(args) -> None:
     print()
 
 
-def cmd_report(args) -> None:
+def cmd_report(args: argparse.Namespace) -> None:
     """Open an existing HTML report in the default web browser."""
     report_path = validate_path(args.path)
     open_report_in_browser(report_path)
     log.info("Report opened in browser: %s", report_path)
 
 
-def cmd_patch(args) -> None:
+def cmd_patch(args: argparse.Namespace) -> None:
     """
     Generate patch files from selected fixes and validate them.
 
@@ -858,7 +889,7 @@ def cmd_patch(args) -> None:
     print()
 
 
-def cmd_apply(args) -> None:
+def cmd_apply(args: argparse.Namespace) -> None:
     """
     Validate, apply, and archive patch files from the current working directory.
 
@@ -939,7 +970,7 @@ def cmd_apply(args) -> None:
     print()
 
 
-def cmd_clean(args) -> None:
+def cmd_clean(args: argparse.Namespace) -> None:
     """
     Clean generated artifacts and patch files from the working directory.
 
@@ -1020,6 +1051,35 @@ def add_rules_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_scan_filter_arguments(parser: argparse.ArgumentParser) -> None:
+    """
+    Add CLI arguments for rule and directory filtering during scan.
+
+    Args:
+        parser (argparse.ArgumentParser): Parser for the scan command.
+    """
+    parser.add_argument(
+        "--only",
+        help="Comma-separated list of rule IDs to include, e.g. STYLE-002,STYLE-003",
+    )
+    parser.add_argument(
+        "--exclude",
+        help="Comma-separated list of rule IDs to exclude, e.g. SEC-031,DBG-023",
+    )
+    parser.add_argument(
+        "--only-category",
+        help="Comma-separated list of rule categories to include, e.g. STYLE,SECURITY",
+    )
+    parser.add_argument(
+        "--exclude-category",
+        help="Comma-separated list of rule categories to exclude, e.g. STYLE,DEBUG",
+    )
+    parser.add_argument(
+        "--exclude-dir",
+        help="Comma-separated directory names to skip during scan, e.g. tests,venv,migrations",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """
     Build the CLI parser with all commands and options for astanalyzer.
@@ -1082,6 +1142,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not open HTML report automatically after scan",
     )
     add_rules_argument(scan_parser)
+    add_scan_filter_arguments(scan_parser)
     scan_parser.set_defaults(func=cmd_scan)
 
     patch_parser = subparsers.add_parser("patch", help="Generate patches from selected fixes")
@@ -1113,8 +1174,8 @@ def main(argv: list[str] | None = None) -> int:
     """
     Run the astanalyzer CLI application.
 
-    Parses arguments, sets up logging, loads rules, and executes
-    the selected command.
+    Parses arguments, sets up logging, loads rules, resolves scan-time rule
+    selection, and executes the selected command.
 
     Args:
         argv (list[str] | None): Optional CLI arguments.
@@ -1142,10 +1203,32 @@ def main(argv: list[str] | None = None) -> int:
         imported = import_rules_from_path(rules_path)
         log.info("Imported %d custom rule file(s) from %s", len(imported), rules_path)
 
+    all_rules = list(Rule.registry)
+
+    if args.command == "scan":
+        selection = build_rule_selection(
+            only=args.only,
+            exclude=args.exclude,
+            only_category=args.only_category,
+            exclude_category=args.exclude_category,
+        )
+
+        try:
+            selected_rules = filter_rules(all_rules, selection)
+        except RuleFilterError as exc:
+            log.error("Rule selection error: %s", exc)
+            sys.exit(2)
+
+        args.selected_rules = selected_rules
+
+        log.info(
+            "Selected %d rule(s) for scan out of %d loaded rule(s).",
+            len(selected_rules),
+            len(all_rules),
+        )
+    else:
+        args.selected_rules = None
+
     log.info("astanalyzer started")
     args.func(args)
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
