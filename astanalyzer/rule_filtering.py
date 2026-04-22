@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Sequence, Type
+from typing import Sequence, Type
 
 
 class RuleFilterError(ValueError):
@@ -14,6 +14,7 @@ class RuleSelection:
     exclude_ids: frozenset[str]
     only_categories: frozenset[str]
     exclude_categories: frozenset[str]
+    include_ids: frozenset[str]
 
 
 def parse_csv_arg(raw: str | None) -> set[str]:
@@ -39,6 +40,7 @@ def build_rule_selection(
     exclude: str | None = None,
     only_category: str | None = None,
     exclude_category: str | None = None,
+    include: str | None = None,
 ) -> RuleSelection:
     """
     Build a normalized rule selection object from CLI arguments.
@@ -52,18 +54,19 @@ def build_rule_selection(
         exclude_categories=frozenset(
             normalize_category(x) for x in parse_csv_arg(exclude_category)
         ),
+        include_ids=frozenset(parse_csv_arg(include)),
     )
 
 
-def _rule_id(rule_cls: Type) -> str:
-    rule_id = getattr(rule_cls, "id", None)
+def _rule_id(rule: Type) -> str:
+    rule_id = getattr(rule, "id", None)
     if not rule_id:
-        raise RuleFilterError(f"Rule class {rule_cls.__name__} has no 'id' attribute.")
+        raise RuleFilterError(f"Rule {rule!r} has no 'id' attribute.")
     return str(rule_id)
 
 
-def _rule_category(rule_cls: Type) -> str:
-    category = getattr(rule_cls, "category", "")
+def _rule_category(rule: Type) -> str:
+    category = getattr(rule, "category", "")
     return normalize_category(str(category))
 
 
@@ -79,6 +82,7 @@ def validate_rule_selection(
 
     unknown_only = selection.only_ids - available_ids
     unknown_exclude = selection.exclude_ids - available_ids
+    unknown_include = selection.include_ids - available_ids
     unknown_only_categories = selection.only_categories - available_categories
     unknown_exclude_categories = selection.exclude_categories - available_categories
 
@@ -91,6 +95,10 @@ def validate_rule_selection(
     if unknown_exclude:
         errors.append(
             f"Unknown rule IDs in --exclude: {', '.join(sorted(unknown_exclude))}"
+        )
+    if unknown_include:
+        errors.append(
+            f"Unknown rule IDs in --include: {', '.join(sorted(unknown_include))}"
         )
     if unknown_only_categories:
         errors.append(
@@ -121,9 +129,11 @@ def filter_rules(
     2. only_categories
     3. exclude_ids
     4. exclude_categories
+    5. include_ids are added back
     """
     validate_rule_selection(rules, selection)
 
+    all_rules = list(rules)
     filtered = list(rules)
 
     if selection.only_ids:
@@ -147,10 +157,18 @@ def filter_rules(
             if _rule_category(rule) not in selection.exclude_categories
         ]
 
+    if selection.include_ids:
+        existing_ids = {_rule_id(rule) for rule in filtered}
+        for rule in all_rules:
+            rule_id = _rule_id(rule)
+            if rule_id in selection.include_ids and rule_id not in existing_ids:
+                filtered.append(rule)
+                existing_ids.add(rule_id)
+
     if not filtered:
         raise RuleFilterError(
             "No rules selected for scan after applying "
-            "--only/--exclude/--only-category/--exclude-category."
+            "--only/--exclude/--only-category/--exclude-category/--include."
         )
 
     return filtered

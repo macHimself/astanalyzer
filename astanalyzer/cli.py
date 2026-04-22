@@ -1078,6 +1078,10 @@ def add_scan_filter_arguments(parser: argparse.ArgumentParser) -> None:
         "--exclude-dir",
         help="Comma-separated directory names to skip during scan, e.g. tests,venv,migrations",
     )
+    parser.add_argument(
+        "--include",
+        help="Comma-separated list of rule IDs to include even if excluded by filters",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1211,6 +1215,7 @@ def main(argv: list[str] | None = None) -> int:
             exclude=args.exclude,
             only_category=args.only_category,
             exclude_category=args.exclude_category,
+            include=args.include,
         )
 
         try:
