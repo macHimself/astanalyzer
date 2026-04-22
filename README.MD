@@ -125,7 +125,17 @@ It can be opened directly in a browser and is designed for efficient inspection 
 of fix proposals.
 
 The report uses hierarchical navigation. Findings are grouped by category and rule, and each
-individual finding is displayed as a collapsible card with two levels of detail.
+individual finding is displayed as a collapsible card.
+
+### Report structure
+
+The HTML report groups findings hierarchically:
+
+- Category → Rule → Findings
+
+Rule descriptions are displayed at the rule level and are not repeated for each finding.
+They are shown on demand (collapsible), which reduces visual noise and improves navigation
+in large analysis outputs.
 
 #### Hierarchical grouping
 
@@ -135,7 +145,7 @@ To improve navigation in large projects, findings are grouped into a three-level
 - **Rule**
 - **Individual findings**
 
-Each level is collapsible, allowing users to quickly navigate thousands of findings.
+Each level is collapsible, allowing users to efficiently navigate large numbers of findings.
 
 Additionally, each category and rule shows:
 - total number of findings
@@ -146,18 +156,27 @@ This significantly reduces cognitive load compared to a flat list and makes it e
 - inspect issues per rule
 - work efficiently with large reports
 
-**Collapsed view (overview):**
-- finding title
+**Collapsed view (finding overview):**
+- finding identifier (e.g. F-001)
 - severity
 - rule ID
 - file path and line range
 
-**Expanded view (details):**
-- rule description (collapsible)
+**Expanded view (finding details):**
 - syntax-highlighted code snippet with surrounding context
 - highlighted lines where the issue occurs
 - available fix proposals with human-readable explanations
 - optional suppression action (ignore directive)
+
+#### Rule-level details
+
+Each rule provides:
+- rule identifier and title
+- aggregated statistics (number of findings and severity distribution)
+- collapsible rule description
+
+This separation ensures that general explanations are shown once,
+while findings focus only on concrete occurrences.
 
 #### Guided navigation
 

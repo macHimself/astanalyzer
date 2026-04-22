@@ -1018,7 +1018,7 @@ function buildFindingCard(f) {{
   summary.innerHTML = `
     <div class="summary-top">
       <div class="summary-main">
-        <div class="title">${{escapeHtml(f.title)}}</div>
+        <div class="title">${{escapeHtml(f.id)}}</div>
 
         <div class="meta">
           <span class="pill" title="Severity">${{escapeHtml(f.severity)}}</span>
@@ -1045,15 +1045,6 @@ function buildFindingCard(f) {{
   const body = document.createElement("div");
   body.className = "detail-body";
 
-  if (f.message) {{
-    const messageSection = document.createElement("details");
-    messageSection.className = "nested-details";
-    messageSection.innerHTML = `
-      <summary>Rule description</summary>
-      <div class="desc">${{escapeHtml(f.message)}}</div>
-    `;
-    body.appendChild(messageSection);
-  }}
 
 if (f.code_snippet_html) {{
   const codeSection = document.createElement("details");
@@ -1275,6 +1266,17 @@ function render() {{
 
       const ruleBody = document.createElement("div");
       ruleBody.className = "group-body";
+
+      const ruleDescription = rule.findings[0]?.message?.trim();
+      if (ruleDescription) {{
+        const descDetails = document.createElement("details");
+        descDetails.className = "nested-details";
+        descDetails.innerHTML = `
+          <summary>Rule description</summary>
+          <div class="desc">${{escapeHtml(ruleDescription)}}</div>
+        `;
+        ruleBody.appendChild(descDetails);
+      }}
 
       ruleDetails.dataset.rendered = "false";
 
