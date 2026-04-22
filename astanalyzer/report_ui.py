@@ -570,6 +570,60 @@ def build_report_html(report_data: dict) -> str:
       font-weight: 600;
       font-size: 14px;
     }}
+
+    .hint {{
+      font-size: 13px;
+      opacity: 0.7;
+      margin: 12px 0 16px;
+    }}
+    
+    .info {{
+      color: #6b7280;
+    }}
+
+    .warn {{
+      color: #f59e0b;
+      font-weight: 600;
+    }}
+
+    .error {{
+      color: #dc2626;
+      font-weight: 700;
+    }}
+
+    .category-warning {{
+      border-left: 4px solid #f59e0b;
+    }}
+
+    .category-error {{
+      border-left: 4px solid #dc2626;
+    }}
+
+    .rule-warning {{
+      border-left: 3px solid #f59e0b;
+    }}
+
+    .rule-error {{
+      border-left: 3px solid #dc2626;
+    }}
+
+    .rule-warning {{
+      border-left: 3px solid #f59e0b;
+    }}
+
+    .rule-error {{
+      border-left: 3px solid #dc2626;
+    }}
+
+    .snippet-marker {{
+      font-size: 12px;
+      opacity: 0.6;
+      margin: 6px 0 6px;
+      padding-left: 4px;
+      border-left: 2px solid rgba(255,255,255,.10);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }}
+
   </style>
 </head>
 <body>
@@ -591,6 +645,10 @@ def build_report_html(report_data: dict) -> str:
       <button id="btnSelectAll" disabled>Select all</button>
       <button id="btnClear" disabled>Clear selection</button>
       <button id="btnExport" disabled>Export selected.json</button>
+    </div>
+
+    <div class="hint">
+        Expand categories to explore findings.
     </div>
 
     <div id="hint" class="warn" style="display:none; margin: 0 0 12px;"></div>
@@ -692,6 +750,7 @@ function normalisePlan(json) {{
       code_snippet_html: f.code_snippet_html ?? "",
       snippet_start_line: f.snippet_start_line ?? null,
       snippet_end_line: f.snippet_end_line ?? null,
+      snippet_truncated: f.snippet_truncated ?? false,
       anchor: f.anchor ?? null,
       raw_finding: f,
       fixes: Array.isArray(fixes) ? fixes.map((x, j) => ({{
@@ -751,6 +810,39 @@ function groupFindings(findings) {{
       ),
     }}));
 }}
+
+function countSeverity(findings) {{
+  let info = 0;
+  let warning = 0;
+  let error = 0;
+
+  findings.forEach(f => {{
+    const s = (f.severity || "").toLowerCase();
+    if (s === "error") error++;
+    else if (s === "warning") warning++;
+    else info++;
+  }});
+
+  return {{ info, warning, error }};
+}}
+
+
+function formatSeverityMeta(counts) {{
+  const parts = [];
+
+  if (counts.info > 0) {{
+    parts.push(`<span class="info">${{counts.info}} info</span>`);
+  }}
+  if (counts.warning > 0) {{
+    parts.push(`<span class="warn">${{counts.warning}} warning</span>`);
+  }}
+  if (counts.error > 0) {{
+    parts.push(`<span class="error">${{counts.error}} error</span>`);
+  }}
+
+  return parts.join(" • ");
+}}
+
 
 function fixKey(finding, fix) {{
   return `${{finding.file}}::${{finding.id}}::${{fix.fix_id}}`;
@@ -966,8 +1058,12 @@ function buildFindingCard(f) {{
 if (f.code_snippet_html) {{
   const codeSection = document.createElement("details");
   codeSection.className = "nested-details";
+  const marker = f.snippet_truncated
+    ? `<div class="snippet-marker">… truncated …</div>`
+    : "";
   codeSection.innerHTML = `
     <summary>View code context</summary>
+    ${{marker}}
     <div class="code code-wrap" data-snippet-loaded="false"></div>
   `;
 
@@ -1116,31 +1212,53 @@ function render() {{
   const grouped = groupFindings(visible);
 
   grouped.forEach((cat) => {{
+    const allFindings = cat.rules.flatMap(r => r.findings);
+    const {{ info, warning, error }} = countSeverity(allFindings);
+
     const categoryDetails = document.createElement("details");
     categoryDetails.className = "group category-group";
     categoryDetails.open = false;
+
+    if (error > 0) {{
+      categoryDetails.classList.add("category-error");
+    }} else if (warning > 0) {{
+      categoryDetails.classList.add("category-warning");
+    }}
 
     const categoryFindingCount = cat.rules.reduce(
       (sum, rule) => sum + rule.findings.length,
       0
     );
 
-
     categoryDetails.innerHTML = `
-        <summary>
-            <div class="group-summary">
-            <div class="group-title">${{escapeHtml(formatCategoryLabel(cat.category))}}</div>
-            <div class="group-meta">${{categoryFindingCount}} findings • ${{cat.rules.length}} rules</div>
-            </div>
-        </summary>
+      <summary>
+        <div class="group-summary">
+          <div class="group-title">${{escapeHtml(cat.category)}}</div>
+          <div class="group-meta">
+            ${{categoryFindingCount}} findings • 
+            <span class="info">${{info}} info</span> • 
+            <span class="warn">${{warning}} warning</span>
+            ${{error > 0 ? ` • <span class="error">${{error}} error</span>` : ""}}
+          </div>
+        </div>
+      </summary>
     `;
 
     const categoryBody = document.createElement("div");
     categoryBody.className = "group-body";
 
     cat.rules.forEach((rule) => {{
+      const counts = countSeverity(rule.findings);
+      const severityMeta = formatSeverityMeta(counts);
+
       const ruleDetails = document.createElement("details");
       ruleDetails.className = "group rule-group";
+
+      if (counts.error > 0) {{
+        ruleDetails.classList.add("rule-error");
+      }} else if (counts.warning > 0) {{
+        ruleDetails.classList.add("rule-warning");
+      }}
 
       ruleDetails.innerHTML = `
         <summary>
@@ -1148,7 +1266,9 @@ function render() {{
             <div class="group-title">
               ${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}
             </div>
-            <div class="group-meta">${{rule.findings.length}} findings</div>
+            <div class="group-meta">
+              ${{rule.findings.length}} findings${{severityMeta ? ` • ${{severityMeta}}` : ""}}
+            </div>
           </div>
         </summary>
       `;
@@ -1158,18 +1278,18 @@ function render() {{
 
       ruleDetails.dataset.rendered = "false";
 
-        ruleDetails.addEventListener("toggle", () => {{
+      ruleDetails.addEventListener("toggle", () => {{
         if (!ruleDetails.open || ruleDetails.dataset.rendered === "true") {{
-            return;
+          return;
         }}
 
         rule.findings.forEach((f) => {{
-            const card = buildFindingCard(f);
-            ruleBody.appendChild(card);
+          const card = buildFindingCard(f);
+          ruleBody.appendChild(card);
         }});
 
         ruleDetails.dataset.rendered = "true";
-        }});
+      }});
 
       ruleDetails.appendChild(ruleBody);
       categoryBody.appendChild(ruleDetails);
