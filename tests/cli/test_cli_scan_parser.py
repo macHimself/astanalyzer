@@ -13,6 +13,7 @@ def test_scan_parser_accepts_rule_filter_arguments():
         "--exclude-category", "SECURITY",
         "--include", "STYLE-002",
         "--exclude-dir", "tests,migrations",
+        "archive"
     ])
 
     assert args.command == "scan"
@@ -23,3 +24,4 @@ def test_scan_parser_accepts_rule_filter_arguments():
     assert args.exclude_category == "SECURITY"
     assert args.include == "STYLE-002"
     assert args.exclude_dir == "tests,migrations"
+    assert args.command == "archive"
