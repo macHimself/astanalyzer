@@ -257,6 +257,25 @@ def archive_patch_files_from_root(archive_dir: Path, base_dir: Path | None = Non
     return moved
 
 
+def has_working_artifacts(base_dir: Path | None = None) -> bool:
+    """
+    Return True if there are generated artifacts or patch files to archive.
+    """
+    root = base_dir or Path.cwd()
+
+    candidates = [
+        root / "astanalyzer-selected.json",
+        root / "selected.json",
+        root / "scan_report.json",
+        root / "report.html",
+    ]
+
+    if any(p.exists() and p.is_file() for p in candidates):
+        return True
+
+    return bool(find_patch_files(root, include_archive=False))
+
+
 def clean_working_artifacts(
     include_archive: bool = False,
     base_dir: Path | None = None,
@@ -722,7 +741,7 @@ def apply_all_patches(root: Path | None = None) -> tuple[int, int]:
     ok = 0
     failed = 0
 
-    print_section("ASTANALYZER CLEAN SUMMARY")
+    print_section("ASTANALYZER APPLY SUMMARY")
     print(f"Root: {root}")
     print(f"Patches found: {len(patch_files)}")
 
@@ -970,6 +989,49 @@ def cmd_apply(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_archive(args: argparse.Namespace) -> None:
+    """
+    Archive generated analysis artifacts and patch files without applying them.
+
+    This command stores the current working artifacts into a timestamped
+    archive directory under 'used_patches'. Unlike the apply command, it does
+    not validate or apply patches.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        None
+
+    Side Effects:
+        - Creates a timestamped archive directory when there is something to archive.
+        - Moves generated JSON, HTML, and patch files into the archive directory.
+        - Prints an archive summary to stdout.
+    """
+    root = Path.cwd()
+
+    if not has_working_artifacts(root):
+        print("Nothing to archive.")
+        return
+
+    archive_dir = create_run_archive_dir(root)
+
+    archived_files = archive_run_artifacts(
+        archive_dir=archive_dir,
+        base_dir=root,
+    )
+    archived_patches = archive_patch_files_from_root(
+        archive_dir=archive_dir,
+        base_dir=root,
+    )
+
+    print_section("ASTANALYZER ARCHIVE SUMMARY")
+    print(f"Archive dir:       {archive_dir}")
+    print(f"Archived files:    {len(archived_files)}")
+    print(f"Archived patches:  {archived_patches}")
+    print()
+
+
 def cmd_clean(args: argparse.Namespace) -> None:
     """
     Clean generated artifacts and patch files from the working directory.
@@ -1170,6 +1232,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only verify patch files, do not apply them",
     )
     apply_parser.set_defaults(func=cmd_apply)
+
+    archive_parser = subparsers.add_parser(
+        "archive",
+        help="Archive generated artefacts and patches without applying them",
+    )
+    archive_parser.set_defaults(func=cmd_archive)
 
     return parser
 
