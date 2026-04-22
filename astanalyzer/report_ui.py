@@ -624,6 +624,40 @@ def build_report_html(report_data: dict) -> str:
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }}
 
+    .code.diff-preview {{
+      padding: 10px 12px;
+      white-space: pre;
+      line-height: 1.5;
+    }}
+
+    .code.diff-preview pre {{
+      margin: 0;
+      white-space: pre;
+      font: inherit;
+      color: inherit;
+      background: transparent;
+    }}
+
+    .code.diff-preview div {{
+      white-space: pre;
+    }}
+
+    .code.diff-preview .line-add {{
+      color: #9be9a8;
+    }}
+
+    .code.diff-preview .line-del {{
+      color: #ffb3b3;
+    }}
+
+    .code.diff-preview .line-meta {{
+      color: #8b949e;
+    }}
+
+    .code.diff-preview .line-hunk {{
+      color: #79c0ff;
+    }}
+
   </style>
 </head>
 <body>
@@ -771,6 +805,26 @@ function getCategoryFromRuleId(ruleId) {{
   if (!ruleId) return "OTHER";
   const parts = String(ruleId).split("-");
   return parts[0] || "OTHER";
+}}
+
+function renderDiff(diffText) {{
+  const lines = diffText.split("\\n");
+
+  return lines.map(line => {{
+    let cls = "";
+
+    if (line.startsWith("+++ ") || line.startsWith("--- ")) {{
+      cls = "line-meta";
+    }} else if (line.startsWith("@@")) {{
+      cls = "line-hunk";
+    }} else if (line.startsWith("+")) {{
+      cls = "line-add";
+    }} else if (line.startsWith("-")) {{
+      cls = "line-del";
+    }}
+
+    return `<div class="${{cls}}">${{escapeHtml(line)}}</div>`;
+  }}).join("");
 }}
 
 function groupFindings(findings) {{
@@ -1125,6 +1179,35 @@ if (f.code_snippet_html) {{
         desc.className = "desc";
         desc.textContent = humanText;
         fixDiv.appendChild(desc);
+      }}
+
+      const patchPreviewText = (fx.patch_preview || "").trim();
+      const patchPreviewStatus =
+        fx.raw_fix?.patch_preview_status || (patchPreviewText ? "available" : "unavailable");
+      const patchPreviewError = fx.raw_fix?.patch_preview_error || "";
+
+      const patchSummaryLabel =
+        patchPreviewStatus === "available"
+          ? "Patch preview"
+          : "Patch preview unavailable";
+
+      if (patchPreviewText || patchPreviewError) {{
+        const patchDetails = document.createElement("details");
+        patchDetails.className = "nested-details";
+        if (patchPreviewText) {{
+          patchDetails.innerHTML = `
+            <summary>${{escapeHtml(patchSummaryLabel)}}</summary>
+            <div class="code diff-preview">
+              ${{renderDiff(patchPreviewText)}}
+            </div>
+          `;
+        }} else {{
+          patchDetails.innerHTML = `
+            <summary>${{escapeHtml(patchSummaryLabel)}}</summary>
+            <div class="desc">Preview unavailable.${{patchPreviewError ? " " + escapeHtml(patchPreviewError) : ""}}</div>
+          `;
+        }}
+        fixDiv.appendChild(patchDetails);
       }}
 
       const dslText =

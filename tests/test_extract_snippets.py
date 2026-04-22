@@ -220,3 +220,79 @@ def test_build_report_html_does_not_render_snippet_marker_when_not_truncated() -
 
     assert "View code context" in html
     assert '"snippet_truncated": false' in html
+
+
+def test_build_report_html_renders_patch_preview() -> None:
+    report_data = {
+        "project_root": "/tmp/project",
+        "findings": [
+            {
+                "id": "F-003",
+                "rule_id": "SEM-001",
+                "title": "None comparison",
+                "severity": "warning",
+                "file": "sample.py",
+                "start_line": 4,
+                "end_line": 4,
+                "message": "Use is None instead of == None.",
+                "code_snippet": "if x == None:\n    return 1\n",
+                "anchor": {},
+                "fixes": [
+                    {
+                        "fix_id": "FX-003-A",
+                        "title": "Replace comparison operator",
+                        "reason": "None comparisons should use identity semantics.",
+                        "dsl": {
+                            "because": "None comparisons should use identity semantics.",
+                            "actions": [{"op": "replace_none_comparison_operator"}],
+                        },
+                        "patch_preview": "--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n-if x == None:\n+if x is None:\n",
+                        "patch_preview_status": "available",
+                        "fixer_index": 0,
+                    }
+                ],
+            }
+        ],
+    }
+
+    html = build_report_html(report_data)
+
+    assert "Patch preview" in html
+    assert "if x is None:" in html
+
+
+def test_build_report_html_renders_unavailable_patch_preview() -> None:
+    report_data = {
+        "project_root": "/tmp/project",
+        "findings": [
+            {
+                "id": "F-004",
+                "rule_id": "STYLE-010",
+                "title": "Preview unavailable sample",
+                "severity": "info",
+                "file": "sample.py",
+                "start_line": 1,
+                "end_line": 1,
+                "message": "No effective change.",
+                "code_snippet": "pass\n",
+                "anchor": {},
+                "fixes": [
+                    {
+                        "fix_id": "FX-004-A",
+                        "title": "No-op fix",
+                        "reason": "This fix does not change code.",
+                        "dsl": {"because": "This fix does not change code.", "actions": []},
+                        "patch_preview": "",
+                        "patch_preview_status": "unavailable",
+                        "patch_preview_error": "Preview is not available because the fix would not change the source.",
+                        "fixer_index": 0,
+                    }
+                ],
+            }
+        ],
+    }
+
+    html = build_report_html(report_data)
+
+    assert "Patch preview unavailable" in html
+    assert "Preview is not available because the fix would not change the source." in html
