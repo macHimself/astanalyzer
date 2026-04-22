@@ -43,10 +43,7 @@ def highlight_python_code(
     adjusted_snippet_start = (snippet_start_line or 1) + leading_blank_count
 
     hl_lines: list[int] = []
-    if (
-        match_start_line is not None
-        and match_end_line is not None
-    ):
+    if match_start_line is not None and match_end_line is not None:
         start_rel = max(1, match_start_line - adjusted_snippet_start + 1)
         end_rel = max(start_rel, match_end_line - adjusted_snippet_start + 1)
         hl_lines = list(range(start_rel, end_rel + 1))
@@ -252,10 +249,10 @@ def build_report_html(report_data: dict) -> str:
     }}
 
     .detail-body {{
-    padding: 12px 16px 16px;
-    border-top: 1px solid rgba(127,127,127,.18);
-    display: grid;
-    gap: 14px;
+      padding: 12px 16px 16px;
+      border-top: 1px solid rgba(127,127,127,.18);
+      display: grid;
+      gap: 14px;
     }}
 
     .section {{
@@ -277,14 +274,6 @@ def build_report_html(report_data: dict) -> str:
       background: color-mix(in oklab, Canvas, CanvasText 3%);
       line-height: 1.4;
       white-space: pre-wrap;
-    }}
-
-    .tech {{
-      font-size: 12px;
-      opacity: .75;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
     }}
 
     .fixes, .actions {{
@@ -327,14 +316,14 @@ def build_report_html(report_data: dict) -> str:
 
     .code {{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(127,127,127,.2);
+      font-size: 13px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
       overflow: auto;
-      background: color-mix(in oklab, Canvas, CanvasText 4%);
-      white-space: pre-wrap;
-      max-height: 220px;
+      background: #2f3136;
+      max-height: 380px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
     }}
 
     .nested-details {{
@@ -348,6 +337,11 @@ def build_report_html(report_data: dict) -> str:
       font-size: 13px;
       font-weight: 600;
       opacity: .9;
+      user-select: none;
+    }}
+
+    .nested-details summary::selection {{
+      background: transparent;
     }}
 
     footer {{
@@ -372,37 +366,13 @@ def build_report_html(report_data: dict) -> str:
     .codehilite {{
       margin: 0;
       background: transparent !important;
-    }}
-
-    .codehilite pre {{
-      margin: 0;
-      white-space: pre;
-      background: transparent !important;
-    }}
-
-    {pygments_css}
-
-    .code {{
-      font-size: 13px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(130,160,220,.18);
-      overflow: auto;
-      background: #2f3136;
-      max-height: 380px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-    }}
-
-    .codehilite {{
-      margin: 0;
-      background: transparent !important;
       color: #e6edf3;
     }}
 
     .codehilite pre {{
       margin: 0;
-      background: transparent !important;
       white-space: pre;
+      background: transparent !important;
       color: #e6edf3;
       line-height: 1.55;
     }}
@@ -414,106 +384,7 @@ def build_report_html(report_data: dict) -> str:
       font-size: 13px;
     }}
 
-    /* default text */
-    .codehilite .n,
-    .codehilite .nn,
-    .codehilite .nx,
-    .codehilite .p,
-    .codehilite .w {{
-      color: #e6edf3;
-    }}
-
-    /* keywords: def, if, try, except */
-    .codehilite .k,
-    .codehilite .kn,
-    .codehilite .kp,
-    .codehilite .kr {{
-      color: #ffbd59;
-      font-weight: 600;
-    }}
-
-    /* function / method names */
-    .codehilite .nf {{
-      color: #2f81f7;
-    }}
-
-    /* class names / types */
-    .codehilite .nc,
-    .codehilite .kt {{
-      color: #a5d6ff;
-    }}
-
-    /* strings and docstrings */
-    .codehilite .s,
-    .codehilite .sa,
-    .codehilite .sb,
-    .codehilite .sc,
-    .codehilite .sd,
-    .codehilite .s1,
-    .codehilite .s2,
-    .codehilite .se,
-    .codehilite .sh,
-    .codehilite .si,
-    .codehilite .sr,
-    .codehilite .ss,
-    .codehilite .dl {{
-      color: #7ee787;
-      font-style: italic;
-    }}
-
-    /* numbers */
-    .codehilite .m,
-    .codehilite .mb,
-    .codehilite .mf,
-    .codehilite .mh,
-    .codehilite .mi,
-    .codehilite .mo {{
-      color: #ff9e64;
-    }}
-
-    /* comments */
-    .codehilite .c,
-    .codehilite .c1,
-    .codehilite .cm,
-    .codehilite .cp,
-    .codehilite .cs {{
-      color: #8b949e;
-      font-style: italic;
-    }}
-
-    /* builtins / constants */
-    .codehilite .nb,
-    .codehilite .bp {{
-      color: #a5d6ff;
-      font-weight: 500;
-    }}
-
-    .codehilite .nb,
-    .codehilite .bp,
-    .codehilite .fm,
-    .codehilite .vc,
-    .codehilite .vg,
-    .codehilite .vi {{
-      color: #b6e3ff;
-      font-weight: 500;
-    }}
-
-    /* operators */
-    .codehilite .o,
-    .codehilite .ow {{
-      color: #c9d1d9;
-    }}
-
-    /* exceptions / special names */
-    .codehilite .ne {{
-      color: #ff7b72;
-      font-weight: 600;
-    }}
-
-    .codehilite .hll {{
-      background: rgba(255, 255, 255, 0.07);
-      box-shadow: inset 3px 0 0 rgba(180, 200, 255, 0.28);
-    }}
+    {pygments_css}
 
     .codehilite table {{
       width: 100%;
@@ -542,23 +413,163 @@ def build_report_html(report_data: dict) -> str:
       font-size: 13px;
     }}
 
-    .codehilite .code {{
-      width: 100%;
+    .codehilite .linenos pre {{
+      text-align: right;
     }}
 
-.codehilite .linenos pre {{
-  text-align: right;
-}}
+    .codehilite .code {{
+      width: 100%;
+      padding-left: 12px;
+    }}
 
-.codehilite .code {{
-  padding-left: 12px;
-}}
+    .codehilite .n,
+    .codehilite .nn,
+    .codehilite .nx,
+    .codehilite .p,
+    .codehilite .w {{
+      color: #e6edf3;
+    }}
 
-.codehilite .hll {{
-  background: rgba(160, 190, 255, 0.08);
-  box-shadow: inset 3px 0 0 rgba(160, 190, 255, 0.35);
-}}
+    .codehilite .k,
+    .codehilite .kn,
+    .codehilite .kp,
+    .codehilite .kr {{
+      color: #ffbd59;
+      font-weight: 600;
+    }}
 
+    .codehilite .nf {{
+      color: #2f81f7;
+    }}
+
+    .codehilite .nc,
+    .codehilite .kt {{
+      color: #a5d6ff;
+    }}
+
+    .codehilite .s,
+    .codehilite .sa,
+    .codehilite .sb,
+    .codehilite .sc,
+    .codehilite .sd,
+    .codehilite .s1,
+    .codehilite .s2,
+    .codehilite .se,
+    .codehilite .sh,
+    .codehilite .si,
+    .codehilite .sr,
+    .codehilite .ss,
+    .codehilite .dl {{
+      color: #7ee787;
+      font-style: italic;
+    }}
+
+    .codehilite .m,
+    .codehilite .mb,
+    .codehilite .mf,
+    .codehilite .mh,
+    .codehilite .mi,
+    .codehilite .mo {{
+      color: #ff9e64;
+    }}
+
+    .codehilite .c,
+    .codehilite .c1,
+    .codehilite .cm,
+    .codehilite .cp,
+    .codehilite .cs {{
+      color: #8b949e;
+      font-style: italic;
+    }}
+
+    .codehilite .nb,
+    .codehilite .bp,
+    .codehilite .fm,
+    .codehilite .vc,
+    .codehilite .vg,
+    .codehilite .vi {{
+      color: #b6e3ff;
+      font-weight: 500;
+    }}
+
+    .codehilite .o,
+    .codehilite .ow {{
+      color: #c9d1d9;
+    }}
+
+    .codehilite .ne {{
+      color: #ff7b72;
+      font-weight: 600;
+    }}
+
+    .codehilite .hll {{
+      background: rgba(255,255,255,.07);
+      box-shadow: inset 3px 0 0 rgba(180, 200, 255, 0.28);
+    }}
+
+    .group {{
+      border: 1px solid rgba(127,127,127,.22);
+      border-radius: 14px;
+      background: color-mix(in oklab, Canvas, CanvasText 1.5%);
+      overflow: hidden;
+    }}
+
+    .group > summary {{
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      user-select: none;
+    }}
+
+    .group > summary::-webkit-details-marker {{
+      display: none;
+    }}
+
+    .group > summary:hover {{
+      background: color-mix(in oklab, Canvas, CanvasText 3%);
+    }}
+
+    .group-body {{
+      padding: 10px 12px 12px;
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid rgba(127,127,127,.16);
+    }}
+
+    .group-summary {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+
+    .group-title {{
+      font-weight: 700;
+    }}
+
+    .group-meta {{
+      font-size: 12px;
+      opacity: .7;
+      white-space: nowrap;
+    }}
+
+    .category-group {{
+      background: color-mix(in oklab, Canvas, CanvasText 2%);
+    }}
+
+    .category-group .group-title {{
+      font-size: 15px;
+    }}
+
+    .rule-group {{
+      margin-left: 10px;
+    }}
+
+    .rule-group .group-title {{
+      font-weight: 600;
+      font-size: 14px;
+    }}
   </style>
 </head>
 <body>
@@ -589,12 +600,21 @@ def build_report_html(report_data: dict) -> str:
   <footer>
     This page was generated from scan_report.json.
   </footer>
-  <script id="report-data" type="application/json">{safe_json}</script>
-<script>
 
+  <script id="report-data" type="application/json">{safe_json}</script>
+  <script>
 const initialRaw = JSON.parse(
   document.getElementById("report-data").textContent
 );
+
+const CATEGORY_LABELS = {{
+  STYLE: "Style and readability",
+  SEM: "Semantic issues",
+  SEC: "Security",
+  PERF: "Performance",
+  DEAD: "Dead code",
+  CX: "Complexity and maintainability",
+}};
 
 const state = {{
   raw: initialRaw,
@@ -618,6 +638,12 @@ const btnPickDir = document.getElementById("btnPickDir");
 const btnSelectAll = document.getElementById("btnSelectAll");
 const btnClear = document.getElementById("btnClear");
 const btnExport = document.getElementById("btnExport");
+
+function formatCategoryLabel(category) {{
+  const code = String(category || "OTHER").toUpperCase();
+  const label = CATEGORY_LABELS[code];
+  return label ? `${{code}} – ${{label}}` : code;
+}}
 
 function setHint(msg, cls = "warn") {{
   if (!msg) {{
@@ -680,6 +706,50 @@ function normalisePlan(json) {{
       }})) : []
     }};
   }});
+}}
+
+function getCategoryFromRuleId(ruleId) {{
+  if (!ruleId) return "OTHER";
+  const parts = String(ruleId).split("-");
+  return parts[0] || "OTHER";
+}}
+
+function groupFindings(findings) {{
+  const grouped = new Map();
+
+  findings.forEach((f) => {{
+    const category = getCategoryFromRuleId(f.rule_id);
+    const ruleKey = f.rule_id || "UNKNOWN_RULE";
+
+    if (!grouped.has(category)) {{
+      grouped.set(category, {{
+        category,
+        rules: new Map(),
+      }});
+    }}
+
+    const cat = grouped.get(category);
+
+    if (!cat.rules.has(ruleKey)) {{
+      cat.rules.set(ruleKey, {{
+        rule_id: f.rule_id,
+        title: f.title,
+        severity: f.severity,
+        findings: [],
+      }});
+    }}
+
+    cat.rules.get(ruleKey).findings.push(f);
+  }});
+
+  return Array.from(grouped.values())
+    .sort((a, b) => a.category.localeCompare(b.category))
+    .map((cat) => ({{
+      ...cat,
+      rules: Array.from(cat.rules.values()).sort((a, b) =>
+        (a.rule_id || "").localeCompare(b.rule_id || "")
+      ),
+    }}));
 }}
 
 function fixKey(finding, fix) {{
@@ -845,189 +915,247 @@ function buildHumanFixText(fx) {{
   return lines.join("\\n");
 }}
 
-function render() {{
-  elList.innerHTML = "";
-  const visible = state.findings.filter(matchesFilter);
+function buildFindingCard(f) {{
+  const card = document.createElement("div");
+  card.className = "card";
 
-  visible.forEach(f => {{
-    const card = document.createElement("div");
-    card.className = "card";
+  const details = document.createElement("details");
+  details.className = "finding";
 
-    const details = document.createElement("details");
-    details.className = "finding";
+  const summary = document.createElement("summary");
+  summary.innerHTML = `
+    <div class="summary-top">
+      <div class="summary-main">
+        <div class="title">${{escapeHtml(f.title)}}</div>
 
-    const summary = document.createElement("summary");
-    summary.innerHTML = `
-      <div class="summary-top">
-        <div class="summary-main">
-          <div class="title">${{escapeHtml(f.title)}}</div>
-
-          <div class="meta">
-            <span class="pill" title="Severity">${{escapeHtml(f.severity)}}</span>
-            <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
-          </div>
-
-          <div class="path" title="File and location">
-            ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
-          </div>
+        <div class="meta">
+          <span class="pill" title="Severity">${{escapeHtml(f.severity)}}</span>
+          <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
         </div>
 
-        <div class="expand-hint">Show details</div>
+        <div class="path" title="File and location">
+          ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
+        </div>
       </div>
-    `;
-    details.appendChild(summary);
-    details.addEventListener("toggle", () => {{
-        const hint = details.querySelector(".expand-hint");
-        if (hint) {{
-            hint.textContent = details.open ? "Hide details" : "Show details";
-        }}
-    }});
 
-    const body = document.createElement("div");
-    body.className = "detail-body";
+      <div class="expand-hint">Show details</div>
+    </div>
+  `;
+  details.appendChild(summary);
 
-    if (f.message) {{
-      const messageSection = document.createElement("details");
-      messageSection.className = "nested-details";
-      messageSection.innerHTML = `
-        <summary>Rule description</summary>
-        <div class="desc">${{escapeHtml(f.message)}}</div>
-      `;
-      body.appendChild(messageSection);
+  details.addEventListener("toggle", () => {{
+    const hint = details.querySelector(".expand-hint");
+    if (hint) {{
+      hint.textContent = details.open ? "Hide details" : "Show details";
     }}
-         
-    if (f.code_snippet_html) {{
+  }});
+
+  const body = document.createElement("div");
+  body.className = "detail-body";
+
+  if (f.message) {{
+    const messageSection = document.createElement("details");
+    messageSection.className = "nested-details";
+    messageSection.innerHTML = `
+      <summary>Rule description</summary>
+      <div class="desc">${{escapeHtml(f.message)}}</div>
+    `;
+    body.appendChild(messageSection);
+  }}
+
+  if (f.code_snippet_html) {{
     const codeSection = document.createElement("details");
     codeSection.className = "nested-details";
     codeSection.innerHTML = `
-        <summary>View code context</summary>
-        <div class="code code-wrap">${{f.code_snippet_html}}</div>
+      <summary>View code context</summary>
+      <div class="code code-wrap">${{f.code_snippet_html}}</div>
     `;
     body.appendChild(codeSection);
-    }}
+  }}
 
-    const fixesSection = document.createElement("div");
-    fixesSection.className = "section";
-    fixesSection.innerHTML = `<div class="section-title">Fix proposals</div>`;
+  const fixesSection = document.createElement("div");
+  fixesSection.className = "section";
+  fixesSection.innerHTML = `<div class="section-title">Fix proposals</div>`;
 
-    const fixesWrap = document.createElement("div");
-    fixesWrap.className = "fixes";
+  const fixesWrap = document.createElement("div");
+  fixesWrap.className = "fixes";
 
-    if (!f.fixes.length) {{
-      const none = document.createElement("div");
-      none.className = "fix";
-      none.textContent = "No fix proposals in this finding.";
-      fixesWrap.appendChild(none);
-    }} else {{
-      f.fixes.forEach(fx => {{
-        const k = fixKey(f, fx);
-        const fixDiv = document.createElement("div");
-        fixDiv.className = "fix";
+  if (!f.fixes.length) {{
+    const none = document.createElement("div");
+    none.className = "fix";
+    none.textContent = "No fix proposals in this finding.";
+    fixesWrap.appendChild(none);
+  }} else {{
+    f.fixes.forEach((fx) => {{
+      const k = fixKey(f, fx);
+      const fixDiv = document.createElement("div");
+      fixDiv.className = "fix";
 
-        const checked = state.selected.has(k);
-        const humanText = buildHumanFixText(fx);
-        const fixReason =
-          fx.reason && fx.reason.trim() !== (f.message || "").trim()
-            ? fx.reason
-            : "";
+      const checked = state.selected.has(k);
+      const humanText = buildHumanFixText(fx);
+      const fixReason =
+        fx.reason && fx.reason.trim() !== (f.message || "").trim()
+          ? fx.reason
+          : "";
 
-        fixDiv.innerHTML = `
-          <label>
-            <input type="checkbox" ${{checked ? "checked" : ""}} />
-            <div>
-              <div class="fix-title">${{escapeHtml(fx.title)}}</div>
-              ${{
-                fixReason
-                  ? `<div class="fix-reason">${{escapeHtml(fixReason)}}</div>`
-                  : ""
-              }}
-            </div>
-          </label>
-        `;
+      fixDiv.innerHTML = `
+        <label>
+          <input type="checkbox" ${{checked ? "checked" : ""}} />
+          <div>
+            <div class="fix-title">${{escapeHtml(fx.title)}}</div>
+            ${{
+              fixReason
+                ? `<div class="fix-reason">${{escapeHtml(fixReason)}}</div>`
+                : ""
+            }}
+          </div>
+        </label>
+      `;
 
-        const cb = fixDiv.querySelector("input");
-        cb.addEventListener("change", (e) => {{
-          if (e.target.checked) {{
-            state.selected.set(k, {{ finding: f, fix: fx }});
-          }} else {{
-            state.selected.delete(k);
-          }}
-          updateCounts();
-        }});
-
-        if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
-          const desc = document.createElement("div");
-          desc.className = "desc";
-          desc.textContent = humanText;
-          fixDiv.appendChild(desc);
+      const cb = fixDiv.querySelector("input");
+      cb.addEventListener("change", (e) => {{
+        if (e.target.checked) {{
+          state.selected.set(k, {{ finding: f, fix: fx }});
+        }} else {{
+          state.selected.delete(k);
         }}
+        updateCounts();
+      }});
 
-        const dslText = typeof fx.dsl === "string"
+      if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
+        const desc = document.createElement("div");
+        desc.className = "desc";
+        desc.textContent = humanText;
+        fixDiv.appendChild(desc);
+      }}
+
+      const dslText =
+        typeof fx.dsl === "string"
           ? fx.dsl
           : JSON.stringify(fx.dsl, null, 2);
 
-        if (dslText && dslText !== "{{}}" && dslText !== "[]") {{
-          const rawDetails = document.createElement("details");
-          rawDetails.className = "nested-details";
-          rawDetails.innerHTML = `
-            <summary>Technical detail</summary>
-            <div class="code">${{escapeHtml(dslText)}}</div>
-          `;
-          fixDiv.appendChild(rawDetails);
-        }}
+      if (dslText && dslText !== "{{}}" && dslText !== "[]") {{
+        const rawDetails = document.createElement("details");
+        rawDetails.className = "nested-details";
+        rawDetails.innerHTML = `
+          <summary>Technical detail</summary>
+          <div class="code">${{escapeHtml(dslText)}}</div>
+        `;
+        fixDiv.appendChild(rawDetails);
+      }}
 
-        fixesWrap.appendChild(fixDiv);
-      }});
-    }}
+      fixesWrap.appendChild(fixDiv);
+    }});
+  }}
 
-    fixesSection.appendChild(fixesWrap);
-    body.appendChild(fixesSection);
+  fixesSection.appendChild(fixesWrap);
+  body.appendChild(fixesSection);
 
-    const actionsSection = document.createElement("div");
-    actionsSection.className = "section";
-    actionsSection.innerHTML = `<div class="section-title">Additional actions</div>`;
+  const actionsSection = document.createElement("div");
+  actionsSection.className = "section";
+  actionsSection.innerHTML = `<div class="section-title">Additional actions</div>`;
 
-    const actionsWrap = document.createElement("div");
-    actionsWrap.className = "actions";
+  const actionsWrap = document.createElement("div");
+  actionsWrap.className = "actions";
 
-    const ignoreDiv = document.createElement("div");
-    ignoreDiv.className = "action ignore";
+  const ignoreDiv = document.createElement("div");
+  ignoreDiv.className = "action ignore";
 
-    const ignoreKey = actionKey(f, "ignore_finding");
-    const ignoreChecked = state.selectedActions.has(ignoreKey);
+  const ignoreKey = actionKey(f, "ignore_finding");
+  const ignoreChecked = state.selectedActions.has(ignoreKey);
 
-    ignoreDiv.innerHTML = `
-      <label>
-        <input type="checkbox" ${{ignoreChecked ? "checked" : ""}} />
-        <div>
-          <div class="action-title">Suppress this warning</div>
-          <div class="action-reason">
-            Insert ignore marker for ${{escapeHtml(f.rule_id)}} in this location.
-          </div>
+  ignoreDiv.innerHTML = `
+    <label>
+      <input type="checkbox" ${{ignoreChecked ? "checked" : ""}} />
+      <div>
+        <div class="action-title">Suppress this warning</div>
+        <div class="action-reason">
+          Insert ignore marker for ${{escapeHtml(f.rule_id)}} in this location.
         </div>
-      </label>
+      </div>
+    </label>
+  `;
+
+  const ignoreCb = ignoreDiv.querySelector("input");
+  ignoreCb.addEventListener("change", (e) => {{
+    if (e.target.checked) {{
+      state.selectedActions.set(ignoreKey, {{
+        type: "ignore_finding",
+        finding: f
+      }});
+    }} else {{
+      state.selectedActions.delete(ignoreKey);
+    }}
+    updateCounts();
+  }});
+
+  actionsWrap.appendChild(ignoreDiv);
+  actionsSection.appendChild(actionsWrap);
+  body.appendChild(actionsSection);
+
+  details.appendChild(body);
+  card.appendChild(details);
+
+  return card;
+}}
+
+function render() {{
+  elList.innerHTML = "";
+  const visible = state.findings.filter(matchesFilter);
+  const grouped = groupFindings(visible);
+
+  grouped.forEach((cat) => {{
+    const categoryDetails = document.createElement("details");
+    categoryDetails.className = "group category-group";
+    categoryDetails.open = true;
+
+    const categoryFindingCount = cat.rules.reduce(
+      (sum, rule) => sum + rule.findings.length,
+      0
+    );
+
+
+    categoryDetails.innerHTML = `
+        <summary>
+            <div class="group-summary">
+            <div class="group-title">${{escapeHtml(formatCategoryLabel(cat.category))}}</div>
+            <div class="group-meta">${{categoryFindingCount}} findings • ${{cat.rules.length}} rules</div>
+            </div>
+        </summary>
     `;
 
-    const ignoreCb = ignoreDiv.querySelector("input");
-    ignoreCb.addEventListener("change", (e) => {{
-      if (e.target.checked) {{
-        state.selectedActions.set(ignoreKey, {{
-          type: "ignore_finding",
-          finding: f
-        }});
-      }} else {{
-        state.selectedActions.delete(ignoreKey);
-      }}
-      updateCounts();
+    const categoryBody = document.createElement("div");
+    categoryBody.className = "group-body";
+
+    cat.rules.forEach((rule) => {{
+      const ruleDetails = document.createElement("details");
+      ruleDetails.className = "group rule-group";
+
+      ruleDetails.innerHTML = `
+        <summary>
+          <div class="group-summary">
+            <div class="group-title">
+              ${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}
+            </div>
+            <div class="group-meta">${{rule.findings.length}} findings</div>
+          </div>
+        </summary>
+      `;
+
+      const ruleBody = document.createElement("div");
+      ruleBody.className = "group-body";
+
+      rule.findings.forEach((f) => {{
+        const card = buildFindingCard(f);
+        ruleBody.appendChild(card);
+      }});
+
+      ruleDetails.appendChild(ruleBody);
+      categoryBody.appendChild(ruleDetails);
     }});
 
-    actionsWrap.appendChild(ignoreDiv);
-    actionsSection.appendChild(actionsWrap);
-    body.appendChild(actionsSection);
-
-    details.appendChild(body);
-    card.appendChild(details);
-    elList.appendChild(card);
+    categoryDetails.appendChild(categoryBody);
+    elList.appendChild(categoryDetails);
   }});
 
   elStatus.textContent = state.raw ? "Loaded" : "No data";
@@ -1194,8 +1322,8 @@ btnPickDir.addEventListener("click", () => {{
 }});
 
 btnSelectAll.addEventListener("click", () => {{
-  state.findings.filter(matchesFilter).forEach(f => {{
-    f.fixes.forEach(fx => {{
+  state.findings.filter(matchesFilter).forEach((f) => {{
+    f.fixes.forEach((fx) => {{
       state.selected.set(fixKey(f, fx), {{ finding: f, fix: fx }});
     }});
   }});
@@ -1216,7 +1344,7 @@ btnExport.addEventListener("click", () => {{
 
 updateSaveTargetLabel();
 applyJson(state.raw, "scan_report.json");
-</script>
+  </script>
 </body>
 </html>"""
 

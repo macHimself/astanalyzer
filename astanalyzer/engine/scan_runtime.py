@@ -139,7 +139,6 @@ def extract_code_snippet(
     end_line: int | None,
     context: int = 4,
 ) -> tuple[str | None, int | None, int | None]:
-
     if start_line is None:
         return None, None, None
 
@@ -148,27 +147,74 @@ def extract_code_snippet(
             lines = f.readlines()
 
         total = len(lines)
+        match_end = end_line if end_line else start_line
 
         snippet_start = max(1, start_line - context)
-        match_end = end_line if end_line else start_line
         snippet_end = min(total, match_end + context)
 
-        triple_count = 0
-        for i in range(snippet_start - 1, snippet_end):
-            triple_count += lines[i].count('"""')
-            triple_count += lines[i].count("'''")
+        # Step 1: expand upwards a little if triple-quoted context looks broken
+        max_backtrack = 20
+        attempts = 0
 
-        if triple_count % 2 == 1:
-            for i in range(snippet_start - 2, -1, -1):
-                if '"""' in lines[i] or "'''" in lines[i]:
-                    snippet_start = i + 1
-                    break
+        while attempts < max_backtrack and snippet_start > 1:
+            snippet = "".join(lines[snippet_start - 1:snippet_end])
 
-        snippet = "".join(lines[snippet_start - 1:snippet_end])
+            triple_double_count = snippet.count('"""')
+            triple_single_count = snippet.count("'''")
+
+            nonempty_lines = [line.strip() for line in snippet.splitlines() if line.strip()]
+            first_nonempty = nonempty_lines[0] if nonempty_lines else ""
+
+            suspicious_start = first_nonempty in {'"""', "'''"}
+            odd_triple_state = (
+                triple_double_count % 2 == 1
+                or triple_single_count % 2 == 1
+            )
+
+            if not suspicious_start and not odd_triple_state:
+                break
+
+            snippet_start -= 1
+            attempts += 1
+
+        # Step 2: rebuild snippet after backtracking
+        snippet_lines = lines[snippet_start - 1:snippet_end]
+
+        # Step 3: if snippet still starts with tail of a docstring,
+        # trim everything up to and including the first standalone triple quote
+        trim_index = None
+        scan_limit = min(6, len(snippet_lines))
+
+        first_nonempty_idx = None
+        for idx, line in enumerate(snippet_lines):
+            if line.strip():
+                first_nonempty_idx = idx
+                break
+
+        if first_nonempty_idx is not None:
+            first_nonempty = snippet_lines[first_nonempty_idx].strip()
+
+            # suspicious case:
+            # snippet starts with plain text or docstring tail,
+            # and soon after comes a standalone closing """ or '''
+            if not first_nonempty.startswith(("def ", "class ", "if ", "for ", "while ",
+                                              "try:", "with ", "match ", "@", "return ",
+                                              "import ", "from ", "#")):
+                for idx in range(scan_limit):
+                    stripped = snippet_lines[idx].strip()
+                    if stripped in {'"""', "'''"}:
+                        trim_index = idx + 1
+                        break
+
+        if trim_index is not None and trim_index < len(snippet_lines):
+            snippet_lines = snippet_lines[trim_index:]
+            snippet_start += trim_index
+
+        snippet = "".join(snippet_lines)
 
         if snippet_start > 1:
             snippet = "# ... truncated ...\n" + snippet
-            
+
         return snippet, snippet_start, snippet_end
 
     except Exception:
