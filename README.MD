@@ -56,13 +56,13 @@ pip install -e .
 ```
 
 ## Usage
-run without any verbosity flag, the tool shows only warnings and errors: 
+By default, the tool focuses on warnings and errors in its output:
 ```bash
 astanalyzer scan ./project
 ```
 
 ### Running without installed CLI entrypoint
-If you are running the module directly, the same flags works: 
+If you are running the module directly, the same flags work: 
 ```bash
 python -m astanalyzer.cli -vv scan .
 ```
@@ -78,7 +78,8 @@ Use -vv to enable debug logging:
 ```bash
 astanalyzer -vv scan ./project
 ```
-this option is useful when you want to inspect:
+
+This option is useful when you want to inspect:
 - matched rules
 - general findings
 - patch selection flow
@@ -101,22 +102,32 @@ AstAnalyzer supports a full workflow from analysis to automated code modificatio
 ```bash
 astanalyzer scan .
 ```
-This generates: 
-scan_report.json, report.html (interactive UI for selecting fixes)
+This generates:
+- `scan_report.json`
+- `report.html` (interactive UI for selecting fixes)
+
+The scan output includes structured metadata for each finding, including:
+- severity
+- rule identifier
+- location
+- code snippet context
+- snippet truncation information
+
+This metadata is used by the UI to provide accurate visualization without
+modifying the original code representation.
 
 ### Select fixes (UI)
 
 Open `report.html`, inspect findings using the interactive UI, select desired fixes, and export the selection.
 
-#### Report UI features
-
 The generated HTML report is a standalone interactive page with no backend dependencies.
 It can be opened directly in a browser and is designed for efficient inspection and selection
 of fix proposals.
 
-Each finding is displayed as a collapsible card with two levels of detail:
+The report uses hierarchical navigation. Findings are grouped by category and rule, and each
+individual finding is displayed as a collapsible card with two levels of detail.
 
-### Hierarchical grouping
+#### Hierarchical grouping
 
 To improve navigation in large projects, findings are grouped into a three-level hierarchy:
 
@@ -125,6 +136,10 @@ To improve navigation in large projects, findings are grouped into a three-level
 - **Individual findings**
 
 Each level is collapsible, allowing users to quickly navigate thousands of findings.
+
+Additionally, each category and rule shows:
+- total number of findings
+- breakdown by severity (info / warning / error)
 
 This significantly reduces cognitive load compared to a flat list and makes it easier to:
 - identify dominant problem areas
@@ -144,18 +159,47 @@ This significantly reduces cognitive load compared to a flat list and makes it e
 - available fix proposals with human-readable explanations
 - optional suppression action (ignore directive)
 
-### Code snippet preview
+#### Guided navigation
 
-The report includes a contextual code preview:
+The interface encourages exploration through:
+- expandable categories and rules
+- contextual hints (e.g. "Expand categories to explore findings")
+- progressive disclosure of details
+
+This approach reduces cognitive load when working with large reports.
+
+#### Severity awareness
+
+Findings are visually distinguished by severity:
+
+- **info** – low importance, informational suggestions
+- **warning** – actionable issues (default focus)
+- **error** – critical problems requiring immediate attention
+
+Severity is reflected in:
+- color-coded labels
+- aggregated counts per category and per rule
+- visual highlighting (left border indicators)
+
+This allows users to quickly identify high-impact issues and prioritize fixes.
+
+#### Code snippet preview
+
+The report includes a contextual code preview that:
+
 - shows surrounding lines around the issue
 - highlights the exact affected lines
 - uses syntax highlighting (Pygments)
-- handles truncated snippets safely
+- indicates when the snippet is truncated
+
+Truncation is represented as metadata and rendered explicitly in the UI,
+instead of being embedded directly into the code snippet. This preserves
+correct line mapping and keeps the preview clean.
 
 This significantly improves readability compared to raw JSON output and allows
 understanding issues without opening the source file.
 
-### Fix proposals
+#### Fix proposals
 
 Each fix is presented with:
 - a short title
@@ -163,14 +207,14 @@ Each fix is presented with:
 - human-readable description of actions derived from DSL
 - expandable technical detail (raw DSL)
 
-### Additional actions
+#### Additional actions
 
 Each finding supports:
 - **"Suppress this warning"** action
   - inserts an ignore directive into the source code
   - allows selective suppression directly from UI
 
-### Interaction features
+#### Interaction features
 
 The report supports:
 - full-text filtering (rule, file, message, fix text)
@@ -190,10 +234,11 @@ or explicitly:
 ```bash
 astanalyzer patch --selected path/to/selected.json
 ```
+
 This step:
-reads selected fixes
-builds patch files (*.patch)
-does NOT modify source code yet
+- reads selected fixes
+- builds patch files (`*.patch`)
+- does **not** modify source code yet
 
 The patch command supports explicit input of the selected JSON file and does not require it to be located in the project root. File paths are resolved relative to the project, ensuring consistent behavior across different environments.
 
@@ -210,25 +255,26 @@ Validation is automatically executed during patching, but can also be done manua
 ```bash
 astanalyzer apply --check
 ```
+
 This ensures:
-patch is syntactically valid
-patch can be applied cleanly
-no conflicts exist
+- the patch is syntactically valid
+- the patch can be applied cleanly
+- no conflicts exist
 
 ### Apply patches
 ```bash
 astanalyzer apply
 ```
-If all checks pass: 
-patches are applied to files
-files are modified
+If all checks pass:
+- patches are applied to files
+- source files are modified
 
 ### Archive run
-After successful apply:
-selected JSON 
-scan report
-HTML report
-patch files
+After a successful apply, the following artifacts are moved to:
+- selected JSON 
+- scan report
+- HTML report
+- patch files
 
 are moved to: 
 ```bash
@@ -239,16 +285,16 @@ used_patches/<timestamp>/
 ```bash
 astanalyzer clean
 ```
-optional:
+Optionally:
 ```bash
 astanalyzer clean --include-archive
 ```
-This removes:
-selected JSON 
-scan report
-HTML report
-patch files
-and used_patches/
+This removes the following artifacts:
+- selected JSON 
+- scan report
+- HTML report
+- patch files
+- `used_patches/` when `--include-archive` is used
 
 ---
 
@@ -327,12 +373,7 @@ The rules are grouped into six categories:
 - `DEAD` – Dead code and unreachable logic
 - `CX` – Complexity and maintainability problems
 
-Each rule has:
-- a stable rule ID
-- a severity level
-- a title
-- a short explanation
-- an example of what it detects
+Rules are identified by a stable rule ID and include metadata such as severity and title.
 
 ### Rule ID format
 
@@ -1125,7 +1166,7 @@ class MissingDocstringForFunction(Rule):
 ---
 ## Custom rules
 
-AstroAnalyzer can load custom rules from user-provided Python files or directories.
+AstAnalyzer can load custom rules from user-provided Python files or directories.
 
 Custom rules are normal subclasses of `Rule`. Once imported, they are registered
 automatically through the rule registry.
@@ -1219,25 +1260,26 @@ The current implementation uses an import-based plugin model:
 - This keeps the system simple and flexible
 - Future versions may introduce explicit plugin registries or entry-point based loading
 
-### Patch creation:
+### Patch creation
 
-Fix DSL -> transformed into FixProposal
-FixProposal.get_diff() generates unified diff
-Patch files are written to disk 
+- Fix DSL is transformed into a `FixProposal`
+- `FixProposal.get_diff()` generates a unified diff
+- patch files are written to disk
 
-### Patch validation:
+### Patch validation
 Each patch is checked using:
 ```bash
 git apply --check
 ```
 This verifies:
-correct diff format
-correct context lines
-file consistency
+- correct diff format
+- correct context lines
+- file consistency
 
 
 ### Patch application
-Patches are applied using
+
+Patches are applied using:
 ```bash
 git apply
 ```
