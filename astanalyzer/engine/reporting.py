@@ -39,6 +39,7 @@ class Finding:
     code_snippet: Optional[str] = None
     snippet_start_line: Optional[int] = None
     snippet_end_line: Optional[int] = None
+    snippet_truncated: bool = False
     code_snippet: Optional[str] = None
     fixes: List[Any] = field(default_factory=list)
     anchor: FindingAnchor | None = None
@@ -307,6 +308,7 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
                 "code_snippet": f.code_snippet,
                 "snippet_start_line": f.snippet_start_line,
                 "snippet_end_line": f.snippet_end_line,
+                "snippet_truncated": f.snippet_truncated,
                 "anchor": asdict(f.anchor) if f.anchor else None,
                 "fixes": fixes,
             }

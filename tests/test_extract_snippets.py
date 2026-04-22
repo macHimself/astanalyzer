@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pytest
 
-# Uprav podle skutečné cesty v projektu
 from astanalyzer.report_ui import build_report_html, highlight_python_code
 from astanalyzer.engine.scan_runtime import extract_code_snippet
 
@@ -28,7 +27,7 @@ def test_extract_code_snippet_returns_context_range(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    snippet, snippet_start, snippet_end = extract_code_snippet(
+    snippet, snippet_start, snippet_end, snippet_truncated = extract_code_snippet(
         file_path=file_path,
         start_line=5,
         end_line=6,
@@ -38,8 +37,9 @@ def test_extract_code_snippet_returns_context_range(tmp_path: Path) -> None:
     assert snippet is not None
     assert snippet_start == 3
     assert snippet_end == 8
-    assert snippet.startswith("# ... truncated ...\n")
-    assert "line3\nline4\nline5\nline6\nline7\nline8\n" in snippet
+    assert snippet_truncated is True
+    assert not snippet.startswith("# ... truncated ...\n")
+    assert snippet == "line3\nline4\nline5\nline6\nline7\nline8\n"
 
 
 def test_extract_code_snippet_does_not_start_inside_triple_quoted_string(
@@ -63,7 +63,7 @@ def test_extract_code_snippet_does_not_start_inside_triple_quoted_string(
         encoding="utf-8",
     )
 
-    snippet, snippet_start, snippet_end = extract_code_snippet(
+    snippet, snippet_start, snippet_end, snippet_truncated = extract_code_snippet(
         file_path=file_path,
         start_line=6,
         end_line=7,
@@ -73,8 +73,8 @@ def test_extract_code_snippet_does_not_start_inside_triple_quoted_string(
     assert snippet is not None
     assert snippet_start is not None
     assert snippet_end is not None
+    assert snippet_truncated is True
 
-    # Snippet nesmí začít uprostřed docstringu.
     assert snippet_start <= 2
     assert '"""' in snippet
     assert "if value:" in snippet
@@ -135,6 +135,7 @@ def test_build_report_html_contains_collapsible_rule_description_and_code_contex
                 "end_line": 11,
                 "snippet_start_line": 8,
                 "snippet_end_line": 14,
+                "snippet_truncated": True,
                 "message": "This block contains no executable logic.",
                 "code_snippet": (
                     "x = 1\n"
@@ -184,3 +185,38 @@ def test_build_report_html_contains_collapsible_rule_description_and_code_contex
     assert "codehilite" in html
     assert "Empty block" in html
     assert "This block contains no executable logic." in html
+    assert "snippet-marker" in html
+
+
+def test_build_report_html_does_not_render_snippet_marker_when_not_truncated() -> None:
+    report_data = {
+        "project_root": "/tmp/project",
+        "findings": [
+            {
+                "id": "F-002",
+                "rule_id": "STYLE-002",
+                "title": "Redundant if/else return",
+                "severity": "info",
+                "file": "sample.py",
+                "start_line": 2,
+                "end_line": 4,
+                "snippet_start_line": 1,
+                "snippet_end_line": 4,
+                "snippet_truncated": False,
+                "message": "Redundant boolean return structure.",
+                "code_snippet": (
+                    "def f(x):\n"
+                    "    if x:\n"
+                    "        return True\n"
+                    "    return False\n"
+                ),
+                "anchor": {},
+                "fixes": [],
+            }
+        ],
+    }
+
+    html = build_report_html(report_data)
+
+    assert "View code context" in html
+    assert '"snippet_truncated": false' in html

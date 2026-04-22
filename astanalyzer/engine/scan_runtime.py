@@ -138,9 +138,9 @@ def extract_code_snippet(
     start_line: int | None,
     end_line: int | None,
     context: int = 4,
-) -> tuple[str | None, int | None, int | None]:
+) -> tuple[str | None, int | None, int | None, bool]:
     if start_line is None:
-        return None, None, None
+        return None, None, None, False
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -152,7 +152,8 @@ def extract_code_snippet(
         snippet_start = max(1, start_line - context)
         snippet_end = min(total, match_end + context)
 
-        # Step 1: expand upwards a little if triple-quoted context looks broken
+        original_snippet_start = snippet_start
+
         max_backtrack = 20
         attempts = 0
 
@@ -177,11 +178,8 @@ def extract_code_snippet(
             snippet_start -= 1
             attempts += 1
 
-        # Step 2: rebuild snippet after backtracking
         snippet_lines = lines[snippet_start - 1:snippet_end]
 
-        # Step 3: if snippet still starts with tail of a docstring,
-        # trim everything up to and including the first standalone triple quote
         trim_index = None
         scan_limit = min(6, len(snippet_lines))
 
@@ -194,12 +192,11 @@ def extract_code_snippet(
         if first_nonempty_idx is not None:
             first_nonempty = snippet_lines[first_nonempty_idx].strip()
 
-            # suspicious case:
-            # snippet starts with plain text or docstring tail,
-            # and soon after comes a standalone closing """ or '''
-            if not first_nonempty.startswith(("def ", "class ", "if ", "for ", "while ",
-                                              "try:", "with ", "match ", "@", "return ",
-                                              "import ", "from ", "#")):
+            if not first_nonempty.startswith((
+                "def ", "class ", "if ", "for ", "while ",
+                "try:", "with ", "match ", "@", "return ",
+                "import ", "from ", "#"
+            )):
                 for idx in range(scan_limit):
                     stripped = snippet_lines[idx].strip()
                     if stripped in {'"""', "'''"}:
@@ -211,14 +208,12 @@ def extract_code_snippet(
             snippet_start += trim_index
 
         snippet = "".join(snippet_lines)
+        snippet_truncated = snippet_start > 1 or original_snippet_start > 1
 
-        if snippet_start > 1:
-            snippet = "# ... truncated ...\n" + snippet
-
-        return snippet, snippet_start, snippet_end
+        return snippet, snippet_start, snippet_end, snippet_truncated
 
     except Exception:
-        return None, None, None
+        return None, None, None, False
     
 
 def build_finding(rule, match, module: ModuleNode, project_root: Path | None = None) -> Finding:
@@ -256,7 +251,7 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
     line = getattr(match, "lineno", None)
     end_line = getattr(match, "end_lineno", line)
 
-    code_snippet, snippet_start, snippet_end = extract_code_snippet(
+    code_snippet, snippet_start, snippet_end, snippet_truncated = extract_code_snippet(
         module.filename,
         line,
         end_line,
@@ -275,6 +270,7 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
         code_snippet=code_snippet,
         snippet_start_line=snippet_start,
         snippet_end_line=snippet_end,
+        snippet_truncated=snippet_truncated,
         anchor=anchor,
     )
 
