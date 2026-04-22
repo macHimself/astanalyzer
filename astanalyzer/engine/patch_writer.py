@@ -198,3 +198,52 @@ def emit_patch_if_changed(
         index=patch_index,
         patch_text=fix.get_diff(),
     )
+
+
+def build_patch_preview_data(fixes: list[FixProposal]) -> dict[str, str]:
+    """
+    Build report-friendly patch preview metadata for one fixer result.
+
+    The preview is a lightweight side artifact for the static HTML report.
+    When no concrete diff can be produced, the returned payload explains why.
+    """
+    if not fixes:
+        return {
+            "patch_preview": "",
+            "patch_preview_status": "unavailable",
+            "patch_preview_error": "No concrete fix proposal was produced.",
+        }
+
+    preview_chunks: list[str] = []
+
+    for fix in fixes:
+        if not isinstance(fix, FixProposal):
+            return {
+                "patch_preview": "",
+                "patch_preview_status": "unavailable",
+                "patch_preview_error": f"Unsupported fix result type: {type(fix).__name__}.",
+            }
+
+        if fix.suggestion == fix.original:
+            continue
+
+        diff_text = fix.get_diff()
+        if diff_text.strip():
+            preview_chunks.append(diff_text.rstrip())
+
+    if not preview_chunks:
+        return {
+            "patch_preview": "",
+            "patch_preview_status": "unavailable",
+            "patch_preview_error": "Preview is not available because the fix would not change the source.",
+        }
+
+    preview = "\n\n".join(preview_chunks) + "\n"
+    max_chars = 20000
+    if len(preview) > max_chars:
+        preview = preview[:max_chars] + "\n... truncated ...\n"
+
+    return {
+        "patch_preview": preview,
+        "patch_preview_status": "available",
+    }

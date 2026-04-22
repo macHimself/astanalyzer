@@ -28,3 +28,22 @@ def BadName():
 
     assert "STYLE-005" in rule_ids
     assert "SEM-001" in rule_ids
+
+
+def test_scan_serializes_patch_preview_metadata(make_project):
+    project = make_project({
+        "a.py": "x = 1\nif x == None:\n    print(x)\n",
+    })
+
+    _, scan = run_rules_on_project_report(project, build_plans=True, build_fixes=False)
+
+    fixes = [
+        fix
+        for finding in scan["findings"]
+        for fix in finding.get("fixes", [])
+        if "patch_preview_status" in fix
+    ]
+
+    assert fixes
+    assert all("patch_preview" in fix for fix in fixes)
+    assert all(fix["patch_preview_status"] in {"available", "unavailable"} for fix in fixes)

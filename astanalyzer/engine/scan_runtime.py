@@ -36,9 +36,42 @@ from .patch_writer import (
     present_foundings_suggestions,
     create_diff,
     emit_patch_if_changed,
+    build_patch_preview_data
 )
 
 log = logging.getLogger(__name__)
+
+
+def attach_fix_preview_overrides(
+    *,
+    finding: Finding,
+    rule,
+    match,
+    refs: dict[str, Any] | None,
+    module: ModuleNode,
+    project: ProjectNode,
+    project_root: Path,
+) -> None:
+    """Build preview-only diff metadata for each fixer builder attached to a finding."""
+    for fixer_index, fixer in enumerate(getattr(rule, "fixer_builders", []) or []):
+        try:
+            result = fixer.build(
+                node=match,
+                module=module,
+                project=project,
+                project_root=project_root,
+                refs=refs or {},
+            )
+            fixes = [] if result is None else (result if isinstance(result, list) else [result])
+            preview_data = build_patch_preview_data(fixes)
+            if preview_data:
+                finding.fix_preview_overrides[fixer_index] = preview_data
+        except Exception as exc:
+            finding.fix_preview_overrides[fixer_index] = {
+                "patch_preview": "",
+                "patch_preview_status": "unavailable",
+                "patch_preview_error": str(exc),
+            }
 
 
 def build_rule_index_by_node_type(rules):
@@ -396,6 +429,15 @@ def process_rule_matches(
 
         if build_plans:
             attach_fixers_to_finding(finding, rule)
+            attach_fix_preview_overrides(
+                finding=finding,
+                rule=rule,
+                match=match,
+                refs=refs,
+                module=module,
+                project=project,
+                project_root=project_root,
+            )
 
         if build_fixes:
             patch_counter = build_and_save_fixes(

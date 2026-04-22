@@ -42,6 +42,7 @@ class Finding:
     snippet_truncated: bool = False
     code_snippet: Optional[str] = None
     fixes: List[Any] = field(default_factory=list)
+    fix_preview_overrides: Dict[int, Dict[str, Any]] = field(default_factory=dict)
     anchor: FindingAnchor | None = None
 
 
@@ -214,13 +215,16 @@ def convert_results(filename: str, results: Iterable[RuleResult]) -> List[Findin
 def fixer_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
     """
     Convert a fixer-like object into a normalized fix dictionary.
-
-    Supports multiple fixer representations by probing common conversion
-    methods and attributes such as `to_dict()`, `dsl`, and `to_json()`.
     """
     dsl: Optional[Dict[str, Any]] = None
+    payload: dict[str, Any] | None = None
 
-    if hasattr(fixer, "to_dict") and callable(fixer.to_dict):
+    if isinstance(fixer, dict):
+        payload = fixer
+        dsl = payload.get("dsl") if isinstance(payload, dict) else None
+        title = payload.get("title") if isinstance(payload, dict) else None
+        reason = payload.get("reason") if isinstance(payload, dict) else None
+    elif hasattr(fixer, "to_dict") and callable(fixer.to_dict):
         payload = fixer.to_dict()
         dsl = payload.get("dsl") if isinstance(payload, dict) else None
         title = payload.get("title") if isinstance(payload, dict) else None
@@ -248,12 +252,19 @@ def fixer_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
             reason = "; ".join(reason_parts)
         dsl = {"because": reason or "—", "actions": []}
 
-    return {
+    item = {
         "fix_id": fix_id,
         "title": title or "Proposed fix",
         "reason": reason or "—",
         "dsl": dsl,
     }
+
+    if isinstance(payload, dict):
+        for key in ("patch_preview", "patch_preview_status", "patch_preview_error"):
+            if key in payload:
+                item[key] = payload[key]
+
+    return item
 
 
 def plan_to_fix_dict(fixer: Any, fix_id: str) -> Dict[str, Any]:
@@ -292,6 +303,11 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
             fix_id = f"FX-{fx_counter:03d}-A"
             item = fixer_to_fix_dict(fixer, fix_id=fix_id)
             item["fixer_index"] = fixer_index
+
+            preview_override = (f.fix_preview_overrides or {}).get(fixer_index)
+            if preview_override:
+                item.update(preview_override)
+
             fixes.append(item)
 
         out["findings"].append(
@@ -305,7 +321,6 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
                 "end_line": end_line,
                 "message": f.message or "",
                 "code_snippet": f.code_snippet or "",
-                "code_snippet": f.code_snippet,
                 "snippet_start_line": f.snippet_start_line,
                 "snippet_end_line": f.snippet_end_line,
                 "snippet_truncated": f.snippet_truncated,
