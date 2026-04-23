@@ -278,12 +278,35 @@ def iter_relevant_bodies(node) -> Iterable[tuple[str, list]]:
         yield ("finalbody", getattr(node, "finalbody", []) or [])
 
 
+def iter_required_bodies(node) -> Iterable[tuple[str, list]]:
+    """
+    Yield only block bodies whose emptiness should count as an empty block.
+
+    This excludes optional parts such as `try.finalbody`, which may be absent
+    without making the overall block empty.
+    """
+    node_type = _node_type(node)
+
+    if hasattr(node, "body"):
+        yield ("body", getattr(node, "body") or [])
+
+    if node_type == "If":
+        orelse = getattr(node, "orelse", None) or []
+        if orelse:
+            yield ("orelse", orelse)
+
+    if node_type == "Try":
+        handlers = getattr(node, "handlers", []) or []
+        for i, handler in enumerate(handlers):
+            yield (f"handler[{i}]", getattr(handler, "body", []) or [])
+
+
 def is_empty_block(node) -> bool:
-    """Return True if any relevant body of the node is empty or contains only no-op statements."""
+    """Return True if any required body of the node is empty or contains only no-op statements."""
     if _node_type(node) not in BLOCK_TYPES:
         return False
 
-    for _, seq in iter_relevant_bodies(node):
+    for _, seq in iter_required_bodies(node):
         if is_empty_seq(seq):
             return True
 
@@ -291,9 +314,9 @@ def is_empty_block(node) -> bool:
 
 
 def empty_parts(node) -> list[str]:
-    """Return names of block parts that are empty or contain only no-op statements."""
+    """Return names of required block parts that are empty or contain only no-op statements."""
     parts: list[str] = []
-    for name, seq in iter_relevant_bodies(node):
+    for name, seq in iter_required_bodies(node):
         if is_empty_seq(seq):
             parts.append(name)
     return parts
