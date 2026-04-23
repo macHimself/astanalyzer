@@ -103,107 +103,81 @@ def loop_comprehension_suggestion(for_node):
         tuple[str | None, str | None]:
             Pair of (kind, suggestion), or (None, None) if no safe rewrite pattern is found.
     """
-    def s(n): return (getattr(n, "as_string", None) or (lambda: ""))()
-
-    # prev sibling
-    p = getattr(for_node, "parent", None)
-    if not p or not hasattr(p, "body"):
+    if for_node.__class__.__name__ != "For":
         return (None, None)
-    body = list(p.body)
+
+    parent = getattr(for_node, "parent", None)
+    if not parent or not hasattr(parent, "body"):
+        return (None, None)
+
+    parent_body = list(getattr(parent, "body", []) or [])
     try:
-        i = body.index(for_node)
+        index = parent_body.index(for_node)
     except ValueError:
         return (None, None)
-    prev = body[i - 1] if i > 0 else None
-    if not prev or prev.__class__.__name__ != "Assign":
+
+    prev_stmt = parent_body[index - 1] if index > 0 else None
+    if prev_stmt is None or prev_stmt.__class__.__name__ != "Assign":
         return (None, None)
 
-    # acc init
-    t0 = (getattr(prev, "targets", None) or [None])[0]
-    acc = getattr(t0, "id", None) or getattr(t0, "name", None)
-    v = getattr(prev, "value", None)
-    if not acc or not v:
+    prev_targets = getattr(prev_stmt, "targets", None) or []
+    if len(prev_targets) != 1:
         return (None, None)
 
-    kind = None
-    vc = v.__class__.__name__
-    if vc == "List": kind = "list"
-    elif vc == "Dict": kind = "dict"
-    elif vc == "Call":
-        fn = getattr(getattr(v, "func", None), "name", None) or getattr(getattr(v, "func", None), "id", None)
-        if fn in ("list", "set", "dict"):
-            kind = "set" if fn == "set" else fn
+    acc_target = prev_targets[0]
+    acc_name = getattr(acc_target, "id", None) or getattr(acc_target, "name", None)
+    if not acc_name:
+        return (None, None)
+
+    init_value = getattr(prev_stmt, "value", None)
+    kind = _infer_comprehension_accumulator_kind(init_value)
     if not kind:
         return (None, None)
 
-    # loop body must be: [Expr(Call(acc.append/add(...)))] or Assign(acc[key]=val)
-    b = getattr(for_node, "body", []) or []
-    if not b:
+    loop_body = getattr(for_node, "body", None) or []
+    if len(loop_body) != 1:
         return (None, None)
 
-    stmt = b[0]
-    cond = None
+    stmt = loop_body[0]
+    condition_text = None
+
     if stmt.__class__.__name__ == "If":
-        cond = s(getattr(stmt, "test", None))
-        stmt = (getattr(stmt, "body", []) or [None])[0]
-        if stmt is None:
+        # Filtered comprehension is OK only when there is no else branch.
+        if getattr(stmt, "orelse", None):
             return (None, None)
-    elif len(b) > 1:
+
+        if_body = getattr(stmt, "body", None) or []
+        if len(if_body) != 1:
+            return (None, None)
+
+        condition_text = _node_text(getattr(stmt, "test", None))
+        if not condition_text:
+            return (None, None)
+
+        stmt = if_body[0]
+
+    extracted = _extract_single_collection_build_stmt(stmt, acc_name)
+    if not extracted:
         return (None, None)
 
-    target = s(getattr(for_node, "target", None)) or "_"
-    it = s(getattr(for_node, "iter", None)) or "iterable"
+    target_text = _node_text(getattr(for_node, "target", None)) or "_"
+    iter_text = _node_text(getattr(for_node, "iter", None)) or "iterable"
+    suffix = f" if {condition_text}" if condition_text else ""
 
-    if kind in ("list", "set"):
-        if stmt.__class__.__name__ != "Expr":
-            return (None, None)
-        call = getattr(stmt, "value", None)
-        if not call or call.__class__.__name__ != "Call":
-            return (None, None)
-        f = getattr(call, "func", None)
-        if not f or f.__class__.__name__ != "Attribute":
-            return (None, None)
-        base = getattr(f, "expr", None) or getattr(f, "value", None)
-        base_name = getattr(base, "name", None) or getattr(base, "id", None)
-        meth = getattr(f, "attrname", None) or getattr(f, "attr", None) or getattr(f, "name", None)
-        if base_name != acc:
-            return (None, None)
+    if extracted[0] == "list" and kind == "list":
+        expr_text = extracted[1]
+        suggestion = f"{acc_name} = [{expr_text} for {target_text} in {iter_text}{suffix}]"
+        return ("list", suggestion)
 
-        want = "append" if kind == "list" else "add"
-        if meth != want:
-            return (None, None)
+    if extracted[0] == "set" and kind == "set":
+        expr_text = extracted[1]
+        suggestion = f"{acc_name} = {{{expr_text} for {target_text} in {iter_text}{suffix}}}"
+        return ("set", suggestion)
 
-        args = getattr(call, "args", []) or []
-        if not args:
-            return (None, None)
-        e = s(args[0])
-        if not e:
-            return (None, None)
-
-        if kind == "list":
-            sug = f"{acc} = [{e} for {target} in {it}{(' if ' + cond) if cond else ''}]"
-            return ("list", sug)
-        else:
-            sug = f"{acc} = {{{e} for {target} in {it}{(' if ' + cond) if cond else ''}}}"
-            return ("set", sug)
-
-    if kind == "dict":
-        if stmt.__class__.__name__ != "Assign":
-            return (None, None)
-        t0 = (getattr(stmt, "targets", None) or [None])[0]
-        if not t0 or t0.__class__.__name__ != "Subscript":
-            return (None, None)
-        base = getattr(t0, "value", None) or getattr(t0, "expr", None)
-        base_name = getattr(base, "name", None) or getattr(base, "id", None)
-        if base_name != acc:
-            return (None, None)
-        key = getattr(t0, "slice", None) or getattr(t0, "index", None)
-        k = s(key)
-        val = s(getattr(stmt, "value", None))
-        if not k or not val:
-            return (None, None)
-        sug = f"{acc} = {{{k}: {val} for {target} in {it}{(' if ' + cond) if cond else ''}}}"
-        return ("dict", sug)
+    if extracted[0] == "dict" and kind == "dict":
+        key_text, value_text = extracted[1], extracted[2]
+        suggestion = f"{acc_name} = {{{key_text}: {value_text} for {target_text} in {iter_text}{suffix}}}"
+        return ("dict", suggestion)
 
     return (None, None)
 
@@ -689,3 +663,311 @@ def count_relevant_statements(node) -> int:
 
     body = getattr(node, "body", None) or []
     return sum(_count_stmt(stmt) for stmt in body)
+
+
+def _iter_scope_locals(scope_node):
+    """Yield names defined directly in the given scope."""
+    body = getattr(scope_node, "body", None) or []
+    for stmt in body:
+        t = stmt.__class__.__name__
+
+        if t in {"FunctionDef", "AsyncFunctionDef", "ClassDef"}:
+            yield getattr(stmt, "name", None)
+
+        elif t in {"Assign", "AnnAssign"}:
+            targets = getattr(stmt, "targets", None) or []
+            if t == "AnnAssign":
+                target = getattr(stmt, "target", None)
+                if target is not None:
+                    targets = [target]
+            for target in targets:
+                name = getattr(target, "name", None) or getattr(target, "id", None)
+                if name:
+                    yield name
+
+        elif t in {"Import", "ImportFrom"}:
+            for alias in getattr(stmt, "names", []) or []:
+                if isinstance(alias, tuple):
+                    original, asname = alias
+                    yield asname or original.split(".")[0]
+
+
+def get_enclosing_scope(node):
+    cur = getattr(node, "parent", None)
+    while cur is not None:
+        if cur.__class__.__name__ in {"FunctionDef", "AsyncFunctionDef", "Module", "Lambda"}:
+            return cur
+        cur = getattr(cur, "parent", None)
+    return None
+
+
+def is_name_shadowed_in_scope(node, name: str) -> bool:
+    """Return True if `name` is defined in the enclosing lexical scope."""
+    scope = get_enclosing_scope(node)
+    if scope is None:
+        return False
+
+    # function params
+    if scope.__class__.__name__ in {"FunctionDef", "AsyncFunctionDef", "Lambda"}:
+        args = getattr(scope, "args", None)
+        if args is not None:
+            for seq_name in ("posonlyargs", "args", "kwonlyargs"):
+                for arg in getattr(args, seq_name, []) or []:
+                    if getattr(arg, "name", None) == name:
+                        return True
+            vararg = getattr(args, "vararg", None)
+            kwarg = getattr(args, "kwarg", None)
+            if getattr(vararg, "name", None) == name:
+                return True
+            if getattr(kwarg, "name", None) == name:
+                return True
+
+    return name in set(filter(None, _iter_scope_locals(scope)))
+
+
+def is_builtin_print_call(node) -> bool:
+    if node.__class__.__name__ != "Call":
+        return False
+
+    func = getattr(node, "func", None)
+    if func is None or func.__class__.__name__ != "Name":
+        return False
+
+    called = getattr(func, "name", None) or getattr(func, "id", None)
+    if called != "print":
+        return False
+
+    return not is_name_shadowed_in_scope(node, "print")
+
+
+def is_builtin_name_call(node, allowed_names) -> bool:
+    if node.__class__.__name__ != "Call":
+        return False
+
+    func = getattr(node, "func", None)
+    if func is None or func.__class__.__name__ != "Name":
+        return False
+
+    called = getattr(func, "name", None) or getattr(func, "id", None)
+    if called not in set(allowed_names):
+        return False
+
+    return not is_name_shadowed_in_scope(node, called)
+
+
+def is_redundant_sorted_before_minmax(node) -> bool:
+    if not is_builtin_name_call(node, {"min", "max"}):
+        return False
+
+    args = getattr(node, "args", []) or []
+    if len(args) != 1:
+        return False
+
+    inner = args[0]
+    if inner.__class__.__name__ != "Call":
+        return False
+
+    return is_builtin_name_call(inner, {"sorted"})
+
+
+def is_probably_str_join_call(node) -> bool:
+    if node.__class__.__name__ != "Call":
+        return False
+
+    func = getattr(node, "func", None)
+    if func is None:
+        return False
+
+    # reject plain join(...)
+    if func.__class__.__name__ == "Name":
+        called = getattr(func, "name", None) or getattr(func, "id", None)
+        if called == "join":
+            return False
+        return False
+
+    # accept only "<string-literal>.join(...)"
+    if func.__class__.__name__ != "Attribute":
+        return False
+
+    base = getattr(func, "expr", None) or getattr(func, "value", None)
+    if base is None:
+        return False
+
+    base_value = getattr(base, "value", None)
+    attr = getattr(func, "attrname", None) or getattr(func, "attr", None) or getattr(func, "name", None)
+
+    return attr == "join" and isinstance(base_value, str)
+
+
+def _assigned_names_in_body(body) -> set[str]:
+    names = set()
+    for stmt in body or []:
+        t = stmt.__class__.__name__
+        if t in {"Assign", "AnnAssign"}:
+            targets = getattr(stmt, "targets", None) or []
+            if t == "AnnAssign":
+                target = getattr(stmt, "target", None)
+                if target is not None:
+                    targets = [target]
+            for target in targets:
+                name = getattr(target, "name", None) or getattr(target, "id", None)
+                if name:
+                    names.add(name)
+    return names
+
+
+def is_nested_loop_same_stable_collection(node) -> bool:
+    if node.__class__.__name__ != "For":
+        return False
+
+    outer = getattr(node, "parent", None)
+    while outer is not None and outer.__class__.__name__ != "For":
+        outer = getattr(outer, "parent", None)
+
+    if outer is None:
+        return False
+
+    inner_iter = getattr(node, "iter", None)
+    outer_iter = getattr(outer, "iter", None)
+    if inner_iter is None or outer_iter is None:
+        return False
+
+    # reject calls like get_items() vs get_items()
+    if inner_iter.__class__.__name__ == "Call" or outer_iter.__class__.__name__ == "Call":
+        return False
+
+    inner_text = getattr(inner_iter, "as_string", lambda: "")()
+    outer_text = getattr(outer_iter, "as_string", lambda: "")()
+    if inner_text != outer_text:
+        return False
+
+    # if the iterable name is reassigned inside outer body before inner loop, reject
+    if inner_iter.__class__.__name__ == "Name":
+        iter_name = getattr(inner_iter, "name", None) or getattr(inner_iter, "id", None)
+        outer_body = getattr(outer, "body", []) or []
+        seen_inner = False
+        for stmt in outer_body:
+            if stmt is node:
+                seen_inner = True
+                break
+            if iter_name in _assigned_names_in_body([stmt]):
+                return False
+
+    return True
+
+
+def _node_text(node) -> str:
+    """Return a stable string form of an AST node, or empty string."""
+    return (getattr(node, "as_string", None) or (lambda: ""))()
+
+
+def _infer_comprehension_accumulator_kind(init_value) -> str | None:
+    """
+    Infer whether the accumulator initialization corresponds to a list, set, or dict.
+
+    Supported forms:
+        result = []
+        result = {}
+        result = list()
+        result = set()
+        result = dict()
+    """
+    if init_value is None:
+        return None
+
+    value_type = init_value.__class__.__name__
+
+    if value_type == "List":
+        return "list"
+
+    if value_type == "Dict":
+        return "dict"
+
+    if value_type == "Call":
+        func = getattr(init_value, "func", None)
+        func_name = getattr(func, "name", None) or getattr(func, "id", None)
+        if func_name in {"list", "set", "dict"}:
+            return func_name
+
+    return None
+
+
+def _extract_single_collection_build_stmt(stmt, acc_name: str):
+    """
+    Extract a simple collection-building statement suitable for comprehension rewriting.
+
+    Supported patterns:
+        acc.append(expr)
+        acc.add(expr)
+        acc[key] = value
+
+    Returns:
+        tuple[str, ...] | None
+
+    Shapes:
+        ("list", expr_text)
+        ("set", expr_text)
+        ("dict", key_text, value_text)
+    """
+    stmt_type = stmt.__class__.__name__
+
+    if stmt_type == "Expr":
+        call = getattr(stmt, "value", None)
+        if call is None or call.__class__.__name__ != "Call":
+            return None
+
+        func = getattr(call, "func", None)
+        if func is None or func.__class__.__name__ != "Attribute":
+            return None
+
+        base = getattr(func, "expr", None) or getattr(func, "value", None)
+        base_name = getattr(base, "name", None) or getattr(base, "id", None)
+        method_name = (
+            getattr(func, "attrname", None)
+            or getattr(func, "attr", None)
+            or getattr(func, "name", None)
+        )
+
+        if base_name != acc_name:
+            return None
+
+        args = getattr(call, "args", []) or []
+        if len(args) != 1:
+            return None
+
+        expr_text = _node_text(args[0])
+        if not expr_text:
+            return None
+
+        if method_name == "append":
+            return ("list", expr_text)
+
+        if method_name == "add":
+            return ("set", expr_text)
+
+        return None
+
+    if stmt_type == "Assign":
+        targets = getattr(stmt, "targets", None) or []
+        if len(targets) != 1:
+            return None
+
+        target = targets[0]
+        if target.__class__.__name__ != "Subscript":
+            return None
+
+        base = getattr(target, "value", None) or getattr(target, "expr", None)
+        base_name = getattr(base, "name", None) or getattr(base, "id", None)
+        if base_name != acc_name:
+            return None
+
+        key_node = getattr(target, "slice", None) or getattr(target, "index", None)
+        key_text = _node_text(key_node)
+        value_text = _node_text(getattr(stmt, "value", None))
+
+        if not key_text or not value_text:
+            return None
+
+        return ("dict", key_text, value_text)
+
+    return None
