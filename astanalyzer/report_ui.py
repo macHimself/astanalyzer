@@ -133,9 +133,27 @@ def build_report_html(report_data: dict) -> str:
       white-space: nowrap;
     }}
 
+    .pill-info {{
+      color: #6b7280;
+    }}
+
+    .pill-warning {{
+      color: #f59e0b;
+      border-color: rgba(245,158,11,.45);
+      background: rgba(245,158,11,.08);
+      font-weight: 600;
+    }}
+
+    .pill-error {{
+      color: #dc2626;
+      border-color: rgba(220,38,38,.45);
+      background: rgba(220,38,38,.08);
+      font-weight: 700;
+    }}
+
     main {{
       padding: 16px 20px;
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }}
 
@@ -145,6 +163,24 @@ def build_report_html(report_data: dict) -> str:
       flex-wrap: wrap;
       margin: 12px 0 18px;
       align-items: center;
+    }}
+
+    .view-toggle {{
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid rgba(127,127,127,.35);
+      border-radius: 10px;
+      overflow: hidden;
+    }}
+
+    .view-toggle button {{
+      border: 0;
+      border-radius: 0;
+    }}
+
+    .view-toggle button.active {{
+      background: color-mix(in oklab, CanvasText 12%, Canvas);
+      font-weight: 700;
     }}
 
     button, input[type="file"] {{
@@ -571,12 +607,23 @@ def build_report_html(report_data: dict) -> str:
       font-size: 14px;
     }}
 
+    .file-group {{
+      margin-left: 20px;
+    }}
+
+    .file-group .group-title {{
+      font-weight: 600;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      word-break: break-word;
+    }}
+
     .hint {{
       font-size: 13px;
       opacity: 0.7;
       margin: 12px 0 16px;
     }}
-    
+
     .info {{
       color: #6b7280;
     }}
@@ -607,12 +654,12 @@ def build_report_html(report_data: dict) -> str:
       border-left: 3px solid #dc2626;
     }}
 
-    .rule-warning {{
-      border-left: 3px solid #f59e0b;
+    .file-warning {{
+      border-left: 2px solid #f59e0b;
     }}
 
-    .rule-error {{
-      border-left: 3px solid #dc2626;
+    .file-error {{
+      border-left: 2px solid #dc2626;
     }}
 
     .snippet-marker {{
@@ -657,7 +704,6 @@ def build_report_html(report_data: dict) -> str:
     .code.diff-preview .line-hunk {{
       color: #79c0ff;
     }}
-
   </style>
 </head>
 <body>
@@ -668,6 +714,7 @@ def build_report_html(report_data: dict) -> str:
       <span class="pill" id="counts">0 findings / 0 fixes selected / 0 actions selected</span>
       <span class="pill" id="sourceHint">scan_report.json</span>
       <span class="pill" id="saveTarget">Target: download fallback</span>
+      <span class="pill" id="viewStatus">View: Rule first</span>
     </div>
   </header>
 
@@ -675,6 +722,12 @@ def build_report_html(report_data: dict) -> str:
     <div class="toolbar">
       <input id="fileInput" type="file" accept="application/json,.json" />
       <input id="search" type="search" placeholder="Filter: file, rule_id, title, text…" />
+
+      <div class="view-toggle" aria-label="View mode">
+        <button id="btnRuleFirst" type="button" class="active">Rule first</button>
+        <button id="btnFileFirst" type="button">File first</button>
+      </div>
+
       <button id="btnPickDir">Choose folder</button>
       <button id="btnSelectAll" disabled>Select all</button>
       <button id="btnClear" disabled>Clear selection</button>
@@ -682,7 +735,7 @@ def build_report_html(report_data: dict) -> str:
     </div>
 
     <div class="hint">
-        Expand categories to explore findings.
+      Toggle between rule-first and file-first grouping without changing the selected fixes.
     </div>
 
     <div id="hint" class="warn" style="display:none; margin: 0 0 12px;"></div>
@@ -714,7 +767,8 @@ const state = {{
   selected: new Map(),
   selectedActions: new Map(),
   filter: "",
-  dirHandle: null
+  dirHandle: null,
+  viewMode: "rule-first"
 }};
 
 const elStatus = document.getElementById("status");
@@ -723,6 +777,7 @@ const elList = document.getElementById("list");
 const elHint = document.getElementById("hint");
 const elSourceHint = document.getElementById("sourceHint");
 const elSaveTarget = document.getElementById("saveTarget");
+const elViewStatus = document.getElementById("viewStatus");
 
 const fileInput = document.getElementById("fileInput");
 const search = document.getElementById("search");
@@ -730,6 +785,8 @@ const btnPickDir = document.getElementById("btnPickDir");
 const btnSelectAll = document.getElementById("btnSelectAll");
 const btnClear = document.getElementById("btnClear");
 const btnExport = document.getElementById("btnExport");
+const btnRuleFirst = document.getElementById("btnRuleFirst");
+const btnFileFirst = document.getElementById("btnFileFirst");
 
 function formatCategoryLabel(category) {{
   const code = String(category || "OTHER").toUpperCase();
@@ -761,6 +818,13 @@ function updateSaveTargetLabel() {{
   }}
 }}
 
+function updateViewButtons() {{
+  btnRuleFirst.classList.toggle("active", state.viewMode === "rule-first");
+  btnFileFirst.classList.toggle("active", state.viewMode === "file-first");
+  elViewStatus.textContent =
+    state.viewMode === "rule-first" ? "View: Rule first" : "View: File first";
+}}
+
 function normalisePlan(json) {{
   const findings = Array.isArray(json)
     ? json
@@ -770,10 +834,13 @@ function normalisePlan(json) {{
 
   return findings.map((f, idx) => {{
     const fixes = f.fixes ?? f.fix_proposals ?? f.proposals ?? f.selected_fixes ?? [];
+    const ruleId = f.rule_id ?? f.rule ?? f.code ?? "UNKNOWN_RULE";
+
     return {{
       _idx: idx,
       id: f.id ?? f.finding_id ?? f.match_id ?? `${{idx}}`,
-      rule_id: f.rule_id ?? f.rule ?? f.code ?? "UNKNOWN_RULE",
+      rule_id: ruleId,
+      category: f.category ?? getCategoryFromRuleId(ruleId),
       title: f.title ?? f.headline ?? f.name ?? "Untitled finding",
       severity: f.severity ?? f.level ?? "info",
       file: f.file ?? f.filename ?? f.path ?? "unknown",
@@ -827,44 +894,6 @@ function renderDiff(diffText) {{
   }}).join("");
 }}
 
-function groupFindings(findings) {{
-  const grouped = new Map();
-
-  findings.forEach((f) => {{
-    const category = getCategoryFromRuleId(f.rule_id);
-    const ruleKey = f.rule_id || "UNKNOWN_RULE";
-
-    if (!grouped.has(category)) {{
-      grouped.set(category, {{
-        category,
-        rules: new Map(),
-      }});
-    }}
-
-    const cat = grouped.get(category);
-
-    if (!cat.rules.has(ruleKey)) {{
-      cat.rules.set(ruleKey, {{
-        rule_id: f.rule_id,
-        title: f.title,
-        severity: f.severity,
-        findings: [],
-      }});
-    }}
-
-    cat.rules.get(ruleKey).findings.push(f);
-  }});
-
-  return Array.from(grouped.values())
-    .sort((a, b) => a.category.localeCompare(b.category))
-    .map((cat) => ({{
-      ...cat,
-      rules: Array.from(cat.rules.values()).sort((a, b) =>
-        (a.rule_id || "").localeCompare(b.rule_id || "")
-      ),
-    }}));
-}}
-
 function countSeverity(findings) {{
   let info = 0;
   let warning = 0;
@@ -879,7 +908,6 @@ function countSeverity(findings) {{
 
   return {{ info, warning, error }};
 }}
-
 
 function formatSeverityMeta(counts) {{
   const parts = [];
@@ -896,7 +924,6 @@ function formatSeverityMeta(counts) {{
 
   return parts.join(" • ");
 }}
-
 
 function fixKey(finding, fix) {{
   return `${{finding.file}}::${{finding.id}}::${{fix.fix_id}}`;
@@ -926,6 +953,7 @@ function matchesFilter(finding) {{
   const hay = [
     finding.id,
     finding.rule_id,
+    finding.category,
     finding.title,
     finding.severity,
     finding.file,
@@ -1074,14 +1102,10 @@ function buildFindingCard(f) {{
       <div class="summary-main">
         <div class="title">${{escapeHtml(f.id)}}</div>
 
-        <div class="meta">
-          <span class="pill" title="Severity">${{escapeHtml(f.severity)}}</span>
-          <span class="pill" title="Rule identifier">${{escapeHtml(f.rule_id)}}</span>
-        </div>
-
         <div class="path" title="File and location">
           ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
         </div>
+
       </div>
 
       <div class="expand-hint">Show details</div>
@@ -1096,34 +1120,40 @@ function buildFindingCard(f) {{
     }}
   }});
 
+  function severityPillClass(severity) {{
+    const s = String(severity || "info").toLowerCase();
+    if (s === "error") return "pill-error";
+    if (s === "warning") return "pill-warning";
+    return "pill-info";
+  }}
+
   const body = document.createElement("div");
   body.className = "detail-body";
 
+  if (f.code_snippet_html) {{
+    const codeSection = document.createElement("details");
+    codeSection.className = "nested-details";
+    const marker = f.snippet_truncated
+      ? `<div class="snippet-marker">… truncated …</div>`
+      : "";
+    codeSection.innerHTML = `
+      <summary>View code context</summary>
+      ${{marker}}
+      <div class="code code-wrap" data-snippet-loaded="false"></div>
+    `;
 
-if (f.code_snippet_html) {{
-  const codeSection = document.createElement("details");
-  codeSection.className = "nested-details";
-  const marker = f.snippet_truncated
-    ? `<div class="snippet-marker">… truncated …</div>`
-    : "";
-  codeSection.innerHTML = `
-    <summary>View code context</summary>
-    ${{marker}}
-    <div class="code code-wrap" data-snippet-loaded="false"></div>
-  `;
+    codeSection.addEventListener("toggle", () => {{
+      const target = codeSection.querySelector(".code-wrap");
+      if (!codeSection.open || !target || target.dataset.snippetLoaded === "true") {{
+        return;
+      }}
 
-  codeSection.addEventListener("toggle", () => {{
-    const target = codeSection.querySelector(".code-wrap");
-    if (!codeSection.open || !target || target.dataset.snippetLoaded === "true") {{
-      return;
-    }}
+      target.innerHTML = f.code_snippet_html;
+      target.dataset.snippetLoaded = "true";
+    }});
 
-    target.innerHTML = f.code_snippet_html;
-    target.dataset.snippetLoaded = "true";
-  }});
-
-  body.appendChild(codeSection);
-}}
+    body.appendChild(codeSection);
+  }}
 
   const fixesSection = document.createElement("div");
   fixesSection.className = "section";
@@ -1215,15 +1245,7 @@ if (f.code_snippet_html) {{
           ? fx.dsl
           : JSON.stringify(fx.dsl, null, 2);
 
-      if (dslText && dslText !== "{{}}" && dslText !== "[]") {{
-        const rawDetails = document.createElement("details");
-        rawDetails.className = "nested-details";
-        rawDetails.innerHTML = `
-          <summary>Technical detail</summary>
-          <div class="code">${{escapeHtml(dslText)}}</div>
-        `;
-        fixDiv.appendChild(rawDetails);
-      }}
+
 
       fixesWrap.appendChild(fixDiv);
     }});
@@ -1280,112 +1302,318 @@ if (f.code_snippet_html) {{
   return card;
 }}
 
-function render() {{
-  elList.innerHTML = "";
-  const visible = state.findings.filter(matchesFilter);
-  const grouped = groupFindings(visible);
+function createGroupDetails(className, titleHtml, metaHtml, counts, defaultOpen = false) {{
+  const details = document.createElement("details");
+  details.className = `group ${{className}}`;
+  details.open = defaultOpen;
 
-  grouped.forEach((cat) => {{
-    const allFindings = cat.rules.flatMap(r => r.findings);
-    const {{ info, warning, error }} = countSeverity(allFindings);
+  if (counts.error > 0) {{
+    if (className.includes("category-group")) details.classList.add("category-error");
+    if (className.includes("rule-group")) details.classList.add("rule-error");
+    if (className.includes("file-group")) details.classList.add("file-error");
+  }} else if (counts.warning > 0) {{
+    if (className.includes("category-group")) details.classList.add("category-warning");
+    if (className.includes("rule-group")) details.classList.add("rule-warning");
+    if (className.includes("file-group")) details.classList.add("file-warning");
+  }}
 
-    const categoryDetails = document.createElement("details");
-    categoryDetails.className = "group category-group";
-    categoryDetails.open = false;
+  details.innerHTML = `
+    <summary>
+      <div class="group-summary">
+        <div class="group-title">${{titleHtml}}</div>
+        <div class="group-meta">${{metaHtml}}</div>
+      </div>
+    </summary>
+  `;
 
-    if (error > 0) {{
-      categoryDetails.classList.add("category-error");
-    }} else if (warning > 0) {{
-      categoryDetails.classList.add("category-warning");
+  const body = document.createElement("div");
+  body.className = "group-body";
+  details.appendChild(body);
+  return {{ details, body }};
+}}
+
+function groupFindingsRuleFirst(findings) {{
+  const root = new Map();
+
+  findings.forEach((f) => {{
+    const category = f.category || getCategoryFromRuleId(f.rule_id);
+    const ruleKey = f.rule_id || "UNKNOWN_RULE";
+    const fileKey = f.file || "unknown";
+
+    if (!root.has(category)) {{
+      root.set(category, new Map());
     }}
 
-    const categoryFindingCount = cat.rules.reduce(
-      (sum, rule) => sum + rule.findings.length,
-      0
+    const categoryMap = root.get(category);
+
+    if (!categoryMap.has(ruleKey)) {{
+      categoryMap.set(ruleKey, new Map());
+    }}
+
+    const ruleMap = categoryMap.get(ruleKey);
+
+    if (!ruleMap.has(fileKey)) {{
+      ruleMap.set(fileKey, []);
+    }}
+
+    ruleMap.get(fileKey).push(f);
+  }});
+
+  return Array.from(root.entries())
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+    .map(([category, rulesMap]) => {{
+      const rules = Array.from(rulesMap.entries())
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        .map(([ruleId, filesMap]) => {{
+          const files = Array.from(filesMap.entries())
+            .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+            .map(([file, fileFindings]) => ({{
+              file,
+              findings: fileFindings.sort((a, b) => (a.start_line || 0) - (b.start_line || 0))
+            }}));
+
+          const allFindings = files.flatMap(item => item.findings);
+          return {{
+            rule_id: ruleId,
+            title: allFindings[0]?.title || "Untitled rule",
+            files,
+            findings: allFindings
+          }};
+        }});
+
+      const allFindings = rules.flatMap(rule => rule.findings);
+      return {{
+        category,
+        rules,
+        findings: allFindings
+      }};
+    }});
+}}
+
+function groupFindingsFileFirst(findings) {{
+  const root = new Map();
+
+  findings.forEach((f) => {{
+    const fileKey = f.file || "unknown";
+    const category = f.category || getCategoryFromRuleId(f.rule_id);
+    const ruleKey = f.rule_id || "UNKNOWN_RULE";
+
+    if (!root.has(fileKey)) {{
+      root.set(fileKey, new Map());
+    }}
+
+    const fileMap = root.get(fileKey);
+
+    if (!fileMap.has(category)) {{
+      fileMap.set(category, new Map());
+    }}
+
+    const categoryMap = fileMap.get(category);
+
+    if (!categoryMap.has(ruleKey)) {{
+      categoryMap.set(ruleKey, []);
+    }}
+
+    categoryMap.get(ruleKey).push(f);
+  }});
+
+  return Array.from(root.entries())
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+    .map(([file, categoriesMap]) => {{
+      const categories = Array.from(categoriesMap.entries())
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        .map(([category, rulesMap]) => {{
+          const rules = Array.from(rulesMap.entries())
+            .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+            .map(([ruleId, ruleFindings]) => ({{
+              rule_id: ruleId,
+              title: ruleFindings[0]?.title || "Untitled rule",
+              findings: ruleFindings.sort((a, b) => (a.start_line || 0) - (b.start_line || 0))
+            }}));
+
+          const allFindings = rules.flatMap(rule => rule.findings);
+          return {{
+            category,
+            rules,
+            findings: allFindings
+          }};
+        }});
+
+      const allFindings = categories.flatMap(category => category.findings);
+      return {{
+        file,
+        categories,
+        findings: allFindings
+      }};
+    }});
+}}
+
+function buildFileGroup(fileLabel, findings) {{
+  const counts = countSeverity(findings);
+  const severityMeta = formatSeverityMeta(counts);
+
+  const {{ details, body }} = createGroupDetails(
+    "file-group",
+    escapeHtml(fileLabel),
+    `${{findings.length}} findings${{severityMeta ? ` • ${{severityMeta}}` : ""}}`,
+    counts
+  );
+
+  details.dataset.rendered = "false";
+  details.addEventListener("toggle", () => {{
+    if (!details.open || details.dataset.rendered === "true") {{
+      return;
+    }}
+
+    findings.forEach((f) => {{
+      body.appendChild(buildFindingCard(f));
+    }});
+
+    details.dataset.rendered = "true";
+  }});
+
+  return details;
+}}
+
+function renderRuleFirst(visible) {{
+  const grouped = groupFindingsRuleFirst(visible);
+
+  grouped.forEach((cat) => {{
+    const categoryCounts = countSeverity(cat.findings);
+    const categoryMeta = formatSeverityMeta(categoryCounts);
+
+    const {{ details: categoryDetails, body: categoryBody }} = createGroupDetails(
+      "category-group",
+      escapeHtml(formatCategoryLabel(cat.category)),
+      `${{cat.findings.length}} findings${{categoryMeta ? ` • ${{categoryMeta}}` : ""}}`,
+      categoryCounts
     );
 
-    categoryDetails.innerHTML = `
-      <summary>
-        <div class="group-summary">
-          <div class="group-title">${{escapeHtml(cat.category)}}</div>
-          <div class="group-meta">
-            ${{categoryFindingCount}} findings • 
-            <span class="info">${{info}} info</span> • 
-            <span class="warn">${{warning}} warning</span>
-            ${{error > 0 ? ` • <span class="error">${{error}} error</span>` : ""}}
-          </div>
-        </div>
-      </summary>
-    `;
-
-    const categoryBody = document.createElement("div");
-    categoryBody.className = "group-body";
-
     cat.rules.forEach((rule) => {{
-      const counts = countSeverity(rule.findings);
-      const severityMeta = formatSeverityMeta(counts);
+      const ruleCounts = countSeverity(rule.findings);
+      const ruleMeta = formatSeverityMeta(ruleCounts);
 
-      const ruleDetails = document.createElement("details");
-      ruleDetails.className = "group rule-group";
-
-      if (counts.error > 0) {{
-        ruleDetails.classList.add("rule-error");
-      }} else if (counts.warning > 0) {{
-        ruleDetails.classList.add("rule-warning");
-      }}
-
-      ruleDetails.innerHTML = `
-        <summary>
-          <div class="group-summary">
-            <div class="group-title">
-              ${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}
-            </div>
-            <div class="group-meta">
-              ${{rule.findings.length}} findings${{severityMeta ? ` • ${{severityMeta}}` : ""}}
-            </div>
-          </div>
-        </summary>
-      `;
-
-      const ruleBody = document.createElement("div");
-      ruleBody.className = "group-body";
-
-      const ruleDescription = rule.findings[0]?.message?.trim();
-      if (ruleDescription) {{
-        const descDetails = document.createElement("details");
-        descDetails.className = "nested-details";
-        descDetails.innerHTML = `
-          <summary>Rule description</summary>
-          <div class="desc">${{escapeHtml(ruleDescription)}}</div>
-        `;
-        ruleBody.appendChild(descDetails);
-      }}
+      const {{ details: ruleDetails, body: ruleBody }} = createGroupDetails(
+        "rule-group",
+        `${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}`,
+        `${{rule.findings.length}} findings${{ruleMeta ? ` • ${{ruleMeta}}` : ""}}`,
+        ruleCounts
+      );
 
       ruleDetails.dataset.rendered = "false";
-
       ruleDetails.addEventListener("toggle", () => {{
         if (!ruleDetails.open || ruleDetails.dataset.rendered === "true") {{
           return;
         }}
 
-        rule.findings.forEach((f) => {{
-          const card = buildFindingCard(f);
-          ruleBody.appendChild(card);
+        const ruleDescription = rule.findings[0]?.message?.trim();
+        if (ruleDescription) {{
+          const descDetails = document.createElement("details");
+          descDetails.className = "nested-details";
+          descDetails.innerHTML = `
+            <summary>Rule description</summary>
+            <div class="desc">${{escapeHtml(ruleDescription)}}</div>
+          `;
+          ruleBody.appendChild(descDetails);
+        }}
+
+        rule.files.forEach((fileItem) => {{
+          ruleBody.appendChild(buildFileGroup(fileItem.file, fileItem.findings));
         }});
 
         ruleDetails.dataset.rendered = "true";
       }});
 
-      ruleDetails.appendChild(ruleBody);
       categoryBody.appendChild(ruleDetails);
     }});
 
-    categoryDetails.appendChild(categoryBody);
     elList.appendChild(categoryDetails);
   }});
+}}
+
+function renderFileFirst(visible) {{
+  const grouped = groupFindingsFileFirst(visible);
+
+  grouped.forEach((fileItem) => {{
+    const fileCounts = countSeverity(fileItem.findings);
+    const fileMeta = formatSeverityMeta(fileCounts);
+
+    const {{ details: fileDetails, body: fileBody }} = createGroupDetails(
+      "file-group",
+      escapeHtml(fileItem.file),
+      `${{fileItem.findings.length}} findings${{fileMeta ? ` • ${{fileMeta}}` : ""}}`,
+      fileCounts
+    );
+
+    fileItem.categories.forEach((categoryItem) => {{
+      const categoryCounts = countSeverity(categoryItem.findings);
+      const categoryMeta = formatSeverityMeta(categoryCounts);
+
+      const {{ details: categoryDetails, body: categoryBody }} = createGroupDetails(
+        "category-group",
+        escapeHtml(formatCategoryLabel(categoryItem.category)),
+        `${{categoryItem.findings.length}} findings${{categoryMeta ? ` • ${{categoryMeta}}` : ""}}`,
+        categoryCounts
+      );
+
+      categoryItem.rules.forEach((rule) => {{
+        const ruleCounts = countSeverity(rule.findings);
+        const ruleMeta = formatSeverityMeta(ruleCounts);
+
+        const {{ details: ruleDetails, body: ruleBody }} = createGroupDetails(
+          "rule-group",
+          `${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}`,
+          `${{rule.findings.length}} findings${{ruleMeta ? ` • ${{ruleMeta}}` : ""}}`,
+          ruleCounts
+        );
+
+        ruleDetails.dataset.rendered = "false";
+        ruleDetails.addEventListener("toggle", () => {{
+          if (!ruleDetails.open || ruleDetails.dataset.rendered === "true") {{
+            return;
+          }}
+
+        const ruleDescription = rule.findings[0]?.message?.trim();
+        if (ruleDescription) {{
+            const descDetails = document.createElement("details");
+            descDetails.className = "nested-details";
+            descDetails.innerHTML = `
+              <summary>Rule description</summary>
+              <div class="desc">${{escapeHtml(ruleDescription)}}</div>
+            `;
+            ruleBody.appendChild(descDetails);
+        }}
+
+        rule.findings.forEach((f) => {{
+            ruleBody.appendChild(buildFindingCard(f));
+        }});
+
+        ruleDetails.dataset.rendered = "true";
+        }});
+
+        categoryBody.appendChild(ruleDetails);
+      }});
+
+      fileBody.appendChild(categoryDetails);
+    }});
+
+    elList.appendChild(fileDetails);
+  }});
+}}
+
+function render() {{
+  elList.innerHTML = "";
+  const visible = state.findings.filter(matchesFilter);
+
+  if (state.viewMode === "file-first") {{
+    renderFileFirst(visible);
+  }} else {{
+    renderRuleFirst(visible);
+  }}
 
   elStatus.textContent = state.raw ? "Loaded" : "No data";
   updateCounts();
+  updateViewButtons();
 }}
 
 function applyJson(json, source) {{
@@ -1547,6 +1775,16 @@ btnPickDir.addEventListener("click", () => {{
   pickDirectory();
 }});
 
+btnRuleFirst.addEventListener("click", () => {{
+  state.viewMode = "rule-first";
+  render();
+}});
+
+btnFileFirst.addEventListener("click", () => {{
+  state.viewMode = "file-first";
+  render();
+}});
+
 btnSelectAll.addEventListener("click", () => {{
   state.findings.filter(matchesFilter).forEach((f) => {{
     f.fixes.forEach((fx) => {{
@@ -1569,6 +1807,7 @@ btnExport.addEventListener("click", () => {{
 }});
 
 updateSaveTargetLabel();
+updateViewButtons();
 applyJson(state.raw, "scan_report.json");
   </script>
 </body>
