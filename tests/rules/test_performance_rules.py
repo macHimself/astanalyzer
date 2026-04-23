@@ -131,3 +131,27 @@ def test_join_on_generator_not_detected_for_real_generator(scan_rule_ids):
     )
 
     assert "PERF-007" not in rule_ids
+
+
+def test_loop_could_be_comprehension_matches_simple_append(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(xs):\n"
+        "    result = []\n"
+        "    for x in xs:\n"
+        "        result.append(x)\n"
+        "    return result\n",
+    )
+
+    assert "PERF-006" in rule_ids
+
+def test_loop_could_be_comprehension_matches_filtered_append(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(xs):\n"
+        "    result = []\n"
+        "    for x in xs:\n"
+        "        if is_valid(x):\n"
+        "            result.append(normalize(x))\n"
+        "    return result\n",
+    )
+
+    assert "PERF-006" in rule_ids

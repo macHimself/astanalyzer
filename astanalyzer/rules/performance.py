@@ -33,6 +33,10 @@ from ..rule import Rule
 from ..tools import (
     is_loop_comprehension_candidate,
     loop_comprehension_suggestion,
+    is_builtin_print_call,
+    is_redundant_sorted_before_minmax,
+    is_probably_str_join_call,
+    is_nested_loop_same_stable_collection
 )
 
 
@@ -59,7 +63,7 @@ class PrintInListComprehension(Rule):
                 "value",
                 match("ListComp").in_attr(
                     "elt",
-                    match("Call").where_call(name="print"),
+                    match("Call").satisfies(is_builtin_print_call),
                 ),
             )
         ]
@@ -117,7 +121,8 @@ class RedundantSortBeforeMinMax(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").where_call(name={"min", "max"}).has_arg("func", "sorted")
+            # match("Call").where_call(name={"min", "max"}).has_arg("func", "sorted")
+            match("Call").satisfies(is_redundant_sorted_before_minmax)
         ]
         self.fixer_builders = [
             fix()
@@ -177,9 +182,10 @@ class DoubleLoopSameCollection(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("For")
-            .capture_ancestor("outer", "For")
-            .same_iter_as_ancestor("outer")
+            match("For").where("__custom_condition__", is_nested_loop_same_stable_collection)
+            # match("For")
+            # .capture_ancestor("outer", "For")
+            # .same_iter_as_ancestor("outer")
         ]
         self.fixer_builders = [
             fix()
@@ -246,12 +252,12 @@ class JoinOnGenerator(Rule):
         super().__init__()
         self.matchers = [
             match("Call")
-            .where_call(name="join")
+            .satisfies(is_probably_str_join_call)
             .where_len("args", 1)
             .where_node_type("args.0", "ListComp"),
 
             match("Call")
-            .where_call(name="join")
+            .satisfies(is_probably_str_join_call)
             .where_len("args", 1)
             .where_node_type("args.0", "Call")
             .where("args.0.func.name", "list")
