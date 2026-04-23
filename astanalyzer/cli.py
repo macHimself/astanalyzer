@@ -207,14 +207,18 @@ def archive_run_artifacts(archive_dir: Path, base_dir: Path | None = None) -> li
     return archived
 
 
-def read_project_root_from_selected_json(base_dir: Path | None = None) -> Path | None:
-    """Read project_root from selected JSON in the working directory if available."""
-    root = base_dir or Path.cwd()
+def read_project_root_from_selected_json(selected_path: Path | None = None) -> Path | None:
+    """Read project_root from selected JSON if available."""
+    candidates: list[Path] = []
 
-    candidates = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-    ]
+    if selected_path is not None:
+        candidates.append(selected_path)
+
+    cwd = Path.cwd()
+    candidates.extend([
+        cwd / "astanalyzer-selected.json",
+        cwd / "selected.json",
+    ])
 
     for candidate in candidates:
         if not candidate.exists() or not candidate.is_file():
@@ -1034,7 +1038,15 @@ def cmd_archive(args: argparse.Namespace) -> None:
         - Prints an archive summary to stdout.
     """
     root = Path.cwd()
-    project_root = read_project_root_from_selected_json(root)
+
+    selected_path = None
+    if getattr(args, "selected", None):
+        selected_path = Path(args.selected).expanduser().resolve()
+        if not selected_path.exists() or not selected_path.is_file():
+            log.error("Selected JSON '%s' does not exist or is not a file.", selected_path)
+            sys.exit(1)
+
+    project_root = read_project_root_from_selected_json(selected_path)
     patch_root = project_root or root
 
     has_local_artifacts = has_working_artifacts(root)
@@ -1266,6 +1278,12 @@ def build_parser() -> argparse.ArgumentParser:
     archive_parser = subparsers.add_parser(
         "archive",
         help="Archive generated artefacts and patches without applying them",
+    )
+    archive_parser.add_argument(
+        "selected",
+        nargs="?",
+        default=None,
+        help="Selected fixes JSON file used to resolve project_root for patch archiving",
     )
     archive_parser.set_defaults(func=cmd_archive)
 
