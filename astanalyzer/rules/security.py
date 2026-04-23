@@ -28,6 +28,15 @@ from ..fixer import fix
 from ..matcher import match
 from ..rule import Rule
 
+from ..tools import (
+    is_builtin_eval_or_exec_call, 
+    is_explicit_builtins_eval_or_exec_call, 
+    is_builtin_eval_literal_candidate, 
+    is_builtin_os_system_or_popen_call, 
+    is_hardcoded_secret_assignment, 
+    is_insecure_random_call, 
+    is_builtin_open_call
+)
 
 class UseOfEval(Rule):
     """
@@ -49,10 +58,8 @@ class UseOfEval(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").where_call(name="eval"),
-            match("Call").where_call(name="exec"),
-            match("Call").where_call(qual="builtins.eval"),
-            match("Call").where_call(qual="builtins.exec"),
+            match("Call").satisfies(is_builtin_eval_or_exec_call),
+            match("Call").satisfies(is_explicit_builtins_eval_or_exec_call),            
         ]
         self.fixer_builders = [
             fix()
@@ -101,7 +108,7 @@ class EvalLiteralParsingCandidate(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").satisfies(self.is_literal_eval_candidate)
+            match("Call").satisfies(is_builtin_eval_literal_candidate)
         ]
         self.fixer_builders = [
             fix()
@@ -113,34 +120,6 @@ class EvalLiteralParsingCandidate(Rule):
             .replace_eval_with_literal_eval()
             .because("Replace eval() with ast.literal_eval() for literal parsing."),
         ]
-
-    def is_literal_eval_candidate(self, node) -> bool:
-        if node.__class__.__name__ != "Call":
-            return False
-
-        func = getattr(node, "func", None)
-        name = getattr(func, "name", None) or getattr(func, "id", None)
-        if name != "eval":
-            return False
-
-        args = getattr(node, "args", None) or []
-        keywords = getattr(node, "keywords", None) or []
-        if len(args) != 1 or keywords:
-            return False
-
-        arg = args[0]
-        if arg.__class__.__name__ not in {"Const", "Constant"}:
-            return False
-
-        value = getattr(arg, "value", None)
-        if not isinstance(value, str):
-            return False
-
-        text = value.strip()
-        if not text:
-            return False
-
-        return text[0] in "([{'\"-0123456789"
 
 
 class UseOfOsSystem(Rule):
@@ -163,8 +142,7 @@ class UseOfOsSystem(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").where_call(qual="os.system"),
-            match("Call").where_call(qual="os.popen"),
+            match("Call").satisfies(is_builtin_os_system_or_popen_call),
         ]
         self.fixer_builders = [
             fix()
@@ -234,9 +212,9 @@ class HardcodedPasswordOrKey(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Assign|AnnAssign")
-            .where_target_contains_any(*self.SUSPECT_NAMES)
-            .where_value_is_string_literal(non_empty=True)
+            match("Assign|AnnAssign").satisfies(
+                lambda node: is_hardcoded_secret_assignment(node, self.SUSPECT_NAMES)
+            )
         ]
         self.fixer_builders = [
             fix()
@@ -271,8 +249,7 @@ class InsecureRandom(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").where_call(qual=f"random.{fn}")
-            for fn in self.UNSAFE_FUNCS
+            match("Call").satisfies(lambda node: is_insecure_random_call(node, self.UNSAFE_FUNCS))
         ]
         self.fixer_builders = [
             fix()
@@ -302,7 +279,7 @@ class OpenWithoutWith(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            match("Call").where_call(name="open").missing_parent("With|AsyncWith")
+            match("Call").satisfies(is_builtin_open_call).missing_parent("With|AsyncWith")
         ]
         self.fixer_builders = [
             fix()
