@@ -107,20 +107,239 @@ def split_identifier_parts(name: str) -> list[str]:
 
 
 # ===== Assignment / usage helpers =====
-def is_unused_assign(node) -> bool:
-    """
-    Return True if a simple assignment target is not referenced later
-    in the same block.
+def _flatten_target_names(target) -> list[str]:
+    """Extract all simple assigned names from a target, including tuple/list unpacking."""
+    target_type = _node_type(target)
 
-    Note:
-        This is a lightweight textual heuristic, not full data-flow analysis.
+    if target_type in {"AssignName", "Name"}:
+        name = _node_name(target)
+        return [name] if name else []
+
+    if target_type in {"Tuple", "List"}:
+        names: list[str] = []
+        for child in getattr(target, "elts", []) or []:
+            names.extend(_flatten_target_names(child))
+        return names
+
+    return []
+
+
+def _assignment_target_names(node) -> list[str]:
+    """Return all simple names assigned by an Assign/AnnAssign node."""
+    names: list[str] = []
+    for target in _assignment_targets(node):
+        names.extend(_flatten_target_names(target))
+    return names
+
+
+def _text_uses_name(node, name: str) -> bool:
+    """Return True if node text references the given name as a whole identifier."""
+    text = _node_text(node)
+    if not text:
+        return False
+    return re.search(rf"\b{re.escape(name)}\b", text) is not None
+
+
+def _stmt_assigns_name(stmt, name: str) -> bool:
+    """Return True if the statement assigns to the given name."""
+    if _node_type(stmt) not in {"Assign", "AnnAssign"}:
+        return False
+    return name in _assignment_target_names(stmt)
+
+
+def _stmt_reads_name_before_overwrite(stmt, name: str) -> bool:
     """
-    targets = _assignment_targets(node)
-    if len(targets) != 1:
+    Return True if the statement reads `name` before overwriting it.
+
+    This is a heuristic ordering helper for common control-flow statements.
+    """
+    stmt_type = _node_type(stmt)
+
+    if stmt_type == "If":
+        test = getattr(stmt, "test", None)
+        if _text_uses_name(test, name):
+            return True
+
+        for child in getattr(stmt, "body", None) or []:
+            if _stmt_reads_name_before_overwrite(child, name):
+                return True
+            if _stmt_assigns_name(child, name):
+                break
+
+        for child in getattr(stmt, "orelse", None) or []:
+            if _stmt_reads_name_before_overwrite(child, name):
+                return True
+            if _stmt_assigns_name(child, name):
+                break
+
         return False
 
-    name = _node_name(targets[0])
-    if not name:
+    if stmt_type == "While":
+        test = getattr(stmt, "test", None)
+        if _text_uses_name(test, name):
+            return True
+
+        for child in getattr(stmt, "body", None) or []:
+            if _stmt_reads_name_before_overwrite(child, name):
+                return True
+            if _stmt_assigns_name(child, name):
+                break
+
+        for child in getattr(stmt, "orelse", None) or []:
+            if _stmt_reads_name_before_overwrite(child, name):
+                return True
+            if _stmt_assigns_name(child, name):
+                break
+
+        return False
+
+    if stmt_type in {"Assign", "AnnAssign"}:
+        value = getattr(stmt, "value", None)
+        return _text_uses_name(value, name)
+
+    return _text_uses_name(stmt, name)
+
+
+def is_local_function_assignment(node) -> bool:
+    """
+    Return True if the assignment is inside a function-like local scope.
+
+    Dead-code heuristics for assignments are reliable mainly for local variables,
+    not for module-level or class-level declarations that may be used elsewhere.
+    """
+    parent = getattr(node, "parent", None)
+    while parent is not None:
+        parent_type = _node_type(parent)
+
+        if parent_type in {"FunctionDef", "AsyncFunctionDef", "Lambda"}:
+            return True
+
+        if parent_type in {"ClassDef", "Module"}:
+            return False
+
+        parent = getattr(parent, "parent", None)
+
+    return False
+
+
+def _enclosing_control_flow_statement(node):
+    """
+    Return the nearest enclosing control-flow statement that owns the current
+    statement via one of its statement-list attributes.
+    """
+    cur = node
+    parent = getattr(cur, "parent", None)
+
+    while parent is not None:
+        parent_type = _node_type(parent)
+        if parent_type in {"If", "For", "While", "Try", "With", "ExceptHandler"}:
+            for attr in ("body", "orelse", "finalbody"):
+                seq = getattr(parent, attr, None)
+                if isinstance(seq, list) and cur in seq:
+                    return parent
+
+        cur = parent
+        parent = getattr(cur, "parent", None)
+
+    return None
+
+
+def _iter_following_statement_groups_after_control_flow(node):
+    """
+    Yield following statement groups after enclosing control-flow statements.
+
+    This is used for assignments inside branches or loops that may be read later
+    after the enclosing block completes.
+    """
+    cur = node
+    seen: set[int] = set()
+
+    while True:
+        control = _enclosing_control_flow_statement(cur)
+        if control is None:
+            return
+
+        oid = id(control)
+        if oid in seen:
+            return
+        seen.add(oid)
+
+        parent = getattr(control, "parent", None)
+        if parent is None:
+            return
+
+        for attr in ("body", "orelse", "finalbody"):
+            seq = getattr(parent, attr, None)
+            if isinstance(seq, list) and control in seq:
+                idx = seq.index(control)
+                following = seq[idx + 1:]
+                if following:
+                    yield following
+                break
+
+        cur = control
+
+
+def _is_name_read_after_enclosing_control_flow(node, name: str) -> bool:
+    """Return True if name is read after one of the enclosing control-flow blocks finishes."""
+    for statements in _iter_following_statement_groups_after_control_flow(node):
+        for stmt in statements:
+            if _stmt_reads_name_before_overwrite(stmt, name):
+                return True
+    return False
+
+
+def _is_name_used_by_enclosing_while_next_iteration(node, name: str) -> bool:
+    """
+    Return True if `name` is assigned inside a while-body and then used
+    by the enclosing while on the next iteration.
+
+    This covers:
+    - use in the while test itself
+    - use in statements that appear before the current assignment within the
+      same while body, because those statements will run first on the next
+      iteration
+    """
+    cur = node
+    parent = getattr(cur, "parent", None)
+
+    while parent is not None:
+        if _node_type(parent) == "While":
+            body = getattr(parent, "body", None) or []
+            if cur in body:
+                if _text_uses_name(getattr(parent, "test", None), name):
+                    return True
+
+                idx = body.index(cur)
+                next_iter_prefix = body[:idx]
+                for stmt in next_iter_prefix:
+                    if _stmt_reads_name_before_overwrite(stmt, name):
+                        return True
+
+        cur = parent
+        parent = getattr(cur, "parent", None)
+
+    return False
+
+
+def is_unused_assign(node) -> bool:
+    """
+    Return True if assigned names are not read before being overwritten
+    or before the relevant control-flow scope ends.
+
+    Heuristic only. Handles:
+    - simple reassignment flows: x = x.strip()
+    - unpacking assignments
+    - reads in conditions before branch-local reassignment
+    - values assigned in branches and used after branch merge
+    - values assigned in nested blocks and used after outer block completion
+    - loop-carried state updates in while loops
+    """
+    if not is_local_function_assignment(node):
+        return False
+
+    target_names = [name for name in _assignment_target_names(node) if name and name != "_"]
+    if not target_names:
         return False
 
     parent = getattr(node, "parent", None)
@@ -128,13 +347,39 @@ def is_unused_assign(node) -> bool:
     if not isinstance(body, list):
         return False
 
-    for stmt in body:
-        if stmt is node:
-            continue
-        if name in _node_text(stmt):
-            return False
+    try:
+        idx = body.index(node)
+    except ValueError:
+        return False
 
-    return True
+    local_following = body[idx + 1:]
+
+    for name in target_names:
+        read_before_overwrite = False
+        overwritten_before_read = False
+
+        for stmt in local_following:
+            if _stmt_reads_name_before_overwrite(stmt, name):
+                read_before_overwrite = True
+                break
+
+            if _stmt_assigns_name(stmt, name):
+                overwritten_before_read = True
+                break
+
+        if not read_before_overwrite and _is_name_used_by_enclosing_while_next_iteration(node, name):
+            read_before_overwrite = True
+
+        if not read_before_overwrite and _is_name_read_after_enclosing_control_flow(node, name):
+            read_before_overwrite = True
+
+        if not read_before_overwrite and overwritten_before_read:
+            return True
+
+        if not read_before_overwrite and not overwritten_before_read:
+            return True
+
+    return False
 
 
 # ===== Scope and symbol helpers =====
