@@ -131,7 +131,64 @@ def test_function_too_long_matches_large_function(scan_rule_ids):
 def test_function_too_long_matches_async_function(scan_rule_ids):
     source = (
         "async def f():\n"
+        + "".join(f"    x{i} = {i}\n" for i in range(41))
+    )
+
+    rule_ids = scan_rule_ids(source)
+
+    assert "CX-003" in rule_ids
+
+
+def test_function_too_long_does_not_match_short_function(scan_rule_ids):
+    source = (
+        "def f():\n"
+        "    x = 1\n"
+        "    y = 2\n"
+        "    return x + y\n"
+    )
+
+    rule_ids = scan_rule_ids(source)
+
+    assert "CX-003" not in rule_ids
+
+
+def test_function_too_long_does_not_match_exact_threshold(scan_rule_ids):
+    source = (
+        "def f():\n"
         + "".join(f"    x{i} = {i}\n" for i in range(40))
+    )
+
+    rule_ids = scan_rule_ids(source)
+
+    assert "CX-003" not in rule_ids
+
+
+def test_function_too_long_matches(scan_rule_ids):
+    source = (
+        "def f():\n"
+        + "".join(f"    x{i} = {i}\n" for i in range(41))
+    )
+
+    rule_ids = scan_rule_ids(source)
+
+    assert "CX-003" in rule_ids
+
+
+def test_function_too_long_matches_large_function(scan_rule_ids):
+    source = (
+        "def f():\n"
+        + "".join(f"    x{i} = {i}\n" for i in range(60))
+    )
+
+    rule_ids = scan_rule_ids(source)
+
+    assert "CX-003" in rule_ids
+
+
+def test_function_too_long_matches_async_function(scan_rule_ids):
+    source = (
+        "async def f():\n"
+        + "".join(f"    x{i} = {i}\n" for i in range(41))
     )
 
     rule_ids = scan_rule_ids(source)
