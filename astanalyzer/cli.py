@@ -207,6 +207,31 @@ def archive_run_artifacts(archive_dir: Path, base_dir: Path | None = None) -> li
     return archived
 
 
+def read_project_root_from_selected_json(base_dir: Path | None = None) -> Path | None:
+    """Read project_root from selected JSON in the working directory if available."""
+    root = base_dir or Path.cwd()
+
+    candidates = [
+        root / "astanalyzer-selected.json",
+        root / "selected.json",
+    ]
+
+    for candidate in candidates:
+        if not candidate.exists() or not candidate.is_file():
+            continue
+
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+
+        project_root = normalize_project_root(data.get("project_root"))
+        if project_root is not None:
+            return project_root
+
+    return None
+
+
 def archive_patch_files_from_root(archive_dir: Path, base_dir: Path | None = None) -> int:
     """
     Archive all patch files from the project directory into a structured archive location.
@@ -1009,8 +1034,13 @@ def cmd_archive(args: argparse.Namespace) -> None:
         - Prints an archive summary to stdout.
     """
     root = Path.cwd()
+    project_root = read_project_root_from_selected_json(root)
+    patch_root = project_root or root
 
-    if not has_working_artifacts(root):
+    has_local_artifacts = has_working_artifacts(root)
+    has_project_patches = bool(find_patch_files(patch_root, include_archive=False))
+
+    if not has_local_artifacts and not has_project_patches:
         print("Nothing to archive.")
         return
 
@@ -1022,7 +1052,7 @@ def cmd_archive(args: argparse.Namespace) -> None:
     )
     archived_patches = archive_patch_files_from_root(
         archive_dir=archive_dir,
-        base_dir=root,
+        base_dir=patch_root,
     )
 
     print_section("ASTANALYZER ARCHIVE SUMMARY")
