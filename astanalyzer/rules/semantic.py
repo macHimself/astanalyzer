@@ -42,6 +42,7 @@ from ..enums import NodeType, RuleCategory, Severity
 from ..fixer import fix
 from ..matcher import match
 from ..rule import Rule
+from ..tools import is_builtin_print_call
 
 
 class AlwaysTrueConditionIf(Rule):
@@ -311,7 +312,7 @@ class PrintDebugStatement(Rule):
         super().__init__()
         self.matchers = [
             match("Expr").with_child(
-                match("Call").where_call(name="print")
+                match("Call").satisfies(is_builtin_print_call)
             )
         ]
         self.fixer_builders = [
