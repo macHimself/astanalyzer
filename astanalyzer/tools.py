@@ -594,27 +594,49 @@ def _iter_compare_pairs(node):
 
 
 # ===== Predicate factory helpers =====
-def function_arg_count(node) -> int:
-    """Return the number of positional-only, positional, and keyword-only arguments of a function node."""
+def function_arg_count(
+    node,
+    *,
+    ignore_bound_first_arg: bool = True,
+    ignore_init: bool = False,
+) -> int:
+    """Return the number of relevant function arguments for complexity checks."""
     args = getattr(node, "args", None)
     if args is None:
         return 0
 
-    posonly = len(getattr(args, "posonlyargs", []) or [])
-    normal = len(getattr(args, "args", []) or [])
-    kwonly = len(getattr(args, "kwonlyargs", []) or [])
+    if ignore_init and getattr(node, "name", None) == "__init__":
+        return 0
 
-    return posonly + normal + kwonly
+    posonly_args = list(getattr(args, "posonlyargs", []) or [])
+    normal_args = list(getattr(args, "args", []) or [])
+    kwonly_args = list(getattr(args, "kwonlyargs", []) or [])
+
+    count = len(posonly_args) + len(normal_args) + len(kwonly_args)
+
+    if ignore_bound_first_arg and normal_args:
+        first_name = getattr(normal_args[0], "name", None)
+        if first_name in {"self", "cls"}:
+            count -= 1
+
+    return max(count, 0)
 
 
-def arg_count_gt(limit: int):
-    """
-    Build a predicate that matches functions with more than `limit` arguments.
-    """
+def arg_count_gt(
+    limit: int,
+    *,
+    ignore_bound_first_arg: bool = True,
+    ignore_init: bool = False,
+):
+    """Build a predicate that matches functions with more than `limit` relevant arguments."""
     def _check(node) -> bool:
         if node.__class__.__name__ not in {"FunctionDef", "AsyncFunctionDef"}:
             return False
-        return function_arg_count(node) > limit
+        return function_arg_count(
+            node,
+            ignore_bound_first_arg=ignore_bound_first_arg,
+            ignore_init=ignore_init,
+        ) > limit
     return _check
 
 
@@ -637,3 +659,33 @@ def parent_depth_at_least(type_names: tuple[str, ...], min_depth: int):
         return depth >= min_depth
 
     return _check
+
+
+def count_relevant_statements(node) -> int:
+    """
+    Count executable statements in a function while ignoring no-op string
+    expressions and nested function/class scopes.
+    """
+    def _count_stmt(stmt) -> int:
+        if is_noop_stmt(stmt):
+            return 0
+
+        t = stmt.__class__.__name__
+        if t in {"FunctionDef", "AsyncFunctionDef", "ClassDef"}:
+            return 0
+
+        total = 1
+
+        for attr in ("body", "orelse", "finalbody"):
+            seq = getattr(stmt, attr, None)
+            if isinstance(seq, list):
+                total += sum(_count_stmt(s) for s in seq)
+
+        handlers = getattr(stmt, "handlers", None) or []
+        for h in handlers:
+            total += sum(_count_stmt(s) for s in (getattr(h, "body", None) or []))
+
+        return total
+
+    body = getattr(node, "body", None) or []
+    return sum(_count_stmt(stmt) for stmt in body)

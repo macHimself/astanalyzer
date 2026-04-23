@@ -19,7 +19,7 @@ from ..enums import NodeType, RuleCategory, Severity
 from ..fixer import fix
 from ..matcher import match
 from ..rule import Rule
-from ..tools import arg_count_gt, function_arg_count, parent_depth_at_least
+from ..tools import arg_count_gt, function_arg_count, parent_depth_at_least, count_relevant_statements
 
 
 class TooManyArguments(Rule):
@@ -42,15 +42,22 @@ class TooManyArguments(Rule):
 
     def __init__(self):
         super().__init__()
+        # self.matchers = [
+        #     match("FunctionDef|AsyncFunctionDef")
+        #     .where("__custom_condition__", arg_count_gt(self.MAX_ARGS))
+        # ]
         self.matchers = [
-            match("FunctionDef|AsyncFunctionDef")
-            .where("__custom_condition__", arg_count_gt(self.MAX_ARGS))
+            match("FunctionDef|AsyncFunctionDef").where(
+                "__custom_condition__",
+                arg_count_gt(self.MAX_ARGS, ignore_bound_first_arg=True, ignore_init=True),
+            )
         ]
         self.fixer_builders = [
             fix()
             .insert_comment(
                 lambda node: (
-                    f"# Function has {function_arg_count(node)} parameters "
+                    f"# Function has {function_arg_count(node, ignore_bound_first_arg=True, ignore_init=True)} parameters "
+                    # f"# Function has {function_arg_count(node)} parameters "
                     f"(recommended <= {self.MAX_ARGS}). "
                     "Consider grouping related parameters into an object/dataclass "
                     "or splitting the function into smaller responsibilities."
@@ -122,9 +129,10 @@ class FunctionTooLong(Rule):
         super().__init__()
         self.matchers = [
             match("FunctionDef|AsyncFunctionDef").satisfies(
-                lambda node: hasattr(node, "lineno")
-                and hasattr(node, "end_lineno")
-                and (node.end_lineno - node.lineno + 1) > self.MAX_LINES
+                lambda node: count_relevant_statements(node) > self.MAX_LINES
+                # lambda node: hasattr(node, "lineno")
+                # and hasattr(node, "end_lineno")
+                # and (node.end_lineno - node.lineno + 1) > self.MAX_LINES
             )
         ]
         self.fixer_builders = [
