@@ -8,7 +8,7 @@ AstAnalyzer is a static analysis engine for Python that operates on the abstract
 
 Instead of modifying code directly, it generates fix proposals that can be reviewed and applied safely. The workflow separates analysis, selection, patch generation, archiving, and application into distinct stages.
 
-The implementation ensures consistent handling of relative and absolute paths across all stages of the pipeline. This allows patch generation to work correctly even when intermediate artifacts (such as JSON reports) are located outside of the project root, improving robustness in practical usage scenarios.
+The implementation ensures consistent handling of relative and absolute paths across all stages of the pipeline. This allows patch generation and archiving to work correctly even when intermediate artifacts, such as selected JSON files, are located outside of the project root.
 
 This design enables reproducible analysis, integration with CI workflows, and controlled refactoring of large codebases. The tool provides full visibility into proposed changes through precomputed patch previews.
 
@@ -16,15 +16,11 @@ Unlike traditional linters, AstAnalyzer focuses on extensibility and controlled 
 
 ## Why this matters
 
-Most static analysis tools produce reports that require manual inspection
-and direct navigation to source code.
+Most static analysis tools produce reports that require manual inspection and direct navigation to source code.
 
-AstAnalyzer introduces a review step between analysis and modification,
-where findings are presented with context and fix proposals can be selected
-before any changes are applied.
+AstAnalyzer introduces a review step between analysis and modification, where findings are presented with context and fix proposals can be selected before any changes are applied.
 
-Each proposal includes a preview of the exact code changes, making the process
-transparent and reducing the risk of unintended modifications.
+Each proposal includes a preview of the exact code changes, making the process transparent and reducing the risk of unintended modifications.
 
 This makes automated refactoring safer, more transparent, and easier to control.
 
@@ -67,19 +63,25 @@ astanalyzer scan ./project
 ```
 
 ### Running without installed CLI entrypoint
-If you are running the module directly, the same flags work: 
+
+If you are running the module directly, the same flags work:
+
 ```bash
 python -m astanalyzer.cli -vv scan .
 ```
 
 ### Info mode
-Use -v to enable informational logs:
+
+Use `-v` to enable informational logs:
+
 ```bash
 astanalyzer -v scan ./project
 ```
 
 ### Debug mode
-Use -vv to enable debug logging:
+
+Use `-vv` to enable debug logging:
+
 ```bash
 astanalyzer -vv scan ./project
 ```
@@ -92,7 +94,9 @@ This option is useful when you want to inspect:
 - cleanup operations
 
 ### Quiet mode
-Use --quiet to show only errors:
+
+Use `--quiet` to show only errors:
+
 ```bash
 astanalyzer --quiet scan ./project
 ```
@@ -179,21 +183,21 @@ astanalyzer scan . --exclude-category STYLE --include STYLE-010
 
 ---
 
-## How it works (scan -> select -> patch -> archive/apply)
+## How it works: scan -> select -> patch -> archive/apply
 
 AstAnalyzer supports a full workflow from analysis to automated code modification.
 
-### Scan the project 
+### Scan the project
+
 ```bash
 astanalyzer scan .
 ```
+
 This generates:
 - `scan_report.json`
 - `report.html` (interactive UI for selecting fixes)
 
-Each fix proposal also includes a **precomputed patch preview** (unified diff),
-allowing users to inspect the exact code changes directly in the report
-without generating patch files or modifying source code.
+Each fix proposal also includes a **precomputed patch preview** (unified diff), allowing users to inspect the exact code changes directly in the report without generating patch files or modifying source code.
 
 The scan output includes structured metadata for each finding, including:
 - severity
@@ -201,93 +205,92 @@ The scan output includes structured metadata for each finding, including:
 - location
 - code snippet context
 - snippet truncation information
+- project root
 
-This metadata is used by the UI to provide accurate visualization without
-modifying the original code representation.
+This metadata is used by the UI and patch pipeline to provide accurate visualization and robust path resolution.
 
-### Select fixes (UI)
+### Select fixes in the UI
 
 Open `report.html`, inspect findings using the interactive UI, select desired fixes, and export the selection.
 
-The generated HTML report is a standalone interactive page with no backend dependencies.
-It can be opened directly in a browser and is designed for efficient inspection and selection
-of fix proposals.
-
-The report uses hierarchical navigation. Findings are grouped by category and rule, and each
-individual finding is displayed as a collapsible card.
+The generated HTML report is a standalone interactive page with no backend dependencies. It can be opened directly in a browser and is designed for efficient inspection and selection of fix proposals.
 
 ### Report structure
 
-The HTML report groups findings hierarchically:
+The HTML report supports two switchable navigation modes:
 
-- Category → Rule → Findings
+- **Rule first:** Category -> Rule -> File -> Findings
+- **File first:** File -> Category -> Rule -> Findings
 
-Rule descriptions are displayed at the rule level and are not repeated for each finding.
-They are shown on demand (collapsible), which reduces visual noise and improves navigation
-in large analysis outputs.
+The rule-first view is useful when reviewing one type of issue across the project. The file-first view is useful when fixing several issues inside the same source file.
+
+Both views use the same underlying scan data and preserve selected fixes when switching between modes.
 
 #### Hierarchical grouping
 
-To improve navigation in large projects, findings are grouped into a three-level hierarchy:
+To improve navigation in large projects, findings are grouped into collapsible sections.
+
+In rule-first mode, the report is organized as:
 
 - **Category** (e.g. STYLE, SEC, CX)
 - **Rule**
+- **File**
 - **Individual findings**
 
-Each level is collapsible, allowing users to efficiently navigate large numbers of findings.
+In file-first mode, the report is organized as:
 
-Additionally, each category and rule shows:
+- **File**
+- **Category**
+- **Rule**
+- **Individual findings**
+
+Each group displays:
 - total number of findings
-- breakdown by severity (info / warning / error)
+- severity distribution (info / warning / error)
+- visual severity indicators
 
-This significantly reduces cognitive load compared to a flat list and makes it easier to:
-- identify dominant problem areas
-- inspect issues per rule
-- work efficiently with large reports
+This makes it easier to inspect findings either by analysis type or by source file.
 
-**Collapsed view (finding overview):**
-- finding identifier (e.g. F-001)
-- severity
-- rule ID
+#### Finding cards
+
+Individual finding cards are intentionally minimal. They display:
+- finding identifier
 - file path and line range
+- expandable details
 
-**Expanded view (finding details):**
-- syntax-highlighted code snippet with surrounding context
-- highlighted lines where the issue occurs
-- available fix proposals with human-readable explanations
-- optional suppression action (ignore directive)
+Severity, category, and rule information are not repeated inside every finding card because they are already represented by the surrounding hierarchy.
 
 #### Rule-level details
 
 Each rule provides:
 - rule identifier and title
-- aggregated statistics (number of findings and severity distribution)
+- aggregated statistics
 - collapsible rule description
 
-This separation ensures that general explanations are shown once,
-while findings focus only on concrete occurrences.
+Rule descriptions are displayed at the rule level and are not repeated for each individual finding. This reduces duplication and keeps large reports readable.
 
 #### Guided navigation
 
 The interface encourages exploration through:
-- expandable categories and rules
-- contextual hints (e.g. "Expand categories to explore findings")
+- switchable rule-first and file-first views
+- expandable categories, rules, files, and findings
+- full-text filtering
 - progressive disclosure of details
 
-This approach reduces cognitive load when working with large reports.
+This approach reduces cognitive load when working with large reports and supports both thematic cleanup and file-oriented fixing workflows.
 
 #### Severity awareness
 
 Findings are visually distinguished by severity:
 
 - **info** – low importance, informational suggestions
-- **warning** – actionable issues (default focus)
+- **warning** – actionable issues
 - **error** – critical problems requiring immediate attention
 
 Severity is reflected in:
-- color-coded labels
-- aggregated counts per category and per rule
-- visual highlighting (left border indicators)
+- aggregated counts per group
+- color-coded summary text
+- visual highlighting with left border indicators
 
 This allows users to quickly identify high-impact issues and prioritize fixes.
 
@@ -300,12 +303,9 @@ The report includes a contextual code preview that:
 - uses syntax highlighting (Pygments)
 - indicates when the snippet is truncated
 
-Truncation is represented as metadata and rendered explicitly in the UI,
-instead of being embedded directly into the code snippet. This preserves
-correct line mapping and keeps the preview clean.
+Truncation is represented as metadata and rendered explicitly in the UI, instead of being embedded directly into the code snippet. This preserves correct line mapping and keeps the preview clean.
 
-This significantly improves readability compared to raw JSON output and allows
-understanding issues without opening the source file.
+This significantly improves readability compared to raw JSON output and allows understanding issues without opening the source file.
 
 #### Fix proposals
 
@@ -320,8 +320,7 @@ Each fix is presented with:
 
 Each fix proposal includes a precomputed patch preview displayed directly in the report.
 
-The preview is generated during the scan phase and represents the exact unified diff
-that would be produced during patch generation.
+The preview is generated during the scan phase and represents the exact unified diff that would be produced during patch generation.
 
 This allows users to:
 
@@ -335,17 +334,16 @@ The preview uses a unified diff format with basic highlighting:
 - removed lines (`-`)
 - diff metadata and context (`@@`, file headers)
 
-If a preview cannot be generated (e.g. no effective change), the UI displays
-a clear fallback message explaining the reason.
+If a preview cannot be generated, the UI displays a clear fallback message explaining the reason.
 
 The preview is a read-only artifact and does not modify code or create patch files.
 
 #### Additional actions
 
 Each finding supports:
-- **"Suppress this warning"** action
+- **Suppress this warning**
   - inserts an ignore directive into the source code
-  - allows selective suppression directly from UI
+  - allows selective suppression directly from the UI
 
 #### Interaction features
 
@@ -354,14 +352,18 @@ The report supports:
 - bulk selection of fixes
 - clearing selection
 - exporting selected fixes into a JSON plan
-- hierarchical navigation (category → rule → findings)
+- switchable hierarchical navigation:
+  - rule-first: category -> rule -> file -> findings
+  - file-first: file -> category -> rule -> findings
 
 The exported JSON is then used in the patch generation step.
 
 ### Generate patches
+
 ```bash
 astanalyzer patch
 ```
+
 or explicitly:
 
 ```bash
@@ -372,19 +374,24 @@ This step:
 - reads selected fixes
 - builds patch files (`*.patch`)
 - does **not** modify source code yet
+- validates generated patches using `git apply --check`
 
-The patch command supports explicit input of the selected JSON file and does not require it to be located in the project root. File paths are resolved relative to the project, ensuring consistent behavior across different environments.
+The patch command supports explicit input of the selected JSON file and does not require it to be located in the project root. The selected JSON contains the original `project_root`, which is used to resolve source files and patch locations.
 
 ### Path handling and robustness
 
-The tool does not assume that analysis artifacts (e.g. `scan_report.json` or selected JSON files) are located within the project root.
+The tool does not assume that analysis artifacts, such as `scan_report.json` or selected JSON files, are located within the project root.
 
-All paths are normalized and resolved consistently during patch generation and application. This prevents failures caused by mismatched relative paths and allows flexible workflows where analysis results are stored or processed externally.
+All paths are normalized and resolved consistently during patch generation, patch validation, application, and archiving. This prevents failures caused by mismatched relative paths and allows flexible workflows where analysis results are stored or processed externally.
+
+The selected JSON file stores the `project_root` value. This value is reused by patch generation and archiving so that patch files can be resolved consistently even when commands are executed outside the source project directory.
 
 This behavior was introduced to eliminate common sources of patch failure in earlier versions.
 
 ### Validate patches (dry-run)
+
 Validation is automatically executed during patching, but can also be done manually:
+
 ```bash
 astanalyzer apply --check
 ```
@@ -396,35 +403,65 @@ This ensures:
 
 ### Archive generated artifacts without applying patches
 
-If patches were generated but should not be applied yet, the current working artifacts can be archived without modifying source code:
+If patches were generated but should not be applied yet, the current artifacts can be archived without modifying source code:
 
-    astanalyzer archive
+```bash
+astanalyzer archive
+```
 
-This moves the current analysis artifacts into a timestamped archive directory:
+The archive command can also receive an explicit selected JSON file:
+
+```bash
+astanalyzer archive path/to/astanalyzer-selected.json
+```
+
+When a selected JSON file is available, AstAnalyzer reads its `project_root` value and uses it to locate generated patch files. This allows patch archiving to work even when the command is executed outside the original project directory.
+
+The command looks for selected JSON in this order:
+
+1. explicitly provided path
+2. `astanalyzer-selected.json` in the current working directory
+3. `selected.json` in the current working directory
+4. fallback to the current working directory
+
+This moves generated artifacts into a timestamped archive directory:
+
+```bash
+used_patches/<timestamp>/
+```
+
+Archived artifacts may include:
 - selected JSON
 - scan report
 - HTML report
 - generated patch files
 
-The archived files are stored under:
+Patch files are stored under:
 
-    used_patches/<timestamp>/
+```bash
+used_patches/<timestamp>/patches/
+```
 
-This is useful when the user wants to preserve the generated results for later review or reuse, but does not want to apply the patches immediately.
+The original patch directory structure is preserved relative to the detected project root.
 
 ### Apply patches
+
 ```bash
 astanalyzer apply
 ```
+
 If all checks pass:
 - patches are applied to files
 - source files are modified
+- generated artifacts and patches are archived after successful application
 
 ### Archive run
 
 Artifacts can be archived in two ways:
 - automatically after a successful apply
 - manually without applying patches using the archive command
+
+When possible, the archive command resolves the project root from the selected JSON file. This ensures that patch files can be found even if the archive command is executed from a different directory than the scanned project.
 
 The following artifacts are stored in a timestamped archive directory:
 - selected JSON
@@ -433,20 +470,25 @@ The following artifacts are stored in a timestamped archive directory:
 - patch files
 
 They are moved to:
+
 ```bash
 used_patches/<timestamp>/
 ```
 
 ### Clean workspace
+
 ```bash
 astanalyzer clean
 ```
+
 Optionally:
+
 ```bash
 astanalyzer clean --include-archive
 ```
+
 This removes the following artifacts:
-- selected JSON 
+- selected JSON
 - scan report
 - HTML report
 - patch files
@@ -462,8 +504,6 @@ Use this only when the code is intentional and acceptable.
 
 Ignore directives are preserved in the source code and will suppress findings in future scans.
 
----
-
 ### Ignore next node
 
 Suppress a rule for the following statement:
@@ -474,15 +514,11 @@ def foo():
     ...
 ```
 
----
-
 ### Ignore on the same line
 
 ```python
 x = eval(data)  # astanalyzer: ignore SEC-030
 ```
-
----
 
 ### Ignore multiple rules
 
@@ -491,8 +527,6 @@ x = eval(data)  # astanalyzer: ignore SEC-030
 def foo():
     ...
 ```
-
----
 
 ### Disable rules in a block
 
@@ -504,8 +538,6 @@ def foo():
 
 # astanalyzer: enable STYLE-003
 ```
-
----
 
 ### Ignore all rules
 
@@ -520,6 +552,7 @@ def foo():
 ## Built-in Rules
 
 This project includes a set of built-in static analysis rules for Python code.
+
 The rules are grouped into six categories:
 
 - `STYLE` – Code style, formatting, readability, naming and documentation
@@ -535,7 +568,7 @@ Rules are identified by a stable rule ID and include metadata such as severity a
 
 Each rule is identified by a stable ID in the following format:
 
-```
+```text
 <CATEGORY>-<NUMBER>
 ```
 
@@ -567,20 +600,28 @@ Rule IDs are used for:
 - selecting rules from CLI (`--only`, `--exclude`, `--include`)
 - referencing rules in CI pipelines and tooling
 - mapping fixes and patches to specific rules
+
 ---
+
 ## STYLE – Code Style & Readability Rules
 
 ### STYLE-001 – EmptyBlock
-**Severity:** warning  
+
+**Severity:** warning
+
 Detects blocks that are syntactically present but effectively empty.
 
 ```python
 if ready:
     pass
 ```
+
 ---
+
 ### STYLE-002 – RedundantIfElseReturn
-**Severity:** info  
+
+**Severity:** info
+
 Detects `if/else` returning boolean literals.
 
 ```python
@@ -594,7 +635,9 @@ def is_valid(x):
 ---
 
 ### STYLE-003 – MultipleReturnsInFunction
-**Severity:** info  
+
+**Severity:** info
+
 Detects functions with multiple return statements.
 
 ```python
@@ -609,7 +652,9 @@ def classify(x):
 ---
 
 ### STYLE-004 – LineTooLong
-**Severity:** info  
+
+**Severity:** info
+
 Detects lines exceeding configured length.
 
 ```python
@@ -619,7 +664,8 @@ message = "This is a very very very very very very very long line"
 ---
 
 ### STYLE-005 – FunctionNameNotSnakeCase
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 def MyFunction():
@@ -629,7 +675,8 @@ def MyFunction():
 ---
 
 ### STYLE-006 – ClassNameNotPascalCase
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 class my_class:
@@ -639,7 +686,8 @@ class my_class:
 ---
 
 ### STYLE-007 – ConstantNotUpperCase
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 pi_value = 3.14
@@ -648,13 +696,16 @@ pi_value = 3.14
 ---
 
 ### STYLE-008 – TrailingWhitespace
-**Severity:** info  
+
+**Severity:** info
+
 Detects trailing spaces at end of line.
 
 ---
 
 ### STYLE-009 – MissingBlankLineBetweenFunctions
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 def a():
@@ -666,7 +717,8 @@ def b():
 ---
 
 ### STYLE-010 – MissingDocstringForFunction
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def process_data(data):
@@ -676,7 +728,8 @@ def process_data(data):
 ---
 
 ### STYLE-011 – MissingDocstringForClass
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 class UserService:
@@ -686,14 +739,16 @@ class UserService:
 ---
 
 ### STYLE-012 – MissingDocstringForModule
-**Severity:** warning  
+
+**Severity:** warning
 
 ---
 
 ## SEM – Semantic Rules
 
 ### SEM-001 – AlwaysTrueConditionIf
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 if 1:
@@ -703,7 +758,8 @@ if 1:
 ---
 
 ### SEM-002 – AlwaysTrueConditionWhile
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 while True:
@@ -713,7 +769,8 @@ while True:
 ---
 
 ### SEM-003 – CompareToNoneUsingEq
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 if value == None:
@@ -721,6 +778,7 @@ if value == None:
 ```
 
 Preferred:
+
 ```python
 if value is None:
     pass
@@ -729,7 +787,8 @@ if value is None:
 ---
 
 ### SEM-004 – AssignmentInCondition
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 if (n := get_value()):
@@ -739,7 +798,8 @@ if (n := get_value()):
 ---
 
 ### SEM-005 – RedeclaredVariable
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 count = 1
@@ -749,7 +809,8 @@ count = 2
 ---
 
 ### SEM-006 – ExceptionNotUsed
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 try:
@@ -761,7 +822,8 @@ except ValueError as e:
 ---
 
 ### SEM-007 – BareExcept
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 try:
@@ -773,7 +835,8 @@ except:
 ---
 
 ### SEM-008 – MutableDefaultArgument
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def add_item(item, bucket=[]):
@@ -784,7 +847,8 @@ def add_item(item, bucket=[]):
 ---
 
 ### SEM-009 – PrintDebugStatement
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 print("debug:", value)
@@ -795,7 +859,8 @@ print("debug:", value)
 ## SEC – Security Rules
 
 ### SEC-001 – UseOfEval
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 result = eval(user_input)
@@ -804,7 +869,8 @@ result = eval(user_input)
 ---
 
 ### SEC-002 – EvalLiteralParsingCandidate
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 data = eval("[1, 2, 3]")
@@ -813,7 +879,8 @@ data = eval("[1, 2, 3]")
 ---
 
 ### SEC-003 – UseOfOsSystem
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 import os
@@ -823,7 +890,8 @@ os.system("rm -rf /tmp/test")
 ---
 
 ### SEC-004 – HardcodedPasswordOrKey
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 password = "admin123"
@@ -833,7 +901,8 @@ api_key = "secret-key"
 ---
 
 ### SEC-005 – InsecureRandom
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 import random
@@ -843,7 +912,8 @@ token = str(random.randint(1000, 9999))
 ---
 
 ### SEC-006 – OpenWithoutWith
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 f = open("data.txt")
@@ -851,6 +921,7 @@ content = f.read()
 ```
 
 Preferred:
+
 ```python
 with open("data.txt") as f:
     content = f.read()
@@ -861,7 +932,8 @@ with open("data.txt") as f:
 ## PERF – Performance Rules
 
 ### PERF-001 – PrintInListComprehension
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 [print(x) for x in items]
@@ -870,7 +942,8 @@ with open("data.txt") as f:
 ---
 
 ### PERF-002 – UselessComprehension
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 [x for x in items]
@@ -879,7 +952,8 @@ with open("data.txt") as f:
 ---
 
 ### PERF-003 – RedundantSortBeforeMinMax
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 smallest = sorted(values)[0]
@@ -888,7 +962,8 @@ smallest = sorted(values)[0]
 ---
 
 ### PERF-004 – UnnecessaryCopy
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 items2 = list(items)
@@ -897,7 +972,8 @@ items2 = list(items)
 ---
 
 ### PERF-005 – DoubleLoopSameCollection
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 for x in items:
@@ -910,7 +986,8 @@ for x in items:
 ---
 
 ### PERF-006 – LoopCouldBeComprehension
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 result = []
@@ -921,7 +998,8 @@ for x in items:
 ---
 
 ### PERF-007 – JoinOnGenerator
-**Severity:** info  
+
+**Severity:** info
 
 ```python
 ",".join(str(x) for x in items)
@@ -932,7 +1010,8 @@ for x in items:
 ## DEAD – Dead Code Rules
 
 ### DEAD-001 – UnusedVariable
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 x = 10
@@ -942,7 +1021,8 @@ return 5
 ---
 
 ### DEAD-002 – UnreachableCode
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def f():
@@ -953,7 +1033,8 @@ def f():
 ---
 
 ### DEAD-003 – Unused assignment (keep value)
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def f():
@@ -966,7 +1047,8 @@ def f():
 ## CX – Complexity Rules
 
 ### CX-001 – TooManyArguments
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def create_user(name, age, city, email, phone, role, active):
@@ -976,7 +1058,8 @@ def create_user(name, age, city, email, phone, role, active):
 ---
 
 ### CX-002 – TooDeepNesting
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 if a:
@@ -989,7 +1072,8 @@ if a:
 ---
 
 ### CX-003 – FunctionTooLong
-**Severity:** warning  
+
+**Severity:** warning
 
 ```python
 def big_function():
@@ -1003,30 +1087,37 @@ Long functions are harder to understand, test, and maintain.
 ## Rule DSL
 
 ### Matcher DSL
+
 The matcher DSL is used to describe AST patterns declaratively.
 
 Create a matcher with:
+
 ```python
 match("FunctionDef")
 match("If|For|While")
 ```
+
 A matcher can then be refined with additional conditions.
 
-
-
 #### Basic matcher methods
-Match by type
+
+Match by type:
+
 ```python
 match("FunctionDef")
 match("Assign|AnnAssign")
 ```
-Child existence
+
+Child existence:
+
 ```python
 match("FunctionDef").has("Return")
 match("FunctionDef").missing("Return")
 match("FunctionDef").with_child(match("Return"))
 ```
+
 #### Attribute conditions
+
 ```python
 match("FunctionDef").where("name", "foo")
 match("FunctionDef").where_exists("doc")
@@ -1035,29 +1126,38 @@ match("FunctionDef").where_regex("name", r"^[a-z_][a-z0-9_]*$")
 match("FunctionDef").where_len("args.args", 2)
 match("Assign").where_node_type("value", "Call")
 ```
+
 #### Call matching
+
 ```python
 match("Call").where_call(name="print")
 match("Call").where_call(qual="os.system")
 ```
+
 #### Parent matching
+
 ```python
 match("Call").has_parent("Expr")
 match("Call").missing_parent("With|AsyncWith")
 ```
+
 #### Descendant matching
+
 ```python
 match("FunctionDef").with_descendant(match("Call").where_call(name="print"))
 match("FunctionDef").without_descendant(match("Raise"))
 ```
+
 #### Sequence matching
+
 ```python
 match("Assign").next_sibling(match("Assign"))
 match("Assign").previous_sibling(match("Assign"))
 match("Assign").later_in_block(match("Expr"))
-
 ```
+
 #### Logical composition
+
 ```python
 match("FunctionDef").and_(match("FunctionDef").where("name", "foo"))
 match("ClassDef").or_(match("FunctionDef"))
@@ -1081,16 +1181,18 @@ def is_large_function(node):
 match("FunctionDef").satisfies(is_large_function)
 ```
 
-Custom predicates allow arbitrary logic, but should be used sparingly.
-Prefer declarative matcher methods when possible.
+Custom predicates allow arbitrary logic, but should be used sparingly. Prefer declarative matcher methods when possible.
 
 #### Captures and references
 
 Captures store matched objects into the matching context so they can be reused later.
+
 ```python
 match("For").capture_ancestor("outer", "For").same_iter_as_ancestor("outer")
 ```
+
 #### DSL sugar helpers
+
 The project also provides convenience methods for common checks:
 
 ```python
@@ -1105,8 +1207,11 @@ match("ClassDef").name_not_pascal()
 match("Assign|AnnAssign").constant_name_not_upper()
 match("FunctionDef").where_mutable_default_argument()
 ```
+
 #### Special matcher helpers currently supported
+
 Examples of special conditions used in existing rules:
+
 ```python
 match("Compare").where_compare_pairwise(op_in=("Eq", "NotEq"), any_side_value=None)
 match("If|While").where_contains("NamedExpr", in_="test")
@@ -1117,24 +1222,31 @@ match("ExceptHandler").where_body_missing_name("")
 ```
 
 #### Notes
+
 - Matchers operate on astroid nodes
 - Most matcher methods are best-effort and intentionally lightweight
 - Prefer declarative matcher chains over imperative logic
---- 
-### Fixer DSL 
+
+---
+
+### Fixer DSL
 
 The fixer DSL is used to build suggested source-code changes.
 
 Create a fixer with:
+
 ```python
 from astanalyzer.fixer import fix
 
 fix()
 ```
+
 A fixer records actions and a human-readable reason.
 
 #### Common fixer actions
-Insert or prepend lines
+
+Insert or prepend lines:
+
 ```python
 fix().insert_before("x = 1")
 fix().insert_after("return x")
@@ -1143,7 +1255,8 @@ fix().append("return x")
 fix().insert_at_body_start("result = []")
 ```
 
-#### Replace code
+Replace code:
+
 ```python
 fix().replace_with("pass")
 fix().replace_line("return value")
@@ -1152,7 +1265,8 @@ fix().replace_range("x is None")
 fix().replace_with_value()
 ```
 
-#### Comments and docstrings
+Comments and docstrings:
+
 ```python
 fix().comment_before("TODO: review this")
 fix().comment_after("Consider refactoring")
@@ -1161,7 +1275,8 @@ fix().add_docstring('"""TODO: Add docstring."""')
 fix().add_module_docstring('"""TODO: Add module docstring."""')
 ```
 
-#### Remove code
+Remove code:
+
 ```python
 fix().remove_line()
 fix().delete_node()
@@ -1170,20 +1285,23 @@ fix().remove_dead_code_after()
 fix().remove_node(ref="previous_assign")
 ```
 
-#### Block restructuring
+Block restructuring:
+
 ```python
 fix().remove_block_header("orelse").unindent_block("orelse", spaces=4)
 fix().remove_orelse_header().unindent_orelse()
 fix().flatten_always_true_if()
 ```
 
-#### Formatting
+Formatting:
+
 ```python
 fix().strip_trailing_whitespace()
 fix().insert_blank_line_before()
 ```
 
-#### Targeted semantic fixes
+Targeted semantic fixes:
+
 ```python
 fix().replace_none_comparison_operator()
 fix().remove_except_alias()
@@ -1197,14 +1315,19 @@ fix().replace_eval_with_literal_eval()
 fix().replace_os_system_with_subprocess_run()
 fix().ensure_import("subprocess")
 ```
+
 ### Reasons
+
 Every fixer should explain why it exists:
+
 ```python
 fix()
     .comment_before("Debug print statement detected.")
     .because("Print statements should not remain in production code.")
 ```
+
 ### Custom actions
+
 For cases that are not yet covered by the built-in DSL:
 
 ```python
@@ -1212,23 +1335,28 @@ fix().custom(my_callback, option="value")
 ```
 
 #### Notes
+
 - Fixers are primarily line-based, not full AST rewriters
 - Some actions affect only the matched node
-- Some actions switch to full-file mode (e.g. imports)
+- Some actions switch to full-file mode, such as imports
 - Fix suggestions may still require human review
 
 ---
+
 ### Refactor DSL
 
 The refactor DSL is intended for broader project-wide transformations.
 
 Create a refactor builder with:
+
 ```python
 from astanalyzer.refactor import refactor_builder
 
 refactor_builder()
 ```
+
 #### Supported refactor operations
+
 ```python
 refactor_builder().rename_function_project_wide()
 refactor_builder().rename_class_project_wide()
@@ -1236,11 +1364,12 @@ refactor_builder().rename_constant_project_wide()
 ```
 
 These operations currently support renaming across:
-	•	the defining file
-	•	simple imports (from module import name)
-	•	qualified usage (import module + module.name(...))
+- the defining file
+- simple imports (`from module import name`)
+- qualified usage (`import module` + `module.name(...)`)
 
 #### Naming helpers
+
 The project provides naming conversion helpers:
 
 ```python
@@ -1250,11 +1379,13 @@ to_upper_snake_case("myConst")   # -> "MY_CONST"
 ```
 
 #### Notes
+
 - Refactors are broader and potentially riskier than fixers
 - They should be reviewed before applying
-- Current implementation is regex/text-based (not symbol-table perfect)
+- Current implementation is regex/text-based and not symbol-table perfect
 
 ---
+
 ## Rule examples
 
 ### Example: detect `== None`
@@ -1292,6 +1423,7 @@ class CompareToNoneUsingEq(Rule):
 ```
 
 ### Example: detect missing function docstrings
+
 ```python
 class MissingDocstringForFunction(Rule):
     """
@@ -1320,15 +1452,17 @@ class MissingDocstringForFunction(Rule):
             .because("Function is missing a docstring."),
         ]
 ```
+
 ---
+
 ## Custom rules
 
 AstAnalyzer can load custom rules from user-provided Python files or directories.
 
-Custom rules are normal subclasses of `Rule`. Once imported, they are registered
-automatically through the rule registry.
+Custom rules are normal subclasses of `Rule`. Once imported, they are registered automatically through the rule registry.
 
 ### Writing rules
+
 AstAnalyzer allows you to define custom static analysis rules using a simple Python-based DSL.
 
 Rules are defined as Python classes that inherit from `Rule`.
@@ -1366,7 +1500,6 @@ class MyCustomRule(Rule):
         ]
 ```
 
-
 ### Load custom rules from CLI
 
 You can load custom rules using the `--rules` argument.
@@ -1383,7 +1516,7 @@ astanalyzer scan . --rules ./my_rules.py
 astanalyzer scan . --rules ./my_rules
 ```
 
-All `.py` files in the directory (recursively) will be imported.
+All `.py` files in the directory recursively will be imported.
 
 #### Load multiple rule sources
 
@@ -1395,7 +1528,7 @@ astanalyzer scan . --rules ./team_rules --rules ./personal_rules.py
 
 - Built-in rules are loaded first
 - Custom rule files are imported dynamically
-- Importing a module registers its rule classes automatically (via `Rule` metaclass)
+- Importing a module registers its rule classes automatically via `Rule` metaclass
 - The scan then runs with both built-in and custom rules
 - Custom rules can also be targeted by scan filters if they define stable rule IDs
 
@@ -1404,7 +1537,7 @@ astanalyzer scan . --rules ./team_rules --rules ./personal_rules.py
 - Only `.py` files are imported
 - Files starting with `_` are skipped when loading from a directory
 - Custom rules must subclass `Rule`
-- Rules are registered at import time (no manual registration needed)
+- Rules are registered at import time; no manual registration is needed
 - Prefer declarative matcher chains over custom logic
 - Keep rules focused and single-purpose
 - Always provide a clear explanation (`because(...)`) for fixes
@@ -1412,6 +1545,7 @@ astanalyzer scan . --rules ./team_rules --rules ./personal_rules.py
 ---
 
 ## Internals (advanced)
+
 The current implementation uses an import-based plugin model:
 
 - Rules are discovered via module import side effects
@@ -1425,37 +1559,42 @@ The current implementation uses an import-based plugin model:
 - patch files are written to disk
 
 ### Patch validation
+
 Each patch is checked using:
+
 ```bash
 git apply --check
 ```
+
 This verifies:
 - correct diff format
 - correct context lines
 - file consistency
 
-
 ### Patch application
 
 Patches are applied using:
+
 ```bash
 git apply
 ```
+
 This modifies files directly.
 
 ### Why this design?
 
-- safe (no direct mutation during scan)
-- reviewable (diff-based workflow)
-- CI-friendly (patch files are portable)
-- reversible (git handles rollback)
-- robust (handles paths and artifacts outside project root)
+- safe: no direct mutation during scan
+- reviewable: diff-based workflow
+- CI-friendly: patch files are portable
+- reversible: git handles rollback
+- robust: handles paths and artifacts outside project root
 
 ### Common pitfalls
-- patches fail if file changed after scan
-- missing newline at EOF can break the patch (auto-fixed)
-- mismatched relative paths may cause issues in earlier versions (now mitigated by consistent path resolution)
-- patches require a git repository (recommended)
+
+- patches fail if files changed after scan
+- missing newline at EOF can break the patch; AstAnalyzer normalizes this before patch generation
+- mismatched relative paths may cause issues in older versions; current versions mitigate this with consistent path resolution
+- patches require a git repository, which is strongly recommended
 
 ---
 
