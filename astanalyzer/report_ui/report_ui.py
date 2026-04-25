@@ -16,6 +16,7 @@ from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 
+from .favicon import FAVICON_FILENAME, ensure_report_favicon
 
 def highlight_python_code(
     code: str,
@@ -95,7 +96,9 @@ def build_report_html(report_data: dict) -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>astanalyzer – Fix Plan Picker</title>
+  <link rel="icon" href="{FAVICON_FILENAME}" type="image/x-icon">
+  <link rel="shortcut icon" href="{FAVICON_FILENAME}" type="image/x-icon">
+  <title>AstAnalyzer – Scan Results</title>
   <style>
     :root {{ color-scheme: light dark; }}
 
@@ -708,7 +711,20 @@ def build_report_html(report_data: dict) -> str:
 </head>
 <body>
   <header>
-    <h1>astanalyzer – fix selection from JSON plan</h1>
+    <h1 style="display:flex; align-items:center; gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    
+    <rect width="64" height="64" rx="10" fill="#3a3a3a"/>
+
+    <rect x="14" y="14" width="34" height="4" fill="#4aa3ff"/>
+    <rect x="20" y="22" width="30" height="4" fill="#2ecc71"/>
+    <rect x="20" y="30" width="34" height="4" fill="#4aa3ff"/>
+    <rect x="14" y="38" width="40" height="5" fill="#e74c3c"/>
+    <rect x="14" y="48" width="28" height="4" fill="#4aa3ff"/>
+
+      </svg>
+    <span>AstAnalyzer – Scan Results</span>
+  </h1>
     <div class="row">
       <span class="pill" id="status">Loaded</span>
       <span class="pill" id="counts">0 findings / 0 fixes selected / 0 actions selected</span>
@@ -1816,6 +1832,11 @@ applyJson(state.raw, "scan_report.json");
 
 def write_report_html(scan_data: dict, output_path: Path) -> Path:
     """Write standalone HTML report to disk and return the output path."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    ensure_report_favicon(output_path.parent)
+
     html = build_report_html(scan_data)
     output_path.write_text(html, encoding="utf-8")
     return output_path
