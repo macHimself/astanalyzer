@@ -1,6 +1,6 @@
-# Fixes
+[Back to README](../README.md) | [Previous: Rules](rules.md) | | [Ignoring Findings](ignoring-findings.md)
 
-[Back to README](../README.md) | [Previous: Rules](rules.md) | [Next: Architecture](architecture.md)
+# Fixes
 
 ## Fixer DSL
 
@@ -145,4 +145,4 @@ to_upper_snake_case("myConst")   # -> "MY_CONST"
 
 ---
 
-[Back to README](../README.md) | [Previous: Rules](rules.md) | [Next: Architecture](architecture.md)
+[Back to README](../README.md) | [Previous: Rules](rules.md) | | [Ignoring Findings](ignoring-findings.md)

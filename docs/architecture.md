@@ -1,6 +1,6 @@
-# Architecture
+[Back to README](../README.md) | [Previous: CLI](cli.md) | [Next: Report UI](report-ui.md)
 
-[Back to README](../README.md) | [Previous: Fixes](fixes.md) | [Next: Report UI](report-ui.md)
+# Architecture
 
 ## Workflow
 
@@ -115,4 +115,4 @@ The current implementation uses an import-based plugin model:
 
 ---
 
-[Back to README](../README.md) | [Previous: Fixes](fixes.md) | [Next: Report UI](report-ui.md)
+[Back to README](../README.md) | [Previous: CLI](cli.md) | [Next: Report UI](report-ui.md)

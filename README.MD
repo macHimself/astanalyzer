@@ -63,57 +63,13 @@ Full documentation is available in the [`docs/`](docs/) directory.
 |---|---|
 | [Getting Started](docs/getting-started.md) | Installation, development setup and first scan |
 | [CLI](docs/cli.md) | Command-line usage, logging and rule filters |
-| [Rules](docs/rules.md) | Built-in rules, rule IDs, matcher DSL and custom rules |
-| [Fixes](docs/fixes.md) | Fixer DSL, fix proposals and refactor helpers |
 | [Architecture](docs/architecture.md) | Scan, review, patch and apply workflow |
 | [Report UI](docs/report-ui.md) | Interactive HTML report and fix selection |
 | [Patch System](docs/patch-system.md) | Patch generation, validation, application and archiving |
 | [Path Resolution](docs/path-resolution.md) | Robust handling of project roots and external artifacts |
+| [Rules](docs/rules.md) | Built-in rules, rule IDs, matcher DSL and custom rules |
+| [Fixes](docs/fixes.md) | Fixer DSL, fix proposals and refactor helpers |
+| [Custom Rules](docs/custom-rules.md) | Extending the analyzer |
+| [Ignoring Findings](docs/ignoring-findings.md) | Suppressing rules inline |
 | [Examples](docs/examples/basic-rule.md) | Example custom rules |
-
-## Example rule
-
-```python
-from astanalyzer.enums import Severity, RuleCategory, NodeType
-from astanalyzer.fixer import fix
-from astanalyzer.matcher import match
-from astanalyzer.rule import Rule
-
-
-class CompareToNoneUsingEq(Rule):
-    id = "SEM-003"
-    title = "Comparison to None using == or !="
-    severity = Severity.WARNING
-    category = RuleCategory.SEMANTIC
-    node_type = NodeType.COMPARE
-
-    def __init__(self):
-        super().__init__()
-        self.matchers = [
-            match("Compare").where_compare_pairwise(
-                op_in=("Eq", "NotEq"),
-                any_side_value=None,
-            )
-        ]
-        self.fixer_builders = [
-            fix()
-            .replace_none_comparison_operator()
-            .because("Use 'is' or 'is not' when comparing with None."),
-        ]
-```
-
-## Built-in rule groups
-
-- `STYLE` – code style, formatting, naming and documentation
-- `SEM` – semantic issues and suspicious logic
-- `SEC` – security-related patterns and risks
-- `PERF` – performance and inefficient constructs
-- `DEAD` – dead code and unreachable logic
-- `CX` – complexity and maintainability problems
-
-## Limitations
-
-- Matchers are lightweight and best-effort.
-- Fixers are mostly line-based, not full AST transformations.
-- Refactors are approximate and should be reviewed before applying.
-- Some rules provide suggestions rather than automatic fixes.
+| [Limitations](docs/limitations.md) | Known constraints |
