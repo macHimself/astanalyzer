@@ -1093,7 +1093,7 @@ function buildHumanFixText(fx) {{
 
   if (actions.length) {{
     actions.forEach((action) => {{
-      let step = describeAction(action);
+      let step = action.text || action.label || describeAction(action);
       const extraNote = action?.comment ?? action?.reason ?? "";
       if (extraNote) {{
         step += " Note: " + extraNote;
@@ -1171,9 +1171,9 @@ function buildFindingCard(f) {{
     body.appendChild(codeSection);
   }}
 
-  const fixesSection = document.createElement("div");
-  fixesSection.className = "section";
-  fixesSection.innerHTML = `<div class="section-title">Fix proposals</div>`;
+  const fixesSection = document.createElement("details");
+  fixesSection.className = "nested-details section";
+  fixesSection.innerHTML = `<summary>Fix proposals<summary>`;
 
   const fixesWrap = document.createElement("div");
   fixesWrap.className = "fixes";
@@ -1220,12 +1220,15 @@ function buildFindingCard(f) {{
         updateCounts();
       }});
 
-      if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
-        const desc = document.createElement("div");
-        desc.className = "desc";
-        desc.textContent = humanText;
-        fixDiv.appendChild(desc);
-      }}
+if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
+  const descDetails = document.createElement("details");
+  descDetails.className = "nested-details";
+  descDetails.innerHTML = `
+    <summary>Fix details</summary>
+    <div class="desc">${{escapeHtml(humanText)}}</div>
+  `;
+  fixDiv.appendChild(descDetails);
+}}
 
       const patchPreviewText = (fx.patch_preview || "").trim();
       const patchPreviewStatus =
@@ -1270,9 +1273,9 @@ function buildFindingCard(f) {{
   fixesSection.appendChild(fixesWrap);
   body.appendChild(fixesSection);
 
-  const actionsSection = document.createElement("div");
-  actionsSection.className = "section";
-  actionsSection.innerHTML = `<div class="section-title">Additional actions</div>`;
+  const actionsSection = document.createElement("details");
+  actionsSection.className = "nested-details section";
+  actionsSection.innerHTML = `<summary>Additional actions</dsummary>`;
 
   const actionsWrap = document.createElement("div");
   actionsWrap.className = "actions";
