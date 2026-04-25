@@ -707,6 +707,14 @@ def build_report_html(report_data: dict) -> str:
     .code.diff-preview .line-hunk {{
       color: #79c0ff;
     }}
+
+    .line-range {{
+      margin-left: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      opacity: .7;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }}
   </style>
 </head>
 <body>
@@ -988,6 +996,12 @@ function formatLines(s, e) {{
   return `:${{s ?? e}}`;
 }}
 
+function formatLineRange(s, e) {{
+  if (!s && !e) return "";
+  if (s && e && s !== e) return `lines ${{s}}-${{e}}`;
+  return `line ${{s ?? e}}`;
+}}
+
 function escapeHtml(str) {{
   return String(str).replace(/[&<>"']/g, s => ({{
     "&": "&amp;",
@@ -1093,7 +1107,7 @@ function buildHumanFixText(fx) {{
 
   if (actions.length) {{
     actions.forEach((action) => {{
-      let step = action.text || action.label || describeAction(action);
+      let step = action.summary || action.label || action.note || "";
       const extraNote = action?.comment ?? action?.reason ?? "";
       if (extraNote) {{
         step += " Note: " + extraNote;
@@ -1116,11 +1130,14 @@ function buildFindingCard(f) {{
   summary.innerHTML = `
     <div class="summary-top">
       <div class="summary-main">
-        <div class="title">${{escapeHtml(f.id)}}</div>
-
-        <div class="path" title="File and location">
-          ${{escapeHtml(f.file)}}${{formatLines(f.start_line, f.end_line)}}
+        <div class="title">${{escapeHtml(f.id)}}
+        <span class="line-range">${{formatLineRange(f.start_line, f.end_line)}}</span>
+        
+        
         </div>
+
+        
+
 
       </div>
 
@@ -1191,10 +1208,7 @@ function buildFindingCard(f) {{
 
       const checked = state.selected.has(k);
       const humanText = buildHumanFixText(fx);
-      const fixReason =
-        fx.reason && fx.reason.trim() !== (f.message || "").trim()
-          ? fx.reason
-          : "";
+      const fixReason = ""
 
       fixDiv.innerHTML = `
         <label>
