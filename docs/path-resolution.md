@@ -1,6 +1,6 @@
-# Path Resolution
+[Back to README](../README.md) | [Previous: Patch System](patch-system.md) | [Next: Rules](rules.md)
 
-[Back to README](../README.md) | [Previous: Patch System](patch-system.md) | [Next: Basic Rule Example](examples/basic-rule.md)
+# Path Resolution
 
 ## Overview
 
@@ -48,4 +48,4 @@ This improves robustness in practical use cases, especially CI pipelines and man
 
 ---
 
-[Back to README](../README.md) | [Previous: Patch System](patch-system.md) | [Next: Basic Rule Example](examples/basic-rule.md)
+[Back to README](../README.md) | [Previous: Patch System](patch-system.md) | [Next: Rules](rules.md)

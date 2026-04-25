@@ -1,6 +1,6 @@
-# Rules
+[Back to README](../README.md) | [Next: Path Resolution](path-resolution.md) | [Next: Fixes](fixes.md)
 
-[Back to README](../README.md) | [Previous: CLI](cli.md) | [Next: Fixes](fixes.md)
+# Rules
 
 ## Built-in Rules
 
@@ -484,4 +484,4 @@ astanalyzer scan . --rules ./team_rules --rules ./personal_rules.py
 
 ---
 
-[Back to README](../README.md) | [Previous: CLI](cli.md) | [Next: Fixes](fixes.md)
+[Back to README](../README.md) | [Next: Path Resolution](path-resolution.md) | [Next: Fixes](fixes.md)

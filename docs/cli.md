@@ -1,6 +1,6 @@
-# CLI
+[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](Architecture.md)
 
-[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](rules.md)
+# CLI
 
 ## Basic usage
 
@@ -90,6 +90,73 @@ Rule filters are applied in the following order:
 
 This means that `--include` can restore rules that were previously excluded.
 
+## Patch generation
+
+Generate patch files from the exported selected JSON plan:
+
+```bash
+astanalyzer patch
+```
+
+If no path is provided, AstAnalyzer attempts to locate the selected JSON file automatically using the following order:
+
+1. `astanalyzer-selected.json` in the current working directory
+2. `selected.json` in the current working directory
+3. fallback to the current working directory
+
+You can also provide the selected JSON file explicitly:
+
+```bash
+astanalyzer patch path/to/astanalyzer-selected.json
+```
+
+This command:
+
+- reads selected fixes
+- generates `.patch` files
+- does not modify source files
+- validates generated patches using `git apply --check`
+
+## Patch validation
+
+Validate generated patches without applying them:
+
+```bash
+astanalyzer apply --check
+```
+
+This checks whether patches can be applied cleanly.
+
+## Apply patches
+
+Apply generated patches:
+
+```bash
+astanalyzer apply
+```
+
+If all checks pass, source files are modified and generated artifacts are archived.
+
+## Archive artifacts
+
+Archive generated artifacts without applying patches:
+
+```bash
+astanalyzer archive
+```
+
+or with explicit selected JSON:
+
+```bash
+astanalyzer archive path/to/astanalyzer-selected.json
+```
+
+This moves generated artifacts into:
+
+```text
+used_patches/<timestamp>/
+```
+
 ## Clean workspace
 
 ```bash
@@ -112,4 +179,4 @@ This removes generated artifacts such as:
 
 ---
 
-[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](rules.md)
+[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](Architecture.md)
