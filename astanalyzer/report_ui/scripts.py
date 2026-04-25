@@ -337,7 +337,7 @@ function buildHumanFixText(fx) {{
 
   if (actions.length) {{
     actions.forEach((action) => {{
-      let step = action.summary || action.label || action.note || "";
+      let step = action.summary || action.label || action.note || describeAction(action);
       const extraNote = action?.comment ?? action?.reason ?? "";
       if (extraNote) {{
         step += " Note: " + extraNote;
@@ -414,13 +414,6 @@ function buildFindingCard(f) {{
     }}
   }});
 
-  function severityPillClass(severity) {{
-    const s = String(severity || "info").toLowerCase();
-    if (s === "error") return "pill-error";
-    if (s === "warning") return "pill-warning";
-    return "pill-info";
-  }}
-
   const body = document.createElement("div");
   body.className = "detail-body";
 
@@ -468,8 +461,6 @@ function buildFindingCard(f) {{
       fixDiv.className = "fix";
 
       const checked = state.selected.has(k);
-      const humanText = buildHumanFixText(fx);
-      const fixReason = ""
 
 fixDiv.innerHTML = `
   <label class="fix-header" title="Select this fix">
@@ -488,10 +479,20 @@ const cb = fixDiv.querySelector("input");
 cb.addEventListener("change", (e) => {{
   if (e.target.checked) {{
     removeSelectedFixesForFinding(f);
+
+    fixDiv.parentElement
+      .querySelectorAll('input[type="checkbox"]')
+      .forEach((input) => {{
+        if (input !== e.target) {{
+          input.checked = false;
+        }}
+      }});
+
     state.selected.set(k, {{ finding: f, fix: fx }});
   }} else {{
     state.selected.delete(k);
   }}
+
   updateCounts();
 }});
 
@@ -525,11 +526,6 @@ cb.addEventListener("change", (e) => {{
         }}
         fixDiv.appendChild(patchDetails);
       }}
-
-      const dslText =
-        typeof fx.dsl === "string"
-          ? fx.dsl
-          : JSON.stringify(fx.dsl, null, 2);
 
 
 
@@ -1073,9 +1069,11 @@ btnFileFirst.addEventListener("click", () => {{
 
 btnSelectAll.addEventListener("click", () => {{
   state.findings.filter(matchesFilter).forEach((f) => {{
-    f.fixes.forEach((fx) => {{
-      state.selected.set(fixKey(f, fx), {{ finding: f, fix: fx }});
-    }});
+    const firstFix = f.fixes[0];
+    if (firstFix) {{
+      removeSelectedFixesForFinding(f);
+      state.selected.set(fixKey(f, firstFix), {{ finding: f, fix: firstFix }});
+    }}
   }});
   updateCounts();
   render();
