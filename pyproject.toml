@@ -7,19 +7,21 @@ name = "astanalyzer"
 version = "0.1.0"
 description = "AST-based static analysis engine with DSL for Python"
 authors = [
-    { name = "Martin Cech", email = "cech.martinr@outlook.com" }
+    { name = "Martin Cech", email = "cech.martin@outlook.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "astroid",
     "colorama",
-    "pygments"
+    "pygments",
+    "pillow"
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "coverage"
 ]
 
 [project.scripts]
