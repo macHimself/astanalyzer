@@ -1,6 +1,6 @@
-# Getting Started
-
 [Back to README](../README.md) | [Next: CLI](cli.md)
+
+# Getting Started
 
 ## Development setup
 

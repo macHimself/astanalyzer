@@ -1,6 +1,6 @@
-# Report UI
-
 [Back to README](../README.md) | [Previous: Architecture](architecture.md) | [Next: Patch System](patch-system.md)
+
+# Report UI
 
 ## Overview
 

@@ -1,18 +1,38 @@
-# Patch System
-
 [Back to README](../README.md) | [Previous: Report UI](report-ui.md) | [Next: Path Resolution](path-resolution.md)
+
+# Patch System
 
 ## Generate patches
 
+Generate patch files from the exported selected JSON plan:
+
 ```bash
+
 astanalyzer patch
+
 ```
 
-or explicitly:
+By default, this command searches for a selected JSON file in the current working directory.
+
+The resolution order is:
+1. `astanalyzer-selected.json`
+2. `selected.json`
+
+If no file is found, the command will fail.
+
+---
+
+Alternatively, you can explicitly provide the path:
 
 ```bash
-astanalyzer patch --selected path/to/selected.json
+
+astanalyzer patch path/to/selected.json
+
 ```
+
+This works from any directory and does not require being in the project root.
+
+---
 
 This step:
 
@@ -57,7 +77,7 @@ If all checks pass:
 astanalyzer archive
 ```
 
-The archive command can also receive an explicit selected JSON file:
+By default, this command searches for a selected JSON file in the current working directory. The archive command can also receive an explicit selected JSON file:
 
 ```bash
 astanalyzer archive path/to/astanalyzer-selected.json
@@ -72,7 +92,6 @@ The archive command looks for selected JSON in this order:
 1. explicitly provided path
 2. `astanalyzer-selected.json` in the current working directory
 3. `selected.json` in the current working directory
-4. fallback to the current working directory
 
 ## Archive structure
 

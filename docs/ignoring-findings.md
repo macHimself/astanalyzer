@@ -1,6 +1,6 @@
-# Ignoring Findings
+[Back to README](../README.md) | [Previous: Custom Rules](custom-rules.md) | [Next: Limitations](limitations.md)
 
-[Back to README](../README.md) | [Previos: Custom Rules](custom-rules.md)| [Next: Limitations](limitations.md)
+# Ignoring Findings
 
 AstAnalyzer allows suppressing findings directly in code using inline comments.
 
@@ -53,4 +53,4 @@ def foo():
 
 ---
 
-[Back to README](../README.md) | [Previos: Custom Rules](custom-rules.md)| [Next: Limitations](limitations.md)
+[Back to README](../README.md) | [Previous: Custom Rules](custom-rules.md) | [Next: Limitations](limitations.md)
