@@ -1,4 +1,4 @@
-[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](Architecture.md)
+[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Architecture](architecture.md)
 
 # CLI
 
@@ -179,4 +179,4 @@ This removes generated artifacts such as:
 
 ---
 
-[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Rules](Architecture.md)
+[Back to README](../README.md) | [Previous: Getting Started](getting-started.md) | [Next: Architecture](architecture.md)
