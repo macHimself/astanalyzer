@@ -42,7 +42,12 @@ from .rule_filtering import (
     filter_rules,
 )
 from .logging_config import setup_logging
-from .report_ui import open_report_in_browser, write_report_html
+from .report_ui import (
+    FAVICON_FILENAME, 
+    open_report_in_browser, 
+    write_report_html,
+)
+
 from .rule_loader import import_rules_from_path
 from .rules import load_builtin_rules
 
@@ -50,6 +55,13 @@ log = logging.getLogger(__name__)
 
 ARCHIVE_DIR_NAME = "used_patches"
 
+GENERATED_ARTIFACT_FILENAMES = [
+    "astanalyzer-selected.json",
+    "selected.json",
+    "scan_report.json",
+    "report.html",
+    FAVICON_FILENAME,
+]
 
 def now_stamp() -> str:
     """Return current UTC timestamp formatted as 'YYYY-MM-DD_HH-MM-SS'."""
@@ -188,16 +200,12 @@ def archive_run_artifacts(archive_dir: Path, base_dir: Path | None = None) -> li
         - selected.json
         - scan_report.json
         - report.html
+        - astanalyzer.ico
     """
     root = base_dir or Path.cwd()
     archived: list[Path] = []
 
-    candidates = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    candidates = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     for p in candidates:
         out = move_file_if_exists(p, archive_dir)
@@ -292,12 +300,7 @@ def has_working_artifacts(base_dir: Path | None = None) -> bool:
     """
     root = base_dir or Path.cwd()
 
-    candidates = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    candidates = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     if any(p.exists() and p.is_file() for p in candidates):
         return True
@@ -338,6 +341,7 @@ def clean_working_artifacts(
             * selected.json
             * scan_report.json
             * report.html
+            * astanalyzer.ico
         - All '.patch' files under the root directory are removed.
         - Patch files inside the archive directory are skipped unless
           `include_archive=True`.
@@ -350,12 +354,7 @@ def clean_working_artifacts(
 
     archive_root = get_archive_root_path(root)
 
-    normal_files = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    normal_files = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     for p in normal_files:
         if p.exists() and p.is_file():
