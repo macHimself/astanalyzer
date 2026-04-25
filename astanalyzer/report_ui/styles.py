@@ -117,8 +117,9 @@ def build_report_styles(pygments_css: str) -> str:
     }}
 
     .card {{
-      border: 1px solid rgba(127,127,127,.25);
-      border-radius: 14px;
+      border: 1px solid rgba(127,127,127,.16);
+      border-radius: 10px;
+      border-color: rgba(127,127,127,.18);
       background: color-mix(in oklab, Canvas, CanvasText 2%);
       overflow: hidden;
     }}
@@ -131,6 +132,7 @@ def build_report_styles(pygments_css: str) -> str:
       list-style: none;
       cursor: pointer;
       padding: 14px 16px;
+      border-bottom: 0;
     }}
 
     .finding > summary::-webkit-details-marker {{
@@ -189,10 +191,11 @@ def build_report_styles(pygments_css: str) -> str:
     }}
 
     .detail-body {{
-      padding: 12px 16px 16px;
+      padding: 10px 12px 12px;
       border-top: 1px solid rgba(127,127,127,.18);
       display: grid;
       gap: 14px;
+      border-top: 0;
     }}
 
     .section {{
@@ -254,6 +257,13 @@ def build_report_styles(pygments_css: str) -> str:
       line-height: 1.4;
     }}
 
+    .fix-header {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }}
+
     .code {{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 13px;
@@ -264,12 +274,15 @@ def build_report_styles(pygments_css: str) -> str:
       background: #2f3136;
       max-height: 380px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+      overflow: auto;
+      overflow: hidden;
+      overflow-clip-margin: padding-box;
     }}
 
     .nested-details {{
-      border: 1px dashed rgba(127,127,127,.28);
+      border: 1px dashed rgba(127,127,127,.18);
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 7px 9px;
     }}
 
     .nested-details summary {{
@@ -278,6 +291,7 @@ def build_report_styles(pygments_css: str) -> str:
       font-weight: 600;
       opacity: .9;
       user-select: none;
+      list-style: none;
     }}
 
     .nested-details summary::selection {{
@@ -301,11 +315,16 @@ def build_report_styles(pygments_css: str) -> str:
 
     .code-wrap {{
       overflow: auto;
+      max-width: 100%;
+      box-sizing: border-box;
+      border-radius: 14px;
+      overflow: auto;
     }}
 
     .codehilite {{
       margin: 0;
       background: transparent !important;
+      min-width: max-content;
       color: #e6edf3;
     }}
 
@@ -449,7 +468,8 @@ def build_report_styles(pygments_css: str) -> str:
 
     .group {{
       border: 1px solid rgba(127,127,127,.22);
-      border-radius: 14px;
+      border-radius: 10px;
+      border-color: rgba(127,127,127,.18);
       background: color-mix(in oklab, Canvas, CanvasText 1.5%);
       overflow: hidden;
     }}
@@ -459,6 +479,7 @@ def build_report_styles(pygments_css: str) -> str:
       cursor: pointer;
       padding: 14px 16px;
       user-select: none;
+      border-bottom: 0;
     }}
 
     .group > summary::-webkit-details-marker {{
@@ -470,10 +491,10 @@ def build_report_styles(pygments_css: str) -> str:
     }}
 
     .group-body {{
-      padding: 10px 12px 12px;
+      padding: 8px 10px 10px;
       display: grid;
-      gap: 10px;
-      border-top: 1px solid rgba(127,127,127,.16);
+      gap: 8px;
+      border-top: 0;
     }}
 
     .group-summary {{
@@ -502,24 +523,19 @@ def build_report_styles(pygments_css: str) -> str:
       font-size: 15px;
     }}
 
-    .rule-group {{
-      margin-left: 10px;
-    }}
-
     .rule-group .group-title {{
       font-weight: 600;
       font-size: 14px;
     }}
 
-    .file-group {{
-      margin-left: 20px;
-    }}
-
     .file-group .group-title {{
+      background: transparent;
       font-weight: 600;
       font-size: 13px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: ui-monospace, SFMono-Regular,  Menlo, Monaco, Consolas, monospace;
       word-break: break-word;
+      padding: 4px 0;
+      border-radius: 0;
     }}
 
     .hint {{
@@ -543,27 +559,27 @@ def build_report_styles(pygments_css: str) -> str:
     }}
 
     .category-warning {{
-      border-left: 4px solid #f59e0b;
+      border-left: none;
     }}
 
     .category-error {{
-      border-left: 4px solid #dc2626;
+      border-left: none;
     }}
 
     .rule-warning {{
-      border-left: 3px solid #f59e0b;
+      border-left: 1px solid #f59e0b;
     }}
 
     .rule-error {{
-      border-left: 3px solid #dc2626;
+      border-left: 1px solid #dc2626;
     }}
 
     .file-warning {{
-      border-left: 2px solid #f59e0b;
+      border-left: none;
     }}
 
     .file-error {{
-      border-left: 2px solid #dc2626;
+      border-left: none;
     }}
 
     .snippet-marker {{
@@ -579,6 +595,11 @@ def build_report_styles(pygments_css: str) -> str:
       padding: 10px 12px;
       white-space: pre;
       line-height: 1.5;
+      max-width: 100%;
+      box-sizing: border-box;
+      border-radius: 14px;
+      overflow: auto;
+      overflow-x: auto;
     }}
 
     .code.diff-preview pre {{
@@ -587,10 +608,13 @@ def build_report_styles(pygments_css: str) -> str:
       font: inherit;
       color: inherit;
       background: transparent;
+      min-width: max-content;
     }}
 
     .code.diff-preview div {{
       white-space: pre;
+      white-space: pre-wrap;
+      word-break: break-word;
     }}
 
     .code.diff-preview .line-add {{
@@ -616,5 +640,39 @@ def build_report_styles(pygments_css: str) -> str:
       opacity: .7;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }}
+
+    summary,
+    details > summary,
+    .nested-details > summary,
+    .group > summary,
+    .finding > summary {{
+      list-style: none;
+      outline: none;
+    }}
+
+    summary::-webkit-details-marker,
+    details > summary::-webkit-details-marker,
+    .nested-details > summary::-webkit-details-marker,
+    .group > summary::-webkit-details-marker,
+    .finding > summary::-webkit-details-marker {{
+      display: none;
+    }}
+
+    summary::marker,
+    details > summary::marker,
+    .nested-details > summary::marker,
+    .group > summary::marker,
+    .finding > summary::marker {{
+      content: "";
+      font-size: 0;
+    }}
+
+    details:focus,
+    details:focus-visible,
+    summary:focus,
+    summary:focus-visible {{
+      outline: none;
+    }}
+
   </style>
 """

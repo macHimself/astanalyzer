@@ -349,6 +349,37 @@ function buildHumanFixText(fx) {{
   return lines.join("\\n");
 }}
 
+function shortFixSummary(fx) {{
+  const text = buildHumanFixText(fx).trim();
+
+  if (!text) return "Review proposed change";
+  if (text.length <= 90) return text;
+
+  return text.slice(0, 87).trimEnd() + "…";
+}}
+
+function removeSelectedFixesForFinding(finding) {{
+  for (const [key, value] of state.selected.entries()) {{
+    if (value.finding.id === finding.id && value.finding.file === finding.file) {{
+      state.selected.delete(key);
+    }}
+  }}
+}}
+
+function formatSingleSeverityMeta(findings) {{
+  const counts = countSeverity(findings);
+
+  if (counts.error > 0) {{
+    return `<span class="error">${{counts.error}} error${{counts.error === 1 ? "" : "s"}}</span>`;
+  }}
+
+  if (counts.warning > 0) {{
+    return `<span class="warn">${{counts.warning}} warning${{counts.warning === 1 ? "" : "s"}}</span>`;
+  }}
+
+  return `<span class="info">${{counts.info}} info</span>`;
+}}
+
 function buildFindingCard(f) {{
   const card = document.createElement("div");
   card.className = "card";
@@ -420,7 +451,7 @@ function buildFindingCard(f) {{
 
   const fixesSection = document.createElement("details");
   fixesSection.className = "nested-details section";
-  fixesSection.innerHTML = `<summary>Fix proposals<summary>`;
+  fixesSection.innerHTML = `<summary>Fix proposals</summary>`;
 
   const fixesWrap = document.createElement("div");
   fixesWrap.className = "fixes";
@@ -440,39 +471,31 @@ function buildFindingCard(f) {{
       const humanText = buildHumanFixText(fx);
       const fixReason = ""
 
-      fixDiv.innerHTML = `
-        <label>
-          <input type="checkbox" ${{checked ? "checked" : ""}} />
-          <div>
-            <div class="fix-title">${{escapeHtml(fx.title)}}</div>
-            ${{
-              fixReason
-                ? `<div class="fix-reason">${{escapeHtml(fixReason)}}</div>`
-                : ""
-            }}
-          </div>
-        </label>
-      `;
+fixDiv.innerHTML = `
+  <label class="fix-header" title="Select this fix">
+    <input type="checkbox" ${{checked ? "checked" : ""}} />
 
-      const cb = fixDiv.querySelector("input");
-      cb.addEventListener("change", (e) => {{
-        if (e.target.checked) {{
-          state.selected.set(k, {{ finding: f, fix: fx }});
-        }} else {{
-          state.selected.delete(k);
-        }}
-        updateCounts();
-      }});
+    <div class="fix-main">
+      <div class="fix-title">
+        Proposed fix: ${{escapeHtml(shortFixSummary(fx))}}
+      </div>
+    </div>
+  </label>
+`;
 
-if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
-  const descDetails = document.createElement("details");
-  descDetails.className = "nested-details";
-  descDetails.innerHTML = `
-    <summary>Fix details</summary>
-    <div class="desc">${{escapeHtml(humanText)}}</div>
-  `;
-  fixDiv.appendChild(descDetails);
-}}
+const cb = fixDiv.querySelector("input");
+
+cb.addEventListener("change", (e) => {{
+  if (e.target.checked) {{
+    removeSelectedFixesForFinding(f);
+    state.selected.set(k, {{ finding: f, fix: fx }});
+  }} else {{
+    state.selected.delete(k);
+  }}
+  updateCounts();
+}});
+
+ 
 
       const patchPreviewText = (fx.patch_preview || "").trim();
       const patchPreviewStatus =
@@ -519,7 +542,7 @@ if (humanText && humanText.trim() !== (fx.reason || "").trim()) {{
 
   const actionsSection = document.createElement("details");
   actionsSection.className = "nested-details section";
-  actionsSection.innerHTML = `<summary>Additional actions</dsummary>`;
+  actionsSection.innerHTML = `<summary>Additional actions</summary>`;
 
   const actionsWrap = document.createElement("div");
   actionsWrap.className = "actions";
@@ -713,12 +736,12 @@ function groupFindingsFileFirst(findings) {{
 
 function buildFileGroup(fileLabel, findings) {{
   const counts = countSeverity(findings);
-  const severityMeta = formatSeverityMeta(counts);
+  const fileMeta = formatSingleSeverityMeta(findings);
 
   const {{ details, body }} = createGroupDetails(
     "file-group",
     escapeHtml(fileLabel),
-    `${{findings.length}} findings${{severityMeta ? ` • ${{severityMeta}}` : ""}}`,
+    fileMeta,
     counts
   );
 
@@ -754,12 +777,12 @@ function renderRuleFirst(visible) {{
 
     cat.rules.forEach((rule) => {{
       const ruleCounts = countSeverity(rule.findings);
-      const ruleMeta = formatSeverityMeta(ruleCounts);
+      const ruleMeta = formatSingleSeverityMeta(rule.findings);
 
       const {{ details: ruleDetails, body: ruleBody }} = createGroupDetails(
         "rule-group",
         `${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}`,
-        `${{rule.findings.length}} findings${{ruleMeta ? ` • ${{ruleMeta}}` : ""}}`,
+        ruleMeta,
         ruleCounts
       );
 
@@ -802,10 +825,10 @@ function renderFileFirst(visible) {{
     const fileMeta = formatSeverityMeta(fileCounts);
 
     const {{ details: fileDetails, body: fileBody }} = createGroupDetails(
-      "file-group",
-      escapeHtml(fileItem.file),
-      `${{fileItem.findings.length}} findings${{fileMeta ? ` • ${{fileMeta}}` : ""}}`,
-      fileCounts
+    "file-group",
+    escapeHtml(fileItem.file),
+    `${{fileItem.findings.length}} findings${{fileMeta ? ` • ${{fileMeta}}` : ""}}`,
+    fileCounts
     );
 
     fileItem.categories.forEach((categoryItem) => {{
@@ -821,12 +844,12 @@ function renderFileFirst(visible) {{
 
       categoryItem.rules.forEach((rule) => {{
         const ruleCounts = countSeverity(rule.findings);
-        const ruleMeta = formatSeverityMeta(ruleCounts);
+        const ruleMeta = formatSingleSeverityMeta(rule.findings);
 
         const {{ details: ruleDetails, body: ruleBody }} = createGroupDetails(
           "rule-group",
           `${{escapeHtml(rule.rule_id || "UNKNOWN_RULE")}} – ${{escapeHtml(rule.title || "Untitled rule")}}`,
-          `${{rule.findings.length}} findings${{ruleMeta ? ` • ${{ruleMeta}}` : ""}}`,
+          ruleMeta,
           ruleCounts
         );
 
@@ -836,8 +859,8 @@ function renderFileFirst(visible) {{
             return;
           }}
 
-        const ruleDescription = rule.findings[0]?.message?.trim();
-        if (ruleDescription) {{
+          const ruleDescription = rule.findings[0]?.message?.trim();
+          if (ruleDescription) {{
             const descDetails = document.createElement("details");
             descDetails.className = "nested-details";
             descDetails.innerHTML = `
@@ -845,13 +868,13 @@ function renderFileFirst(visible) {{
               <div class="desc">${{escapeHtml(ruleDescription)}}</div>
             `;
             ruleBody.appendChild(descDetails);
-        }}
+          }}
 
-        rule.findings.forEach((f) => {{
+          rule.findings.forEach((f) => {{
             ruleBody.appendChild(buildFindingCard(f));
-        }});
+          }});
 
-        ruleDetails.dataset.rendered = "true";
+          ruleDetails.dataset.rendered = "true";
         }});
 
         categoryBody.appendChild(ruleDetails);
