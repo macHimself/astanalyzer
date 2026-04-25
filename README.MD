@@ -1,22 +1,41 @@
-# AstAnalyzer
+# astanalyzer
 
 AST-based static analysis engine for Python with a declarative DSL for rules and automated fixes.
 
+---
+
 ## What is AstAnalyzer?
 
-AstAnalyzer is a static analysis engine for Python that operates on the abstract syntax tree (AST). It provides a declarative DSL for defining detection rules and safe fix proposals.
+AstAnalyzer is a static analysis tool that operates on the abstract syntax tree (AST) of Python code.
 
-Instead of modifying code directly during analysis, AstAnalyzer generates findings and reviewable fix proposals. Selected fixes can then be exported, converted into patches, validated, and applied.
+It allows you to:
 
-The workflow separates analysis, selection, patch generation, validation, archiving, and application into distinct stages.
+- detect issues using a declarative rule DSL
+- review findings in an interactive HTML report
+- select fixes before applying changes
+- generate and validate patch files
+- apply changes in a controlled and reproducible way
+
+---
 
 ## Why this matters
 
-Most static analysis tools report issues and leave the user to inspect files manually. AstAnalyzer adds a review step between detection and modification.
+Most static analysis tools produce reports that require manual inspection.
 
-Each fix proposal can include a patch preview, so the user can inspect the exact change before applying it.
+AstAnalyzer changes the workflow:
 
-This makes automated refactoring safer, more transparent, and easier to control.
+```text
+scan → review → select → patch → apply
+```
+
+This approach:
+
+- improves safety (no automatic changes during scan)
+- makes refactoring transparent (patch previews)
+- supports CI workflows
+- allows controlled code transformations
+
+---
 
 ## Quick start
 
@@ -26,50 +45,80 @@ cd astanalyzer
 
 python3 -m venv .venv
 source .venv/bin/activate
-
 pip install -e '.[dev]'
+
 astanalyzer scan .
 ```
 
-## Basic workflow
-
-```bash
-astanalyzer scan .
-```
-
-Generates:
+This generates:
 
 - `scan_report.json`
-- `report.html`
+- `report.html` (interactive UI)
 
-Then select fixes in the HTML report and export the selected JSON.
+Open `report.html`, select fixes, export selection, then:
 
 ```bash
-astanalyzer patch --selected path/to/astanalyzer-selected.json
+astanalyzer patch
 astanalyzer apply
 ```
 
-To clean generated artifacts:
+---
 
-```bash
-astanalyzer clean
-```
+## Core workflow
+
+1. **Scan**
+   ```bash
+   astanalyzer scan .
+   ```
+
+2. **Review**
+   - open `report.html`
+   - inspect findings
+   - select fixes
+
+3. **Generate patches**
+   ```bash
+   astanalyzer patch
+   ```
+
+4. **Apply changes**
+   ```bash
+   astanalyzer apply
+   ```
+
+---
 
 ## Documentation
 
-Full documentation is available in the [`docs/`](docs/) directory.
+### Getting started
 
-| Topic | Description |
-|---|---|
-| [Getting Started](docs/getting-started.md) | Installation, development setup and first scan |
-| [CLI](docs/cli.md) | Command-line usage, logging and rule filters |
-| [Architecture](docs/architecture.md) | Scan, review, patch and apply workflow |
-| [Report UI](docs/report-ui.md) | Interactive HTML report and fix selection |
-| [Patch System](docs/patch-system.md) | Patch generation, validation, application and archiving |
-| [Path Resolution](docs/path-resolution.md) | Robust handling of project roots and external artifacts |
-| [Rules](docs/rules.md) | Built-in rules, rule IDs, matcher DSL and custom rules |
-| [Fixes](docs/fixes.md) | Fixer DSL, fix proposals and refactor helpers |
-| [Custom Rules](docs/custom-rules.md) | Extending the analyzer |
-| [Ignoring Findings](docs/ignoring-findings.md) | Suppressing rules inline |
-| [Examples](docs/examples/basic-rule.md) | Example custom rules |
-| [Limitations](docs/limitations.md) | Known constraints |
+- [Getting Started](docs/getting-started.md) — installation and setup  
+- [CLI](docs/cli.md) — commands and options  
+
+### Core concepts
+
+- [Architecture](docs/architecture.md) — workflow and design  
+- [Report UI](docs/report-ui.md) — interactive report  
+- [Patch System](docs/patch-system.md) — patch generation and application  
+- [Path Resolution](docs/path-resolution.md) — robust file handling  
+
+### Rules and DSL
+
+- [Rules](docs/rules.md) — categories and rule structure  
+- [Rule Catalog](docs/rule-catalog.md) — built-in rules  
+- [Rule DSL](docs/rule-dsl.md) — matcher DSL  
+- [Matcher Helpers](docs/matcher-helpers.md) — advanced matching helpers  
+
+### Fixes and transformations
+
+- [Fixes](docs/fixes.md) — fixer DSL  
+- [Fixer Actions](docs/fixer-actions.md) — available fix operations  
+
+### Extensibility
+
+- [Custom Rules](docs/custom-rules.md) — extending the analyzer  
+- [Ignoring Findings](docs/ignoring-findings.md) — suppressing rules  
+
+### Reference
+
+- [Limitations](docs/limitations.md) — known constraints  

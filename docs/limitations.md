@@ -1,6 +1,6 @@
 # Limitations
 
-[Back to README](../README.md) | [Previous: Custom Rules](custom-rules.md)
+[Back to README](../README.md) | [Previous: Ignoring Findings](ignoring-findings.md)
 
 AstAnalyzer is designed for practical static analysis and controlled refactoring. Some limitations are intentional.
 
@@ -36,4 +36,4 @@ AstAnalyzer is designed for practical static analysis and controlled refactoring
 
 ---
 
-[Back to README](../README.md) | [Previous: Custom Rules](custom-rules.md)
+[Back to README](../README.md) | [Previous: Ignoring Findings](ignoring-findings.md)
