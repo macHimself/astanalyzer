@@ -14,7 +14,7 @@ direct public use.
 
 from __future__ import annotations
 
-import re
+import io, re, tokenize
 from collections.abc import Iterable
 
 
@@ -785,19 +785,52 @@ def is_module_constant(node) -> bool:
     }
 
 
+def _multiline_string_literal_lines(content: str) -> set[int]:
+    """Return line numbers covered by multiline string literals."""
+    protected: set[int] = set()
+
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(content).readline)
+        for token in tokens:
+            if token.type != tokenize.STRING:
+                continue
+
+            start_line = token.start[0]
+            end_line = token.end[0]
+
+            if end_line > start_line:
+                protected.update(range(start_line, end_line + 1))
+
+    except tokenize.TokenError:
+        return set()
+
+    return protected
+
+
+def trailing_whitespace_line_numbers(content: str) -> list[int]:
+    """Return trailing-whitespace line numbers outside multiline string literals."""
+    if not content:
+        return []
+
+    protected = _multiline_string_literal_lines(content)
+
+    return [
+        i
+        for i, line in enumerate(content.splitlines(), 1)
+        if i not in protected and _TRAIL_RE.search(line)
+    ]
+    
+
 def has_trailing_whitespace(module_node) -> bool:
-    """Return True if the module source contains trailing whitespace."""
     content = getattr(module_node.root(), "file_content", None)
     if not content:
         return False
-    return any(_TRAIL_RE.search(line) for line in content.splitlines())
+    return bool(trailing_whitespace_line_numbers(content))
 
 
 def trailing_whitespace_comment(module_node) -> str:
-    """Build a human-readable comment describing lines with trailing whitespace."""
     content = getattr(module_node.root(), "file_content", None) or ""
-    lines = content.splitlines()
-    hits = [str(i) for i, line in enumerate(lines, 1) if _TRAIL_RE.search(line)]
+    hits = [str(i) for i in trailing_whitespace_line_numbers(content)]
 
     if not hits:
         return "# No trailing whitespace found."
@@ -807,14 +840,20 @@ def trailing_whitespace_comment(module_node) -> str:
 
 
 def strip_trailing_whitespace(module_node, suggestion_lines, context, **kwargs):
-    """Rewrite suggestion lines with trailing spaces and tabs removed from line ends."""
     content = getattr(module_node.root(), "file_content", None)
     if not content:
         return
 
-    fixed = "\n".join(_TRAIL_RE.sub("", line) for line in content.splitlines())
+    protected = _multiline_string_literal_lines(content)
+    lines = content.splitlines()
+
+    fixed_lines = [
+        line if i in protected else _TRAIL_RE.sub("", line)
+        for i, line in enumerate(lines, start=1)
+    ]
+
     context["original"][0] = content
-    suggestion_lines[:] = fixed.splitlines()
+    suggestion_lines[:] = fixed_lines
 
 
 # ===== Definition spacing and docstring insertion helpers =====
