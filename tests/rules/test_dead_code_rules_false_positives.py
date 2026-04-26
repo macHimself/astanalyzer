@@ -356,3 +356,15 @@ def debug_dead_findings(scan_findings):
 
     print(dead)
     assert False
+
+
+def test_unused_variable_does_not_match_loop_carried_state(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def pairs(items):\n"
+        "    prev = None\n"
+        "    for right in items:\n"
+        "        yield (prev, right)\n"
+        "        prev = right\n",
+    )
+
+    assert "DEAD-001" not in rule_ids
