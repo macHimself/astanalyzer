@@ -65,7 +65,6 @@ class ANY(Predicate):
         where("name", ANY())
     """
 
-
     def __call__(self, actual, node):
         return True
 
