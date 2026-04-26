@@ -273,7 +273,7 @@ class OpenWithoutWith(Rule):
     id = "SEC-006"
     title = "open() used without context manager"
     severity = Severity.WARNING
-    category = RuleCategory.RESOURCE
+    category = RuleCategory.SECURITY
     node_type = NodeType.CALL
 
     def __init__(self):
