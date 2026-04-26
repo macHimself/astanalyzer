@@ -520,6 +520,9 @@ def find_previous_overwritten_assign(matcher, node):
     if not name:
         return None
 
+    if node_reads_name(matcher, getattr(node, "value", None), name):
+        return None
+
     parent = getattr(node, "parent", None)
     body = getattr(parent, "body", None)
     if not isinstance(body, list):

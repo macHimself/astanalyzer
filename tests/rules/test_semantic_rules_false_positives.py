@@ -143,6 +143,27 @@ def test_redeclared_variable_does_not_match_when_reassignment_is_in_different_ne
     assert "SEM-005" not in rule_ids
 
 
+def test_redeclared_variable_does_not_match_when_reassignment_uses_previous_value(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def normalize_source(text):\n"
+        "    lines = text.replace('\\r\\n', '\\n').replace('\\r', '\\n').split('\\n')\n"
+        "    lines = [line.rstrip() for line in lines]\n"
+        "    return lines\n",
+    )
+
+    assert "SEM-005" not in rule_ids
+
+
+def test_redeclared_variable_does_not_match_for_self_transform_reassignment(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(x):\n"
+        "    x = x.strip()\n"
+        "    return x\n",
+    )
+
+    assert "SEM-005" not in rule_ids
+
+
 # -------------------------
 # SEM-006 ExceptionNotUsed
 # -------------------------
