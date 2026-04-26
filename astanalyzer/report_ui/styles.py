@@ -37,24 +37,6 @@ def build_report_styles(pygments_css: str) -> str:
       white-space: nowrap;
     }}
 
-    .pill-info {{
-      color: #6b7280;
-    }}
-
-    .pill-warning {{
-      color: #f59e0b;
-      border-color: rgba(245,158,11,.45);
-      background: rgba(245,158,11,.08);
-      font-weight: 600;
-    }}
-
-    .pill-error {{
-      color: #dc2626;
-      border-color: rgba(220,38,38,.45);
-      background: rgba(220,38,38,.08);
-      font-weight: 700;
-    }}
-
     main {{
       padding: 16px 20px;
       max-width: 1200px;
@@ -124,25 +106,6 @@ def build_report_styles(pygments_css: str) -> str:
       overflow: hidden;
     }}
 
-    .finding {{
-      border-radius: 14px;
-    }}
-
-    .finding > summary {{
-      list-style: none;
-      cursor: pointer;
-      padding: 14px 16px;
-      border-bottom: 0;
-    }}
-
-    .finding > summary::-webkit-details-marker {{
-      display: none;
-    }}
-
-    .finding > summary:hover {{
-      background: color-mix(in oklab, Canvas, CanvasText 3%);
-    }}
-
     .summary-top {{
       display: flex;
       justify-content: space-between;
@@ -202,13 +165,6 @@ def build_report_styles(pygments_css: str) -> str:
       gap: 8px;
     }}
 
-    .section-title {{
-      font-size: 13px;
-      font-weight: 700;
-      opacity: .82;
-      margin-bottom: 2px;
-    }}
-
     .desc {{
       padding: 8px 10px;
       border-left: 3px solid rgba(127,127,127,.35);
@@ -249,7 +205,6 @@ def build_report_styles(pygments_css: str) -> str:
       font-weight: 600;
     }}
 
-    .fix-reason,
     .action-reason {{
       opacity: .8;
       font-size: 12px;
@@ -628,8 +583,7 @@ def build_report_styles(pygments_css: str) -> str:
     summary,
     details > summary,
     .nested-details > summary,
-    .group > summary,
-    .finding > summary {{
+    .group > summary {{
       list-style: none;
       outline: none;
     }}
