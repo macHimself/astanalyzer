@@ -23,6 +23,20 @@ def test_empty_block_does_not_match_when_except_contains_real_handling(scan_rule
     assert "STYLE-001" not in rule_ids
 
 
+def test_empty_block_does_not_match_except_pass_handler(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def get_node_source(node):\n"
+        "    try:\n"
+        "        if hasattr(node, 'as_string'):\n"
+        "            return node.as_string()\n"
+        "    except Exception:\n"
+        "        pass\n"
+        "    return ''\n",
+    )
+
+    assert "STYLE-001" not in rule_ids
+
+
 # -------------------------
 # STYLE-002 RedundantIfElseReturn
 # -------------------------
