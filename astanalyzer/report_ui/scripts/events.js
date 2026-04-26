@@ -31,14 +31,14 @@ btnSelectAll.addEventListener("click", () => {
     }
   });
   updateCounts();
-  rerenderKeepingOpenDetails();
+  rerenderKeepingDetailsState();
 });
 
 btnClear.addEventListener("click", () => {
   state.selected.clear();
   state.selectedActions.clear();
   updateCounts();
-  rerenderKeepingOpenDetails();
+  rerenderKeepingDetailsState();
 });
 
 btnExport.addEventListener("click", () => {
