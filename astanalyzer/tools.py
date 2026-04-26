@@ -611,11 +611,23 @@ def iter_required_bodies(node) -> Iterable[tuple[str, list]]:
 
 def is_empty_block(node) -> bool:
     """Return True if any required body of the node is empty or contains only no-op statements."""
-    if _node_type(node) not in BLOCK_TYPES:
+    node_type = _node_type(node)
+
+    if node_type not in BLOCK_TYPES:
         return False
 
-    for _, seq in iter_required_bodies(node):
-        if is_empty_seq(seq):
+    if node_type == "ExceptHandler":
+        return False
+
+    for name, seq in iter_required_bodies(node):
+        if not seq:
+            return True
+
+        if all(is_noop_stmt(stmt) for stmt in seq):
+            # try/except with except: pass is intentional suppression
+            if node_type == "Try" and name.startswith("handler["):
+                continue
+
             return True
 
     return False

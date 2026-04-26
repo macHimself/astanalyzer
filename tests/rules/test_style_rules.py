@@ -144,3 +144,12 @@ def test_empty_block_detected(scan_rule_ids):
     )
 
     assert "STYLE-001" in rule_ids
+
+
+def test_empty_block_still_matches_if_pass(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "if condition:\n"
+        "    pass\n",
+    )
+
+    assert "STYLE-001" in rule_ids
