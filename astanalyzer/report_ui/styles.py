@@ -674,5 +674,88 @@ def build_report_styles(pygments_css: str) -> str:
       outline: none;
     }}
 
+    .copy-code-btn {{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+    }}
+
+    .copy-code-btn:hover {{
+       opacity: 1;
+     }}
+
+    .code-container {{
+      position: relative;
+    }}
+
+    .copy-code-btn.copied {{
+      background: #2ecc71;
+      color: black;
+    }}
+
+    .code-container {{
+  position: relative;
+    }}
+
+.copy-code-btn {{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0.8;
+}}
+
+.copy-code-btn:hover {{
+  opacity: 1;
+}}
+
+
+.copy-code-btn {{
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  opacity: .8;
+}}
+
+.copy-code-btn:hover {{
+  opacity: 1;
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, .55);
+}}
+
+
+.code-container {{
+  position: relative;
+}}
+
+.copy-code-btn {{
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 3;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(4px);
+  opacity: 0.85;
+  transition: all 0.15s ease;
+}}
+
+.copy-code-btn:hover {{
+  opacity: 1;
+  color: #f59e0b;
+  border-color: rgba(245,158,11,0.5);
+  background: rgba(0,0,0,0.4);
+}}
+
   </style>
 """

@@ -32,14 +32,39 @@ function buildFindingCard(f) {
   if (f.code_snippet_html) {
     const codeSection = document.createElement("details");
     codeSection.className = "nested-details";
+    codeSection.dataset.detailsKey = `code::${f.file}::${f.id}`;
     const marker = f.snippet_truncated
       ? `<div class="snippet-marker">… truncated …</div>`
       : "";
     codeSection.innerHTML = `
       <summary>View code context</summary>
       ${marker}
-      <div class="code code-wrap" data-snippet-loaded="false"></div>
+      <div class="code-container">
+        <button type="button" class="copy-code-btn">Copy code</button>
+        <div class="code code-wrap" data-snippet-loaded="false"></div>
+      </div>
     `;
+
+    const copyCodeBtn = codeSection.querySelector(".copy-code-btn");
+
+    copyCodeBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      try {
+        await navigator.clipboard.writeText(f.code_snippet || "");
+        copyCodeBtn.textContent = "Copied";
+        setTimeout(() => {
+        copyCodeBtn.textContent = "Copy code";
+        }, 1200);
+      } catch (err) {
+        console.error(err);
+        copyCodeBtn.textContent = "Copy failed";
+        setTimeout(() => {
+        copyCodeBtn.textContent = "Copy code";
+        }, 1200);
+      }
+    });
 
     codeSection.addEventListener("toggle", () => {
       const target = codeSection.querySelector(".code-wrap");
