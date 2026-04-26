@@ -192,7 +192,6 @@ def build_report_styles(pygments_css: str) -> str:
 
     .detail-body {{
       padding: 10px 12px 12px;
-      border-top: 1px solid rgba(127,127,127,.18);
       display: grid;
       gap: 14px;
       border-top: 0;
@@ -274,8 +273,6 @@ def build_report_styles(pygments_css: str) -> str:
       background: #2f3136;
       max-height: 380px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-      overflow: auto;
-      overflow: hidden;
       overflow-clip-margin: padding-box;
     }}
 
@@ -303,10 +300,6 @@ def build_report_styles(pygments_css: str) -> str:
       opacity: .75;
       font-size: 12px;
       text-align: center;
-    }}
-
-    .warn {{
-      color: #b45309;
     }}
 
     .ok {{
@@ -482,10 +475,6 @@ def build_report_styles(pygments_css: str) -> str:
       border-bottom: 0;
     }}
 
-    .group > summary::-webkit-details-marker {{
-      display: none;
-    }}
-
     .group > summary:hover {{
       background: color-mix(in oklab, Canvas, CanvasText 3%);
     }}
@@ -521,11 +510,6 @@ def build_report_styles(pygments_css: str) -> str:
 
     .category-group .group-title {{
       font-size: 15px;
-    }}
-
-    .rule-group .group-title {{
-      font-weight: 600;
-      font-size: 14px;
     }}
 
     .file-group .group-title {{
@@ -674,88 +658,36 @@ def build_report_styles(pygments_css: str) -> str:
       outline: none;
     }}
 
+    .code-container {{
+      position: relative;
+    }}
+
     .copy-code-btn {{
       position: absolute;
       top: 10px;
-      right: 10px;
+      right: 12px;
       z-index: 2;
+      font-size: 12px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(4px);
+      opacity: 0.85;
+      transition: all 0.15s ease;
     }}
 
     .copy-code-btn:hover {{
-       opacity: 1;
-     }}
-
-    .code-container {{
-      position: relative;
+      opacity: 1;
+      color: #f59e0b;
+      border-color: rgba(245,158,11,0.5);
+      background: rgba(0,0,0,0.4);
     }}
 
     .copy-code-btn.copied {{
       background: #2ecc71;
       color: black;
     }}
-
-    .code-container {{
-  position: relative;
-    }}
-
-.copy-code-btn {{
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  opacity: 0.8;
-}}
-
-.copy-code-btn:hover {{
-  opacity: 1;
-}}
-
-
-.copy-code-btn {{
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 2;
-  font-size: 12px;
-  padding: 4px 9px;
-  border-radius: 8px;
-  opacity: .8;
-}}
-
-.copy-code-btn:hover {{
-  opacity: 1;
-  color: #f59e0b;
-  border-color: rgba(245, 158, 11, .55);
-}}
-
-
-.code-container {{
-  position: relative;
-}}
-
-.copy-code-btn {{
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  z-index: 3;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.25);
-  backdrop-filter: blur(4px);
-  opacity: 0.85;
-  transition: all 0.15s ease;
-}}
-
-.copy-code-btn:hover {{
-  opacity: 1;
-  color: #f59e0b;
-  border-color: rgba(245,158,11,0.5);
-  background: rgba(0,0,0,0.4);
-}}
 
   </style>
 """

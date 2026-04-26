@@ -72,18 +72,19 @@ function escapeHtml(str) {
 }
 
 function renderDiff(diffText) {
-  const lines = diffText.split("\\n");
+  const lines = diffText.split("\n");
 
   return lines.map(line => {
+    const raw = line.trimStart();
     let cls = "";
 
-    if (line.startsWith("+++ ") || line.startsWith("--- ")) {
+    if (raw.startsWith("+++ ") || raw.startsWith("--- ")) {
       cls = "line-meta";
-    } else if (line.startsWith("@@")) {
+    } else if (raw.startsWith("@@")) {
       cls = "line-hunk";
-    } else if (line.startsWith("+")) {
+    } else if (raw.startsWith("+")) {
       cls = "line-add";
-    } else if (line.startsWith("-")) {
+    } else if (raw.startsWith("-")) {
       cls = "line-del";
     }
 
