@@ -59,6 +59,21 @@ def _attr_name(node) -> str | None:
     )
 
 
+def _node_contains_name(node, name: str) -> bool:
+    """Return True if node or any descendant references the given name."""
+    if node is None:
+        return False
+
+    if _node_name(node) == name:
+        return True
+
+    get_children = getattr(node, "get_children", None)
+    if get_children is None:
+        return _text_uses_name(node, name)
+
+    return any(_node_contains_name(child, name) for child in get_children())
+
+
 def _node_text(node) -> str:
     """Return a stable string form of an AST node, or empty string."""
     return (getattr(node, "as_string", None) or (lambda: ""))()
@@ -195,9 +210,44 @@ def _stmt_reads_name_before_overwrite(stmt, name: str) -> bool:
 
     if stmt_type in {"Assign", "AnnAssign"}:
         value = getattr(stmt, "value", None)
-        return _text_uses_name(value, name)
+        if _node_contains_name(value, name):
+            return True
+
+        for target in _assignment_targets(stmt):
+            target_type = _node_type(target)
+
+            # x = ... is an overwrite, not a read of x
+            if target_type in {"AssignName", "Name"} and _node_name(target) == name:
+                continue
+
+            # obj[x] = ... or obj[a:b] = ... reads x/a/b
+            if _node_contains_name(target, name):
+                return True
+
+        return False
+    
+    if stmt_type == "Expr":
+        value = getattr(stmt, "value", None)
+        if _call_reads_name(value, name):
+            return True
 
     return _text_uses_name(stmt, name)
+
+
+def _call_reads_name(call_node, name: str) -> bool:
+    """Return True if a Call node reads the given name."""
+    return _node_type(call_node) == "Call" and _node_contains_name(call_node, name)
+
+    for arg in getattr(call_node, "args", None) or []:
+        if _text_uses_name(arg, name):
+            return True
+
+    for keyword in getattr(call_node, "keywords", None) or []:
+        value = getattr(keyword, "value", None)
+        if _text_uses_name(value, name):
+            return True
+
+    return False
 
 
 def is_local_function_assignment(node) -> bool:
@@ -232,10 +282,16 @@ def _enclosing_control_flow_statement(node):
 
     while parent is not None:
         parent_type = _node_type(parent)
+
         if parent_type in {"If", "For", "While", "Try", "With", "ExceptHandler"}:
             for attr in ("body", "orelse", "finalbody"):
                 seq = getattr(parent, attr, None)
                 if isinstance(seq, list) and cur in seq:
+                    return parent
+
+            if parent_type == "ExceptHandler":
+                body = getattr(parent, "body", None)
+                if isinstance(body, list) and cur in body:
                     return parent
 
         cur = parent
@@ -252,7 +308,7 @@ def _iter_following_statement_groups_after_control_flow(node):
     after the enclosing block completes.
     """
     cur = node
-    seen: set[int] = set()
+    seen = set()
 
     while True:
         control = _enclosing_control_flow_statement(cur)
@@ -264,20 +320,27 @@ def _iter_following_statement_groups_after_control_flow(node):
             return
         seen.add(oid)
 
-        parent = getattr(control, "parent", None)
+        container = control
+
+        if _node_type(control) == "ExceptHandler":
+            try_node = getattr(control, "parent", None)
+            if _node_type(try_node) == "Try":
+                container = try_node
+
+        parent = getattr(container, "parent", None)
         if parent is None:
             return
 
         for attr in ("body", "orelse", "finalbody"):
             seq = getattr(parent, attr, None)
-            if isinstance(seq, list) and control in seq:
-                idx = seq.index(control)
+            if isinstance(seq, list) and container in seq:
+                idx = seq.index(container)
                 following = seq[idx + 1:]
                 if following:
                     yield following
                 break
 
-        cur = control
+        cur = container
 
 
 def _is_name_read_after_enclosing_control_flow(node, name: str) -> bool:
