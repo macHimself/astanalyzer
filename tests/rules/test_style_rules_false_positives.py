@@ -199,6 +199,44 @@ def test_trailing_whitespace_does_not_match_clean_module(scan_rule_ids):
     assert "STYLE-008" not in rule_ids
 
 
+def test_trailing_whitespace_ignored_in_docstring(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        'def f():\n'
+        '    """\n'
+        '    text with trailing space \n'
+        '    """\n'
+        '    return 1\n'
+    )
+
+    assert "STYLE-008" not in rule_ids
+
+
+def test_trailing_whitespace_does_not_match_inside_multiline_string(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        'HTML = """\n'
+        'div {   \n'
+        '  color: red;   \n'
+        '}   \n'
+        '"""\n'
+    )
+
+    assert "STYLE-008" not in rule_ids
+
+
+def test_trailing_whitespace_finding_is_anchored_to_affected_line(scan_findings):
+    findings = scan_findings(
+        '"""Module docstring."""\n'
+        "\n"
+        "x = 1\n"
+        "y = 2   \n"
+    )
+
+    finding = next(f for f in findings if f["rule_id"] == "STYLE-008")
+
+    assert finding["start_line"] == 4
+    assert finding["end_line"] == 4
+
+
 # -------------------------
 # STYLE-009 MissingBlankLineBetweenFunctions
 # -------------------------

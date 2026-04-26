@@ -29,6 +29,7 @@ from ..anchor import build_anchor
 from ..fixer import FixProposal
 from ..ignore_rules import is_ignored_for_node
 from ..rule import Rule
+from ..tools import trailing_whitespace_line_numbers
 
 from .project_loader import ProjectNode, ModuleNode, count_lines
 from .reporting import Finding, AnalysisReport, build_scan_json, _relpath
@@ -286,6 +287,13 @@ def build_finding(rule, match, module: ModuleNode, project_root: Path | None = N
 
     line = getattr(match, "lineno", None)
     end_line = getattr(match, "end_lineno", line)
+
+    if rid == "STYLE-008":
+        content = getattr(match.root(), "file_content", None) if hasattr(match, "root") else None
+        hits = trailing_whitespace_line_numbers(content or "")
+        if hits:
+            line = hits[0]
+            end_line = hits[0]
 
     code_snippet, snippet_start, snippet_end, snippet_truncated = extract_code_snippet(
         module.filename,
