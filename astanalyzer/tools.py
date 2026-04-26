@@ -862,6 +862,9 @@ def missing_blank_before_def(node) -> bool:
     parent = getattr(node, "parent", None)
     if parent is None or not hasattr(parent, "body"):
         return False
+    
+    if _node_type(parent) not in {"Module", "ClassDef"}:
+        return False
 
     body = list(parent.body)
     try:

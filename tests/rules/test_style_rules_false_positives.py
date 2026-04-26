@@ -276,6 +276,33 @@ def test_missing_blank_line_between_functions_does_not_match_first_definition_in
     assert "STYLE-009" not in rule_ids
 
 
+def test_missing_blank_line_does_not_match_nested_function_after_control_flow(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def outer(types):\n"
+        "    if isinstance(types, str):\n"
+        "        allowed = {types}\n"
+        "    else:\n"
+        "        allowed = set(types)\n"
+        "    def _predicate(node):\n"
+        "        return node in allowed\n"
+        "    return _predicate\n",
+    )
+
+    assert "STYLE-009" not in rule_ids
+
+
+def test_missing_blank_line_does_not_match_nested_function_inside_function(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def outer():\n"
+        "    x = 1\n"
+        "    def inner():\n"
+        "        return x\n"
+        "    return inner\n",
+    )
+
+    assert "STYLE-009" not in rule_ids
+
+    
 # -------------------------
 # STYLE-010 MissingDocstringForFunction
 # -------------------------
