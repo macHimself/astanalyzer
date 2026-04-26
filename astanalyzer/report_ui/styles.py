@@ -47,8 +47,31 @@ def build_report_styles(pygments_css: str) -> str:
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin: 12px 0 18px;
+      margin: 10px 0;
       align-items: center;
+    }}
+
+    .toolbar-main {{
+      margin-top: 18px;
+    }}
+
+    .toolbar-view {{
+      margin-top: 8px;
+    }}
+
+    .toolbar-selection {{
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(127,127,127,.14);
+    }}
+
+    .toobar input[type="search"] {{
+      flex: 1;
+      min-width: 320px;
+    }}
+
+    toolbar-selection button {{
+      min-width:120px;
     }}
 
     .view-toggle {{
@@ -166,12 +189,12 @@ def build_report_styles(pygments_css: str) -> str:
     }}
 
     .desc {{
-      padding: 8px 10px;
-      border-left: 3px solid rgba(127,127,127,.35);
-      border-radius: 8px;
-      background: color-mix(in oklab, Canvas, CanvasText 3%);
-      line-height: 1.4;
-      white-space: pre-wrap;
+      padding: 6px 0;
+      border-left: none;
+      border-radius: 0;
+      background: transparent;
+      opacity: 0.8;
+      font-size: 13px;
     }}
 
     .fixes, .actions {{

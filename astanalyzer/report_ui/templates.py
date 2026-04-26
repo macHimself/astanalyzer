@@ -42,23 +42,28 @@ def build_report_shell(styles: str, script: str) -> str:
   </header>
 
   <main>
-    <div class="toolbar">
-      <input id="fileInput" type="file" accept="application/json,.json" />
-      <input id="search" type="search" placeholder="Filter: file, rule_id, title, text…" />
+    <div class="toolbar toolbar-main">
+        <input id="fileInput" type="file" accept=".json,application/json" />
+        <button id="btnPickDir">Choose folder</button>
+        <button id="btnExport">Export selected.json</button>
+    </div>
 
-      <div class="view-toggle" aria-label="View mode">
-        <button id="btnRuleFirst" type="button" class="active">Rule first</button>
-        <button id="btnFileFirst" type="button">File first</button>
-      </div>
+    <div class="toolbar toolbar-view">
+        <input id="search" type="search" placeholder="Filter: file, rule_id, title, text..." />
 
-      <button id="btnPickDir">Choose folder</button>
-      <button id="btnSelectAll" disabled>Select all</button>
-      <button id="btnClear" disabled>Clear selection</button>
-      <button id="btnExport" disabled>Export selected.json</button>
+        <div class="view-toggle">
+            <button id="btnRuleFirst" type="button">Rule first</button>
+            <button id="btnFileFirst" type="button">File first</button>
+        </div>
+    </div>
+
+    <div class="toolbar toolbar-selection">
+        <button id="btnSelectAll">Select all</button>
+        <button id="btnClear">Clear selection</button>
     </div>
 
     <div class="hint">
-      ...
+      Review findings → select fixes → export selected.json → run astanalyzer patch
     </div>
 
     <div id="hint" class="warn" style="display:none; margin: 0 0 12px;"></div>
@@ -66,7 +71,7 @@ def build_report_shell(styles: str, script: str) -> str:
   </main>
 
   <footer>
-    This page was generated from scan_report.json.
+    This page was generated from AstAnalyzer scan_report.json.
   </footer>
 
   {script}
