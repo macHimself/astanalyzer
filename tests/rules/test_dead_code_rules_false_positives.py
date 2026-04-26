@@ -368,3 +368,59 @@ def test_unused_variable_does_not_match_loop_carried_state(scan_rule_ids):
     )
 
     assert "DEAD-001" not in rule_ids
+
+
+def test_unused_variable_does_not_match_exception_fallback_used_after_try(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(target, newest):\n"
+        "    if target.exists():\n"
+        "        try:\n"
+        "            same_file = target.resolve() == newest.resolve()\n"
+        "        except FileNotFoundError:\n"
+        "            same_file = False\n"
+        "\n"
+        "        if same_file:\n"
+        "            return target\n"
+        "    return newest\n",
+    )
+
+    assert "DEAD-001" not in rule_ids
+
+
+def test_unused_variable_does_not_match_when_used_after_intermediate_assignments(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(context, node, first_stmt, doc):\n"
+        "    node_lineno = getattr(node, 'lineno', 1)\n"
+        "    first_lineno = getattr(first_stmt, 'lineno', node_lineno)\n"
+        "    insert_at = max(1, first_lineno - node_lineno)\n"
+        "\n"
+        "    indent = getattr(first_stmt, 'col_offset', getattr(node, 'col_offset', 0) + 4)\n"
+        "    doc_line = ' ' * indent + doc\n"
+        "\n"
+        "    context.suggestion_lines.insert(insert_at, doc_line)\n",
+    )
+
+    assert "DEAD-001" not in rule_ids
+
+
+def test_unused_variable_does_not_match_when_used_as_method_call_argument(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(context):\n"
+        "    insert_at = 1\n"
+        "    doc_line = 'x'\n"
+        "    context.suggestion_lines.insert(insert_at, doc_line)\n",
+    )
+
+    assert "DEAD-001" not in rule_ids
+
+
+def test_unused_variable_does_not_match_when_used_as_method_call_argument(scan_rule_ids):
+    rule_ids = scan_rule_ids(
+        "def f(context):\n"
+        "    insert_at = 1\n"
+        "    doc_line = 'x'\n"
+        "    context.suggestion_lines.insert(insert_at, doc_line)\n",
+    )
+
+    assert "DEAD-001" not in rule_ids
+    assert "DEAD-003" not in rule_ids
