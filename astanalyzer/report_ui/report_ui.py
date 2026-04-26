@@ -13,7 +13,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 
 from .favicon import ensure_report_favicon
-from .scripts import build_report_script
+from .script_loader import build_report_script
 from .styles import build_report_styles
 from .templates import build_report_shell
 

@@ -1,5 +1,3 @@
-def build_script_finding_card() -> str:
-    return """
 function buildFindingCard(f) {
   const card = document.createElement("div");
   card.className = "card";
@@ -194,4 +192,3 @@ function buildFindingCard(f) {
 
   return card;
 }
-"""

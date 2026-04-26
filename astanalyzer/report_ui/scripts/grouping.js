@@ -1,5 +1,3 @@
-def build_script_grouping() -> str:
-    return """
 function groupFindingsRuleFirst(findings) {
   const root = new Map();
 
@@ -172,4 +170,3 @@ function buildFileGroup(fileLabel, findings) {
 
   return details;
 }
-"""

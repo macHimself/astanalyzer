@@ -1,5 +1,3 @@
-def build_script_io() -> str:
-    return """
 function setHint(msg, cls = "warn") {
   if (!msg) {
     elHint.style.display = "none";
@@ -198,4 +196,3 @@ async function exportSelected() {
     downloadBlob(filename, blob);
   }
 }
-"""

@@ -1,5 +1,3 @@
-def build_script_fix_helpers() -> str:
-    return """
 function fixKey(finding, fix) {
   return `${finding.file}::${finding.id}::${fix.fix_id}`;
 }
@@ -131,4 +129,3 @@ function removeSelectedFixesForFinding(finding) {
     }
   }
 }
-"""

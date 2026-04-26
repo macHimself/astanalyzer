@@ -1,5 +1,3 @@
-def build_script_events() -> str:
-    return """
 fileInput.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (file) loadFromFile(file);
@@ -50,4 +48,3 @@ btnExport.addEventListener("click", () => {
 updateSaveTargetLabel();
 updateViewButtons();
 applyJson(state.raw, "scan_report.json");
-"""

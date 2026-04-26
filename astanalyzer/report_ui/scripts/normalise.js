@@ -1,5 +1,3 @@
-def build_script_data_normalisation() -> str:
-    return """
 function normalisePlan(json) {
   const findings = Array.isArray(json)
     ? json
@@ -48,4 +46,3 @@ function getCategoryFromRuleId(ruleId) {
   const parts = String(ruleId).split("-");
   return parts[0] || "OTHER";
 }
-"""
