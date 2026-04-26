@@ -289,32 +289,32 @@ def _is_name_read_after_enclosing_control_flow(node, name: str) -> bool:
     return False
 
 
-def _is_name_used_by_enclosing_while_next_iteration(node, name: str) -> bool:
+def _is_name_used_by_enclosing_loop_next_iteration(node, name: str) -> bool:
     """
-    Return True if `name` is assigned inside a while-body and then used
-    by the enclosing while on the next iteration.
+    Return True if `name` is assigned inside a loop body and then used
+    by the enclosing loop on the next iteration.
 
     This covers:
-    - use in the while test itself
+    - use in a while test itself
     - use in statements that appear before the current assignment within the
-      same while body, because those statements will run first on the next
-      iteration
+      same loop body, because those statements run first on the next iteration
     """
     cur = node
     parent = getattr(cur, "parent", None)
 
     while parent is not None:
-        if _node_type(parent) == "While":
+        if _node_type(parent) in {"For", "While"}:
             body = getattr(parent, "body", None) or []
             if cur in body:
-                if _text_uses_name(getattr(parent, "test", None), name):
+                if _node_type(parent) == "While" and _text_uses_name(getattr(parent, "test", None), name):
                     return True
 
                 idx = body.index(cur)
                 next_iter_prefix = body[:idx]
-                for stmt in next_iter_prefix:
-                    if _stmt_reads_name_before_overwrite(stmt, name):
-                        return True
+                return any(
+                    _stmt_reads_name_before_overwrite(stmt, name)
+                    for stmt in next_iter_prefix
+                )
 
         cur = parent
         parent = getattr(cur, "parent", None)
@@ -333,7 +333,7 @@ def is_unused_assign(node) -> bool:
     - reads in conditions before branch-local reassignment
     - values assigned in branches and used after branch merge
     - values assigned in nested blocks and used after outer block completion
-    - loop-carried state updates in while loops
+    - loop-carried state updates in for/while loops
     """
     if not is_local_function_assignment(node):
         return False
@@ -367,7 +367,7 @@ def is_unused_assign(node) -> bool:
                 overwritten_before_read = True
                 break
 
-        if not read_before_overwrite and _is_name_used_by_enclosing_while_next_iteration(node, name):
+        if not read_before_overwrite and _is_name_used_by_enclosing_loop_next_iteration(node, name):
             read_before_overwrite = True
 
         if not read_before_overwrite and _is_name_read_after_enclosing_control_flow(node, name):
