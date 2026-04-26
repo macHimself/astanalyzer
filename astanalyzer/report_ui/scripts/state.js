@@ -1,5 +1,3 @@
-def build_script_state() -> str:
-    return """
 const initialRaw = JSON.parse(
   document.getElementById("report-data").textContent
 );
@@ -39,4 +37,3 @@ const btnClear = document.getElementById("btnClear");
 const btnExport = document.getElementById("btnExport");
 const btnRuleFirst = document.getElementById("btnRuleFirst");
 const btnFileFirst = document.getElementById("btnFileFirst");
-"""

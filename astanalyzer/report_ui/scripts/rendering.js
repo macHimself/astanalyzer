@@ -1,5 +1,3 @@
-def build_script_rendering() -> str:
-    return """
 function renderRuleFirst(visible) {
   const grouped = groupFindingsRuleFirst(visible);
 
@@ -190,4 +188,3 @@ function rerenderKeepingOpenDetails() {
     });
   });
 }
-"""

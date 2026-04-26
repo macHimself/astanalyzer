@@ -1,5 +1,3 @@
-def build_script_formatters() -> str:
-    return """
 function formatCategoryLabel(category) {
   const code = String(category || "OTHER").toUpperCase();
   const label = CATEGORY_LABELS[code];
@@ -92,4 +90,3 @@ function renderDiff(diffText) {
     return `<div class="${cls}">${escapeHtml(line)}</div>`;
   }).join("");
 }
-"""
