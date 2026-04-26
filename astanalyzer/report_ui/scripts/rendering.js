@@ -158,33 +158,42 @@ function detailsKey(details) {
   return `${details.className}::${title}`;
 }
 
-function rememberOpenDetails() {
-  return new Set(
-    Array.from(document.querySelectorAll("details[open]"))
-      .map(detailsKey)
-  );
+function rememberDetailsState() {
+  const detailsState = new Map();
+
+  document.querySelectorAll("details").forEach((details) => {
+    detailsState.set(detailsKey(details), details.open);
+  });
+
+  return detailsState;
 }
 
-function restoreOpenDetails(openKeys) {
+function restoreDetailsState(detailsState) {
   for (let pass = 0; pass < 5; pass++) {
     document.querySelectorAll("details").forEach((details) => {
-      if (openKeys.has(detailsKey(details)) && !details.open) {
-        details.open = true;
-        details.dispatchEvent(new Event("toggle"));
+      const key = detailsKey(details);
+
+      if (detailsState.has(key)) {
+        const shouldBeOpen = detailsState.get(key);
+
+        if (details.open !== shouldBeOpen) {
+          details.open = shouldBeOpen;
+          details.dispatchEvent(new Event("toggle"));
+        }
       }
     });
   }
 }
 
-function rerenderKeepingOpenDetails() {
-  const openKeys = rememberOpenDetails();
+function rerenderKeepingDetailsState() {
+  const detailsState = rememberDetailsState();
   render();
 
   requestAnimationFrame(() => {
-    restoreOpenDetails(openKeys);
+    restoreDetailsState(detailsState);
 
     requestAnimationFrame(() => {
-      restoreOpenDetails(openKeys);
+      restoreDetailsState(detailsState);
     });
   });
 }
