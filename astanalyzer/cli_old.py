@@ -42,7 +42,12 @@ from .rule_filtering import (
     filter_rules,
 )
 from .logging_config import setup_logging
-from .report_ui import open_report_in_browser, write_report_html
+from .report_ui import (
+    FAVICON_FILENAME, 
+    open_report_in_browser, 
+    write_report_html,
+)
+
 from .rule_loader import import_rules_from_path
 from .rules import load_builtin_rules
 
@@ -50,6 +55,13 @@ log = logging.getLogger(__name__)
 
 ARCHIVE_DIR_NAME = "used_patches"
 
+GENERATED_ARTIFACT_FILENAMES = [
+    "astanalyzer-selected.json",
+    "selected.json",
+    "scan_report.json",
+    "report.html",
+    FAVICON_FILENAME,
+]
 
 def now_stamp() -> str:
     """Return current UTC timestamp formatted as 'YYYY-MM-DD_HH-MM-SS'."""
@@ -188,16 +200,12 @@ def archive_run_artifacts(archive_dir: Path, base_dir: Path | None = None) -> li
         - selected.json
         - scan_report.json
         - report.html
+        - astanalyzer.ico
     """
     root = base_dir or Path.cwd()
     archived: list[Path] = []
 
-    candidates = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    candidates = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     for p in candidates:
         out = move_file_if_exists(p, archive_dir)
@@ -205,6 +213,35 @@ def archive_run_artifacts(archive_dir: Path, base_dir: Path | None = None) -> li
             archived.append(out)
 
     return archived
+
+
+def read_project_root_from_selected_json(selected_path: Path | None = None) -> Path | None:
+    """Read project_root from selected JSON if available."""
+    candidates: list[Path] = []
+
+    if selected_path is not None:
+        candidates.append(selected_path)
+
+    cwd = Path.cwd()
+    candidates.extend([
+        cwd / "astanalyzer-selected.json",
+        cwd / "selected.json",
+    ])
+
+    for candidate in candidates:
+        if not candidate.exists() or not candidate.is_file():
+            continue
+
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+
+        project_root = normalize_project_root(data.get("project_root"))
+        if project_root is not None:
+            return project_root
+
+    return None
 
 
 def archive_patch_files_from_root(archive_dir: Path, base_dir: Path | None = None) -> int:
@@ -263,12 +300,7 @@ def has_working_artifacts(base_dir: Path | None = None) -> bool:
     """
     root = base_dir or Path.cwd()
 
-    candidates = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    candidates = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     if any(p.exists() and p.is_file() for p in candidates):
         return True
@@ -309,6 +341,7 @@ def clean_working_artifacts(
             * selected.json
             * scan_report.json
             * report.html
+            * astanalyzer.ico
         - All '.patch' files under the root directory are removed.
         - Patch files inside the archive directory are skipped unless
           `include_archive=True`.
@@ -321,12 +354,7 @@ def clean_working_artifacts(
 
     archive_root = get_archive_root_path(root)
 
-    normal_files = [
-        root / "astanalyzer-selected.json",
-        root / "selected.json",
-        root / "scan_report.json",
-        root / "report.html",
-    ]
+    normal_files = [root / name for name in GENERATED_ARTIFACT_FILENAMES]
 
     for p in normal_files:
         if p.exists() and p.is_file():
@@ -366,42 +394,50 @@ def resolve_selected_input(
     selected_arg: str | None = None,
     *,
     copy_from_downloads: bool = True,
-) -> Path:
+    required: bool = True,
+) -> Path | None:
     """
     Resolve the selected findings JSON file from multiple possible sources.
 
     The resolution follows this priority:
         1. Explicit CLI path (if provided)
-        2. Working directory ('selected.json' or 'astanalyzer-selected.json')
+        2. Working directory ('astanalyzer-selected.json' or 'selected.json')
         3. Newest matching file in '~/Downloads' ('astanalyzer-selected*.json')
 
-    If a file is found in the Downloads directory and `copy_from_downloads`
-    is enabled, it is copied into the current working directory and removed
-    from Downloads.
+    If a resolved file is outside the current working directory and
+    `copy_from_downloads` is enabled, it is copied into the current working
+    directory and removed from its original location. This also applies to an
+    explicit path such as '~/Downloads/astanalyzer-selected.json'.
 
     Args:
         selected_arg (str | None): Optional explicit path to the selected JSON file.
-        copy_from_downloads (bool): If True, copy the file from Downloads into
-            the working directory and delete the original. If False, use the file
-            in-place. Defaults to True.
+        copy_from_downloads (bool): If True, copy the resolved file into
+            the working directory and delete the original when it is outside
+            the working directory. If False, use the file in-place. Defaults
+            to True.
+        required (bool): If True, terminate the command when no selected JSON
+            can be resolved. If False, return None when no fallback file exists.
 
     Returns:
-        Path: Path to the resolved selected JSON file.
+        Path | None: Path to the resolved selected JSON file, or None when
+        `required` is False and no file is found.
 
     Raises:
-        SystemExit: If no valid selected JSON file is found or if the provided
-        path is invalid.
+        SystemExit: If no valid selected JSON file is found and `required` is
+        True, or if the provided path is invalid.
 
     Side Effects:
-        - May copy a file from '~/Downloads' to the working directory.
+        - May copy a file into the working directory.
         - May overwrite an existing file in the working directory.
-        - May delete the original file from '~/Downloads'.
+        - May delete the original file after a successful copy.
         - Emits log messages describing resolution steps.
 
     Notes:
         - Files are selected from Downloads based on the most recent modification time.
-        - The function prefers local files over Downloads when available.
+        - The function prefers local files over Downloads when no explicit path is provided.
     """
+    cwd = Path.cwd().resolve()
+
     if selected_arg:
         p = Path(selected_arg).expanduser().resolve()
         if not p.exists():
@@ -410,21 +446,35 @@ def resolve_selected_input(
         if not p.is_file():
             log.error("Selected path '%s' is not a file.", p)
             sys.exit(1)
+
+        target = (cwd / p.name).resolve()
+
+        if copy_from_downloads and p != target:
+            if target.exists():
+                log.warning("Overwriting existing file in working directory: %s", target)
+
+            shutil.copy2(p, target)
+            if p.exists():
+                p.unlink()
+
+            log.info("Moved selected JSON into working directory: %s -> %s", p, target)
+            return target
+
         return p
 
-    cwd = Path.cwd()
-
     local_candidates = [
-        cwd / "selected.json",
         cwd / "astanalyzer-selected.json",
+        cwd / "selected.json",
     ]
     for candidate in local_candidates:
         if candidate.exists() and candidate.is_file():
             log.info("Using selected JSON from working directory: %s", candidate)
-            return candidate
+            return candidate.resolve()
 
     downloads = Path.home() / "Downloads"
     if not downloads.exists() or not downloads.is_dir():
+        if not required:
+            return None
         log.error(
             "Downloads directory '%s' does not exist and no local selected JSON was found.",
             downloads,
@@ -438,20 +488,22 @@ def resolve_selected_input(
     )
 
     if not candidates:
+        if not required:
+            return None
         log.error(
             "No selected JSON found in working directory or Downloads "
-            "(looked for 'selected.json', 'astanalyzer-selected.json', "
+            "(looked for 'astanalyzer-selected.json', 'selected.json', "
             "and '~/Downloads/astanalyzer-selected*.json')."
         )
         sys.exit(1)
 
-    newest = candidates[0]
+    newest = candidates[0].resolve()
 
     if not copy_from_downloads:
         log.info("Using selected JSON directly from Downloads: %s", newest)
-        return newest.resolve()
+        return newest
 
-    target = cwd / newest.name
+    target = (cwd / newest.name).resolve()
 
     if target.exists():
         try:
@@ -472,6 +524,25 @@ def resolve_selected_input(
     log.info("Copied selected JSON from Downloads: %s -> %s", newest, target)
     return target.resolve()
 
+
+def resolve_selected_cli_argument(
+    positional_path: str | None,
+    deprecated_selected_path: str | None,
+) -> str | None:
+    """Resolve mutually exclusive CLI inputs for selected JSON commands."""
+    if positional_path and deprecated_selected_path:
+        log.error(
+            "Use either the positional selected JSON path or --selected, not both."
+        )
+        sys.exit(2)
+
+    if deprecated_selected_path:
+        log.warning(
+            "--selected is deprecated; use the positional selected_json_path argument instead."
+        )
+        return deprecated_selected_path
+
+    return positional_path
 
 def ensure_final_newline(path: Path) -> None:
     """
@@ -868,8 +939,14 @@ def cmd_patch(args: argparse.Namespace) -> None:
         - If no patches are generated, validation is skipped.
         - Patch validation excludes files stored in the archive directory.
     """
-    selected_arg = args.selected_path or args.selected
+    selected_arg = resolve_selected_cli_argument(
+        getattr(args, "selected_json_path", None),
+        getattr(args, "deprecated_selected", None),
+    )
     selected = resolve_selected_input(selected_arg)
+    if selected is None:
+        log.error("Selected JSON could not be resolved.")
+        sys.exit(1)
     log.info("Using selected JSON: %s", selected)
 
     try:
@@ -1010,7 +1087,24 @@ def cmd_archive(args: argparse.Namespace) -> None:
     """
     root = Path.cwd()
 
-    if not has_working_artifacts(root):
+    selected_arg = resolve_selected_cli_argument(
+        getattr(args, "selected_json_path", None),
+        getattr(args, "deprecated_selected", None),
+    )
+
+    selected_path = resolve_selected_input(
+        selected_arg,
+        copy_from_downloads=True,
+        required=False,
+    )
+
+    project_root = read_project_root_from_selected_json(selected_path)
+    patch_root = project_root or root
+
+    has_local_artifacts = has_working_artifacts(root)
+    has_project_patches = bool(find_patch_files(patch_root, include_archive=False))
+
+    if not has_local_artifacts and not has_project_patches:
         print("Nothing to archive.")
         return
 
@@ -1022,7 +1116,7 @@ def cmd_archive(args: argparse.Namespace) -> None:
     )
     archived_patches = archive_patch_files_from_root(
         archive_dir=archive_dir,
-        base_dir=root,
+        base_dir=patch_root,
     )
 
     print_section("ASTANALYZER ARCHIVE SUMMARY")
@@ -1030,7 +1124,6 @@ def cmd_archive(args: argparse.Namespace) -> None:
     print(f"Archived files:    {len(archived_files)}")
     print(f"Archived patches:  {archived_patches}")
     print()
-
 
 def cmd_clean(args: argparse.Namespace) -> None:
     """
@@ -1213,16 +1306,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     patch_parser = subparsers.add_parser("patch", help="Generate patches from selected fixes")
     patch_parser.add_argument(
-        "selected",
+        "selected_json_path",
         nargs="?",
         default=None,
-        help="Selected fixes JSON file; if missing, uses local file or newest from Downloads",
+        metavar="selected_json_path",
+        help="Selected fixes JSON file; if omitted, uses cwd fallback or newest file from Downloads",
     )
     patch_parser.add_argument(
         "--selected",
-        dest="selected_path",
-        help="Explicit path to selected JSON file",
-    ) 
+        dest="deprecated_selected",
+        help="Deprecated alias for selected_json_path",
+    )
     patch_parser.set_defaults(func=cmd_patch)
 
     apply_parser = subparsers.add_parser("apply", help="Apply existing .patch files")
@@ -1236,6 +1330,18 @@ def build_parser() -> argparse.ArgumentParser:
     archive_parser = subparsers.add_parser(
         "archive",
         help="Archive generated artefacts and patches without applying them",
+    )
+    archive_parser.add_argument(
+        "selected_json_path",
+        nargs="?",
+        default=None,
+        metavar="selected_json_path",
+        help="Selected fixes JSON file used to resolve project_root for patch archiving",
+    )
+    archive_parser.add_argument(
+        "--selected",
+        dest="deprecated_selected",
+        help="Deprecated alias for selected_json_path",
     )
     archive_parser.set_defaults(func=cmd_archive)
 

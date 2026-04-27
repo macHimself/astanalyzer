@@ -21,3 +21,4 @@ scan_report.json
 *.patch
 astanalyzer-selected.json
 *.log
+astanalyzer.ico
