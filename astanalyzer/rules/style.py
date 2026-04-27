@@ -78,8 +78,14 @@ class EmptyBlock(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_at_body_start("# TODO: implement block logic")
-            .because("Empty block should contain real logic or be removed."),
+            .add_review_note_and_ignore(
+                "STYLE-001",
+                "TODO: implement block logic or remove this empty block.",
+            )
+            .because(
+                "Add a review note and suppress this advisory style finding "
+                "until the empty block is manually implemented or removed."
+            ),
             fix()
             .delete_node()
             .because("Empty block can be removed."),
@@ -138,12 +144,16 @@ class MultipleReturnsInFunction(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_on_function(
-                "# TODO: Consider refactoring to a single return path if it improves readability."
+            .add_review_note_and_ignore(
+                "STYLE-003",
+                "Function contains multiple return statements. Consider whether a single exit point would improve readability.",
             )
-            .because("Function contains multiple return statements."),
+            .because(
+                "Add a review note and suppress this advisory style finding "
+                "until the function is manually reviewed."
+            )
         ]
-
+        
 
 class LineTooLong(Rule):
     """
@@ -170,8 +180,14 @@ class LineTooLong(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before("TODO: split long lines or use shorter names.")
-            .because("Module contains lines longer than the configured limit."),
+            .add_review_note_and_ignore(
+                "STYLE-004",
+                "Line exceeds the configured length. Consider splitting the expression or extracting intermediate variables.",
+            )
+            .because(
+                "Add a review note and suppress this advisory formatting finding "
+                "until the line is manually reformatted."
+            )
         ]
 
 

@@ -95,10 +95,14 @@ class AlwaysTrueConditionWhile(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before(
-                "Loop condition is always true; verify that an infinite loop is intended."
+            .add_review_note_and_ignore(
+                "SEM-002",
+                "Loop condition is always true; verify that an infinite loop is intended.",
             )
-            .because("While loop condition is always true."),
+            .because(
+                "Add a review note and suppress this advisory semantic finding "
+                "until the loop condition is manually reviewed."
+            ),
         ]
 
 
@@ -155,10 +159,15 @@ class AssignmentInCondition(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before(
-                "Assignment inside condition (':=') detected. Consider assigning before the condition for clarity."
+            .add_review_note_and_ignore(
+                "SEM-004",
+                "Assignment inside condition (':=') detected. "
+                "Consider assigning before the condition for clarity.",
             )
-            .because("Assignment inside condition reduces readability."),
+            .because(
+                "Add a review note and suppress this advisory semantic finding "
+                "until the condition is manually reviewed."
+            ),
         ]
 
 
@@ -186,10 +195,13 @@ class RedeclaredVariable(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before(
-                "Redeclaration in the same block without prior use. Consider removing the earlier assignment or renaming."
+            .add_review_note_and_ignore(
+                "SEM-005",
+                "Variable is reassigned before the previous value is used. Check whether this is intentional or a lost assignment.",
             )
-            .because("Variable is reassigned before the previous value is used."),
+            .because(
+                "Add a review note and suppress this semantic finding until the reassignment is manually reviewed."
+            ),
             fix()
             .remove_node(ref="previous_assign")
             .because("Remove redundant earlier assignment."),
@@ -221,10 +233,13 @@ class ExceptionNotUsed(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before(
-                "Exception is bound but never used. Remove the alias or log/raise the exception."
+            .add_review_note_and_ignore(
+                "SEM-006",
+                "Exception object is bound but not used. Consider logging it, re-raising it, or removing the alias.",
             )
-            .because("Bound exception variable is unused."),
+            .because(
+                "Add a review note and suppress this advisory semantic finding until manually reviewed."
+            ),
             fix()
             .remove_except_alias()
             .because("Remove unused exception binding."),
@@ -257,10 +272,14 @@ class BareExcept(Rule):
             .replace_bare_except_with_exception()
             .because("Replace bare except with except Exception."),
             fix()
-            .comment_before(
-                "Bare 'except:' catches all exceptions. Consider a specific exception type."
+            .add_review_note_and_ignore(
+                "SEM-007",
+                "Bare 'except:' catches all exceptions. Consider catching a specific exception type.",
             )
-            .because("Bare except is too broad."),
+            .because(
+                "Add a review note and suppress this advisory semantic finding "
+                "until exception handling is manually reviewed."
+            ),
         ]
 
 
@@ -317,10 +336,14 @@ class PrintDebugStatement(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .comment_before(
-                "Debug print statement detected. Use logging instead or remove this line."
+            .add_review_note_and_ignore(
+                "SEM-009",
+                "Debug print statement detected. Use logging instead or remove this line.",
             )
-            .because("Debug print statements should not remain in production code."),
+            .because(
+                "Add a review note and suppress this advisory semantic finding "
+                "until the debug output is manually reviewed."
+            ),
             fix()
             .delete_node()
             .because("Remove debug print statement."),

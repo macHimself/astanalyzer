@@ -94,11 +94,15 @@ class UselessListComprehension(Rule):
         self.matcher = match("Expr").has("ListComp")
         self.fixer_builders = [
             fix()
-            .comment_before(
+            .add_review_note_and_ignore(
+                "PERF-002",
                 "Useless list comprehension: result is unused. "
-                "Use a for loop for side effects or assign/return the list."
+                "Use a for loop for side effects or assign/return the list.",
             )
-            .because("List comprehension result is computed but never used.")
+            .because(
+                "Add a review note and suppress this advisory performance finding "
+                "to avoid repeated detection."
+            )
         ]
 
 
@@ -157,8 +161,14 @@ class UnnecessaryCopy(Rule):
             .replace_unnecessary_copy()
             .because("Redundant copy wrapper can be removed."),
             fix()
-            .comment_before("Unnecessary copy detected. Remove redundant wrapping.")
-            .because("Redundant copy operation detected."),
+            .add_review_note_and_ignore(
+                "PERF-004",
+                "Unnecessary copy detected. Remove redundant wrapping if safe.",
+            )
+            .because(
+                "Add a review note and suppress this advisory performance finding "
+                "until manually reviewed."
+            )
         ]
 
 
@@ -189,13 +199,14 @@ class DoubleLoopSameCollection(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_comment(
-                lambda node: (
-                    "# Nested loop iterates over the same collection as an outer loop. "
-                    "Consider a single pass, indexing, a set for membership, or an algorithmic change."
-                )
+            .add_review_note_and_ignore(
+                "PERF-005",
+                "Collection is iterated multiple times. Consider combining loops if it does not reduce readability or change side effects.",
             )
-            .because("Nested loops iterate over the same collection.")
+            .because(
+                "Add a review note and suppress this advisory performance finding "
+                "until the loop structure is manually reviewed."
+            )
         ]
 
 
@@ -222,13 +233,17 @@ class LoopCouldBeComprehension(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_comment(
+            .add_review_note_and_ignore(
+                "PERF-006",
                 lambda node: (
-                    f"# Loop can be a {loop_comprehension_suggestion(node)[0]} comprehension. "
+                    f"Loop can be a {loop_comprehension_suggestion(node)[0]} comprehension. "
                     f"E.g.: {loop_comprehension_suggestion(node)[1]}"
-                )
+                ),
             )
-            .because("This loop can likely be expressed as a comprehension.")
+            .because(
+                "Add a review note and suppress this advisory performance finding "
+                "until manually reviewed."
+            )
         ]
 
 
