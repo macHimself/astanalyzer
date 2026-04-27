@@ -59,3 +59,84 @@ def test_resolve_selected_input_can_be_optional(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     assert resolve_selected_input(copy_from_downloads=False, required=False) is None
+
+
+def test_resolve_selected_explicit_path(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+
+    f = tmp_path / "file.json"
+    f.write_text("{}")
+
+    result = resolve_selected_input(str(f))
+
+    assert result == (project / "file.json").resolve()
+    assert result.exists()
+    assert not f.exists()
+
+
+def test_resolve_selected_moves_from_downloads(tmp_path, monkeypatch):
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+
+    f = downloads / "astanalyzer-selected.json"
+    f.write_text("{}")
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    cwd = tmp_path / "project"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+
+    result = resolve_selected_input(None)
+
+    assert result.exists()
+    assert result.parent == cwd
+    assert not f.exists()  
+
+
+def test_archive_does_not_copy_from_downloads(tmp_path, monkeypatch):
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+
+    f = downloads / "astanalyzer-selected.json"
+    f.write_text("{}")
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    result = resolve_selected_input(
+        None,
+        copy_from_downloads=False,
+        required=False,
+    )
+
+    assert result == f.resolve()
+    assert f.exists()  # nesmí být smazán
+
+
+def test_selected_cli_argument_conflict():
+    with pytest.raises(SystemExit):
+        resolve_selected_cli_argument("a.json", "b.json")
+
+
+def test_selected_cli_argument_deprecated(caplog):
+    resolve_selected_cli_argument(None, "a.json")
+
+    assert "deprecated" in caplog.text.lower()
+
+
+def test_archive_with_external_selected_file(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+
+    external = tmp_path / "external.json"
+    external.write_text("{}")
+
+    result = resolve_selected_input(
+        str(external),
+        copy_from_downloads=True,
+    )
+
+    assert result.parent == project
