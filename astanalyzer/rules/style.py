@@ -49,12 +49,23 @@ from ..tools import has_trailing_whitespace
 
 class EmptyBlock(Rule):
     """
-    This block contains no executable logic.
+    WHAT:
+    Detects control-flow blocks that contain no executable logic.
 
-    Empty control structures (if, for, while, try, with, except) reduce code clarity
-    and may indicate unfinished implementation or redundant code.
+    WHY:
+    Empty blocks make the code harder to understand because they suggest that
+    some behaviour should exist but has not been implemented. They may indicate
+    unfinished work, leftover scaffolding, or redundant control flow.
 
-    Consider adding meaningful logic or removing the block entirely.
+    WHEN:
+    This is relevant for if, for, while, try, with, and except blocks in normal
+    source code. It may be intentional for placeholders, abstract examples, or
+    temporary development code, but such intent should be explicit.
+
+    HOW:
+    Add the missing logic if the block is unfinished, or remove the block if it is
+    redundant. If the empty block is intentional, add a clear review note or
+    suppress the advisory finding.
     """
     id = "STYLE-001"
     title = "Empty block"
@@ -94,12 +105,23 @@ class EmptyBlock(Rule):
 
 class RedundantIfElseReturn(Rule):
     """
-    Redundant 'else' block after a terminal statement.
+    WHAT:
+    Detects else blocks that follow an if branch ending with a terminal statement
+    such as return, raise, break, or continue.
 
-    When an 'if' branch ends with a terminal statement (e.g. return, raise, break),
-    the 'else' block is unnecessary because control flow will not continue past it.
+    WHY:
+    When the if branch terminates control flow, the else block is not needed.
+    Removing it reduces indentation and makes the remaining execution path easier
+    to read.
 
-    Removing the 'else' and unindenting its contents simplifies the code and improves readability.
+    WHEN:
+    This is relevant when the else block only exists because of unnecessary
+    nesting. It may be less useful when the explicit else improves symmetry or
+    makes two alternative branches clearer.
+
+    HOW:
+    Remove the else header and unindent its body. Keep the explicit else only when
+    it makes the control-flow alternatives easier to understand.
     """
     id = "STYLE-002"
     title = "Redundant else after terminal branches"
@@ -122,14 +144,23 @@ class RedundantIfElseReturn(Rule):
 
 class MultipleReturnsInFunction(Rule):
     """
-    Function contains multiple return statements.
+    WHAT:
+    Detects functions that contain multiple return statements.
 
-    Having multiple return points can make control flow harder to follow,
-    especially in more complex functions. In some cases, consolidating returns
-    into a single exit point can improve readability and maintainability.
+    WHY:
+    Multiple return points can make control flow harder to follow, especially in
+    long or complex functions. They may make it less obvious which paths produce
+    which result.
 
-    However, multiple returns may be acceptable if they keep the code simpler
-    and more understandable.
+    WHEN:
+    This is mainly relevant for complex functions with branching logic. Multiple
+    returns are often acceptable when used as guard clauses or when they make the
+    function simpler and flatter.
+
+    HOW:
+    Review whether a single exit point would improve clarity. If multiple returns
+    make the function easier to understand, keep them and suppress the advisory
+    finding.
     """
     id = "STYLE-003"
     title = "Function with multiple return statements"
@@ -157,13 +188,23 @@ class MultipleReturnsInFunction(Rule):
 
 class LineTooLong(Rule):
     """
-    Line exceeds the recommended maximum length.
+    WHAT:
+    Detects lines that exceed the configured maximum line length.
 
-    Long lines reduce readability, especially in diffs, code reviews, and
-    side-by-side views. Keeping lines within a reasonable limit improves
-    clarity and consistency across the codebase.
+    WHY:
+    Very long lines are harder to read in diffs, code reviews, terminal editors,
+    and side-by-side views. They can also hide complex expressions that would be
+    clearer if split into smaller parts.
 
-    Consider splitting the line or using shorter expressions.
+    WHEN:
+    This is relevant for most source files and shared codebases. It may be
+    acceptable for long URLs, generated code, data literals, or strings where
+    splitting would reduce clarity.
+
+    HOW:
+    Split long expressions across multiple lines, extract intermediate variables,
+    or reformat argument lists. If the long line is intentional and clearer as-is,
+    suppress the advisory finding.
     """
     id = "STYLE-004"
     title = "Line too long"
@@ -193,13 +234,22 @@ class LineTooLong(Rule):
 
 class FunctionNameNotSnakeCase(Rule):
     """
-    Function name does not follow snake_case convention.
+    WHAT:
+    Detects function names that do not follow the snake_case naming convention.
 
-    In Python, function names should use snake_case (lowercase words separated
-    by underscores) according to PEP 8. Consistent naming improves readability,
-    predictability, and collaboration across the codebase.
+    WHY:
+    Consistent naming makes Python code easier to scan and understand. Following
+    snake_case helps distinguish functions from classes and keeps the code aligned
+    with common Python style conventions.
 
-    Consider renaming the function to follow snake_case.
+    WHEN:
+    This is relevant for project-owned Python functions. It may be intentional for
+    framework hooks, external API compatibility, generated code, or functions that
+    must match names defined outside the project.
+
+    HOW:
+    Rename the function to snake_case and update its references. If the name is
+    required by an external interface, keep it and suppress the finding.
     """
     id = "STYLE-005"
     title = "Function name not in snake_case"
@@ -221,13 +271,22 @@ class FunctionNameNotSnakeCase(Rule):
 
 class ClassNameNotPascalCase(Rule):
     """
-    Class name does not follow PascalCase convention.
+    WHAT:
+    Detects class names that do not follow the PascalCase / CapWords convention.
 
-    In Python, class names should use PascalCase (also known as CapWords),
-    where each word starts with a capital letter. This follows PEP 8 and
-    helps distinguish classes from functions and variables.
+    WHY:
+    Consistent class naming helps readers immediately distinguish classes from
+    functions, variables, and modules. It also keeps the code aligned with common
+    Python style conventions.
 
-    Consider renaming the class to follow PascalCase.
+    WHEN:
+    This is relevant for project-owned classes. It may be intentional for generated
+    code, compatibility layers, framework-specific names, or classes that mirror
+    external schemas.
+
+    HOW:
+    Rename the class to PascalCase and update references across the project. If
+    the name is required externally, keep it and suppress the finding.
     """
     id = "STYLE-006"
     title = "Class name not in PascalCase"
@@ -249,13 +308,22 @@ class ClassNameNotPascalCase(Rule):
 
 class ConstantNotUppercase(Rule):
     """
-    Constant name does not follow UPPER_SNAKE_CASE convention.
+    WHAT:
+    Detects constants whose names do not follow the UPPER_SNAKE_CASE convention.
 
-    In Python, constants should be written in UPPER_SNAKE_CASE according to
-    PEP 8. This makes them easily distinguishable from variables and signals
-    that their value is intended to remain unchanged.
+    WHY:
+    Uppercase constant names signal that a value is intended to be stable and not
+    modified during normal execution. Inconsistent naming makes it harder to
+    distinguish constants from ordinary variables.
 
-    Consider renaming the constant to follow this convention.
+    WHEN:
+    This is relevant for module-level values that are intended to behave as
+    constants. It may be a false positive for normal variables, generated code, or
+    values that are intentionally mutable or reassigned.
+
+    HOW:
+    Rename true constants to UPPER_SNAKE_CASE and update references. If the value
+    is not actually a constant, rename or restructure it to reflect its real role.
     """
     id = "STYLE-007"
     title = "Constant not in UPPER_SNAKE_CASE"
@@ -277,13 +345,21 @@ class ConstantNotUppercase(Rule):
 
 class TrailingWhitespace(Rule):
     """
-    Line contains trailing whitespace.
+    WHAT:
+    Detects whitespace at the end of a line.
 
-    Trailing whitespace has no functional meaning and can introduce unnecessary
-    noise in diffs, version control, and code reviews. It is generally considered
-    good practice to remove it.
+    WHY:
+    Trailing whitespace has no semantic value and creates unnecessary noise in
+    diffs, version control history, and code reviews. It can also conflict with
+    formatting tools or editor settings.
 
-    Consider removing trailing whitespace from the affected lines.
+    WHEN:
+    This is relevant in almost all source files. It is rarely intentional, except
+    in special text fixtures where exact whitespace is meaningful.
+
+    HOW:
+    Remove trailing whitespace from the affected lines. If exact trailing spaces
+    are required in a fixture or generated file, exclude or suppress the finding.
     """
     id = "STYLE-008"
     title = "Trailing whitespace"
@@ -305,12 +381,23 @@ class TrailingWhitespace(Rule):
 
 class MissingBlankLineBetweenFunctions(Rule):
     """
-    Missing blank line before function definition.
+    WHAT:
+    Detects function definitions that are not visually separated by the expected
+    blank line spacing.
 
-    According to PEP 8, top-level function definitions should be separated
-    by blank lines to improve readability and visual structure of the code.
+    WHY:
+    Blank lines make source files easier to scan by visually separating independent
+    definitions. Missing separation can make functions appear connected even when
+    they are unrelated.
 
-    Consider adding a blank line before this function.
+    WHEN:
+    This is relevant for top-level functions and class methods where consistent
+    layout improves readability. It may be less relevant in generated code or very
+    compact examples.
+
+    HOW:
+    Insert the required blank line before the function definition. If the compact
+    layout is intentional, suppress the advisory finding.
     """
     id = "STYLE-009"
     title = "Missing blank line(s) between definitions"
@@ -332,13 +419,22 @@ class MissingBlankLineBetweenFunctions(Rule):
 
 class MissingDocstringForFunction(Rule):
     """
-    Function is missing a docstring.
+    WHAT:
+    Detects functions that do not define a docstring.
 
-    Docstrings describe the purpose, parameters, and return values of a function.
-    Without them, the code is harder to understand, use, and maintain—especially
-    for other developers or future readers.
+    WHY:
+    A function docstring explains the purpose of the function, important parameters,
+    return values, side effects, and usage constraints. Without it, the function is
+    harder to use correctly and maintain later.
 
-    Consider adding a clear and concise docstring.
+    WHEN:
+    This is most relevant for public APIs, complex functions, reusable utilities,
+    and functions with non-obvious behaviour. It may be unnecessary for very small
+    private helpers or tests where the intent is already clear.
+
+    HOW:
+    Add a concise docstring that explains what the function does, when to use it,
+    and any important parameters, return values, exceptions, or side effects.
     """
     id = "STYLE-010"
     title = "Missing docstring for function"
@@ -360,13 +456,22 @@ class MissingDocstringForFunction(Rule):
 
 class MissingDocstringForClass(Rule):
     """
-    Class is missing a docstring.
+    WHAT:
+    Detects classes that do not define a docstring.
 
-    A class docstring should describe its purpose, responsibilities, and how it
-    is intended to be used. Without it, understanding the role of the class within
-    the system becomes harder, especially in larger codebases.
+    WHY:
+    A class docstring explains the role, responsibility, and intended usage of the
+    class. Without it, readers must infer the design from implementation details,
+    which becomes harder in larger codebases.
 
-    Consider adding a clear and concise docstring.
+    WHEN:
+    This is most relevant for public classes, domain models, services, rule
+    classes, and classes with meaningful state or behaviour. It may be unnecessary
+    for tiny internal helper classes or generated code.
+
+    HOW:
+    Add a concise class docstring describing the class purpose, main
+    responsibilities, important attributes, and typical usage.
     """
     id = "STYLE-011"
     title = "Missing docstring for class"
@@ -388,13 +493,22 @@ class MissingDocstringForClass(Rule):
 
 class MissingDocstringForModule(Rule):
     """
-    Module is missing a docstring.
+    WHAT:
+    Detects modules that do not define a module-level docstring.
 
-    A module docstring provides a high-level overview of the file’s purpose,
-    its main components, and how it should be used. Without it, understanding
-    the role of the module within the project becomes more difficult.
+    WHY:
+    A module docstring provides a high-level explanation of the file's purpose,
+    main contents, and role in the project. Without it, readers have to inspect
+    individual functions and classes before understanding the module.
 
-    Consider adding a clear and concise module-level docstring.
+    WHEN:
+    This is most relevant for modules containing public functionality, rule groups,
+    core engine components, or non-trivial implementation logic. It may be less
+    important for generated files, tiny scripts, or package marker files.
+
+    HOW:
+    Add a module-level docstring that summarises the module purpose, the main
+    concepts it contains, and any important usage or design notes.
     """
     id = "STYLE-012"
     title = "Missing docstring for module"

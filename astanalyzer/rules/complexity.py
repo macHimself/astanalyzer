@@ -24,14 +24,27 @@ from ..tools import arg_count_gt, function_arg_count, parent_depth_at_least, cou
 
 class TooManyArguments(Rule):
     """
-    Function has too many parameters.
+    WHAT:
+    Detects functions or methods with more parameters than the configured limit.
 
-    A large number of parameters can make a function harder to read, understand,
-    and maintain. It often indicates that the function is doing too much or that
-    related data could be grouped together.
+    WHY:
+    A long parameter list makes a function harder to understand, call correctly,
+    test, and maintain. It can also indicate that the function has too many
+    responsibilities or that several parameters belong to the same conceptual
+    object.
 
-    Consider reducing the number of parameters by introducing a data structure
-    (e.g. a class or dataclass) or splitting the function into smaller parts.
+    WHEN:
+    This is most relevant for public APIs, frequently used functions, and functions
+    where parameters represent related configuration or domain data. It may be less
+    problematic for framework callbacks, generated code, thin wrappers, or functions
+    that intentionally mirror an external API.
+
+    HOW:
+    Review whether related parameters can be grouped into a dataclass, configuration
+    object, value object, or domain model. If the parameters belong to different
+    responsibilities, split the function into smaller functions with clearer
+    purposes. If the current signature is intentional, add a review note or suppress
+    the advisory finding.
     """
     MAX_ARGS = 5
     id = "CX-001"
@@ -69,14 +82,29 @@ class TooManyArguments(Rule):
 
 class TooDeepNesting(Rule):
     """
-    Code is nested too deeply.
+    WHAT:
+    Detects control flow structures (if, for, while, try) that are nested deeper
+    than the configured threshold. [3]
 
-    Deep nesting increases cognitive complexity and makes the code harder to read,
-    reason about, and maintain. It often indicates that the logic could be simplified
-    or reorganized.
+    WHY:
+    Deep nesting increases cognitive complexity, making the code harder to read,
+    understand, and reason about. It obscures the main execution path and makes
+    edge cases harder to identify, test, and modify. Highly nested code is also
+    more error-prone during future changes.
 
-    Consider using guard clauses, early returns/continues, or extracting nested logic
-    into separate functions.
+    WHEN:
+    This is especially problematic in business logic, decision-heavy code, and
+    long functions where multiple conditions and loops are combined. It may be
+    acceptable in short, tightly scoped logic blocks or in code that naturally
+    requires structured nesting (e.g. parsers or state machines), though even
+    there readability should be carefully evaluated.
+
+    HOW:
+    Reduce nesting by introducing guard clauses (early returns/continues),
+    flattening conditional structures, or extracting nested logic into separate
+    helper functions. Focus on making the main execution path visible and easy
+    to follow. If deep nesting is intentional, document the reasoning or suppress
+    the advisory finding.
     """
     id = "CX-002"
     title = "Too deep nesting"
@@ -115,12 +143,28 @@ class TooDeepNesting(Rule):
 
 class FunctionTooLong(Rule):
     """
-    Function is too long.
+    WHAT:
+    Detects functions or async functions whose relevant statement count exceeds
+    the configured limit.
 
-    Long functions are harder to read, understand, test, and maintain. They often
-    indicate that multiple responsibilities are combined into a single unit.
+    WHY:
+    Long functions are harder to read, understand, test, and safely modify. They
+    often combine multiple responsibilities, which makes the function more fragile
+    and increases the risk of introducing regressions during changes.
 
-    Consider breaking the function into smaller, focused helper functions.
+    WHEN:
+    This is most relevant for business logic, data processing, validation, and
+    functions that contain several distinct steps or branches. It may be less
+    problematic for generated code, simple sequential setup code, or functions
+    where splitting would only hide straightforward logic behind artificial helper
+    names.
+
+    HOW:
+    Review the function for separate responsibilities or repeated logical phases.
+    Extract coherent parts into smaller helper functions, move domain-specific
+    operations into dedicated objects, or simplify branching before splitting. If
+    the function is intentionally long and still clear, add a review note or
+    suppress the advisory finding.
     """
     id = "CX-003"
     title = "Too long function"

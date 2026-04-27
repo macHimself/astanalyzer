@@ -42,13 +42,23 @@ from ..tools import (
 
 class PrintInListComprehension(Rule):
     """
-    Print is used inside a list comprehension for side effects.
+    WHAT:
+    Detects list comprehensions that call print() as their produced element.
 
-    List comprehensions are intended for creating lists, not for executing side effects.
-    Using them with functions like print() reduces readability and may create unnecessary
-    intermediate lists.
+    WHY:
+    List comprehensions are intended to build lists. Using them only to execute
+    side effects makes the code harder to read and creates an unnecessary
+    intermediate list whose values are usually discarded.
 
-    Consider replacing this with a simple for loop for clearer and more efficient code.
+    WHEN:
+    This is problematic when the comprehension is used as a standalone expression
+    or when the resulting list is not needed. It is especially relevant in scripts,
+    debugging code, and data-processing loops. If the list of return values is
+    intentionally used, the code should be reviewed manually.
+
+    HOW:
+    Replace the list comprehension with an explicit for loop. A for loop makes
+    the side effect clear and avoids constructing an unused list.
     """
     id = "PERF-001"
     title = "Print used inside list comprehension for side effects"
@@ -76,12 +86,23 @@ class PrintInListComprehension(Rule):
 
 class UselessListComprehension(Rule):
     """
-    List comprehension result is computed but never used.
+    WHAT:
+    Detects list comprehensions that call print() as their produced element.
 
-    List comprehensions are intended to create lists. If the result is not used,
-    this leads to unnecessary computation and may indicate a misuse for side effects.
+    WHY:
+    List comprehensions are intended to build lists. Using them only to execute
+    side effects makes the code harder to read and creates an unnecessary
+    intermediate list whose values are usually discarded.
 
-    Consider using a for loop for side effects or assigning/returning the result.
+    WHEN:
+    This is problematic when the comprehension is used as a standalone expression
+    or when the resulting list is not needed. It is especially relevant in scripts,
+    debugging code, and data-processing loops. If the list of return values is
+    intentionally used, the code should be reviewed manually.
+
+    HOW:
+    Replace the list comprehension with an explicit for loop. A for loop makes
+    the side effect clear and avoids constructing an unused list.
     """
     id = "PERF-002"
     title = "Useless list comprehension (unused result)"
@@ -108,13 +129,23 @@ class UselessListComprehension(Rule):
 
 class RedundantSortBeforeMinMax(Rule):
     """
-    Redundant use of sorted() before min() or max().
+    WHAT:
+    Detects calls where sorted() is passed directly to min() or max().
 
-    Calling sorted() before min() or max() is unnecessary, as these functions
-    already iterate over the data to find the result. Sorting adds extra
-    computational overhead without any benefit.
+    WHY:
+    Sorting the entire iterable is unnecessary when only the minimum or maximum
+    value is needed. min() and max() already scan the iterable and avoid the
+    extra cost of sorting.
 
-    Consider calling min() or max() directly on the iterable.
+    WHEN:
+    This is problematic for larger collections or performance-sensitive code,
+    where sorting adds avoidable time and memory overhead. It may be intentional
+    only if the sorted result is reused elsewhere, which is not the case when it
+    is passed directly into min() or max().
+
+    HOW:
+    Call min() or max() directly on the original iterable. Preserve any key or
+    default arguments where applicable.
     """
     id = "PERF-003"
     title = "Redundant sort before min/max"
@@ -137,13 +168,25 @@ class RedundantSortBeforeMinMax(Rule):
 
 class UnnecessaryCopy(Rule):
     """
-    Unnecessary copy of iterable or object detected.
+    WHAT:
+    Detects copy operations that appear to wrap an object or iterable without a
+    clear need.
 
-    Creating a copy without a clear reason introduces extra memory usage and
-    computational overhead. In many cases, the original object can be used directly
-    without affecting correctness.
+    WHY:
+    Unnecessary copies increase memory usage and add extra computation. They can
+    also make the code misleading by suggesting that isolation or mutation safety
+    is required when the original object could be used directly.
 
-    Consider removing the redundant copy operation.
+    WHEN:
+    This is relevant when the copied value is only read or immediately passed to
+    another operation that does not require a separate object. It may be incorrect
+    to remove the copy when the original object can be mutated later, when aliasing
+    matters, or when a defensive copy is intentionally used.
+
+    HOW:
+    Remove the redundant copy when the original object can be safely reused. If
+    the copy is intentional for mutation isolation or API safety, keep it and
+    document the reason or suppress the advisory finding.
     """
     id = "PERF-004"
     title = "Unnecessary copy of iterable or object"
@@ -174,14 +217,25 @@ class UnnecessaryCopy(Rule):
 
 class DoubleLoopSameCollection(Rule):
     """
-    Nested loops iterate over the same collection.
+    WHAT:
+    Detects nested loops that iterate over the same stable collection.
 
-    This pattern often leads to quadratic time complexity (O(n²)) and may cause
-    performance issues on larger datasets. In many cases, the logic can be
-    rewritten using a single pass, indexing, or more efficient data structures
-    such as sets or dictionaries.
+    WHY:
+    Nested iteration over the same collection often creates quadratic time
+    complexity. This can be acceptable for small inputs, but it becomes expensive
+    as the collection grows and may hide a more efficient algorithmic approach.
 
-    Consider refactoring to reduce time complexity.
+    WHEN:
+    This is most relevant in data processing, search, comparison, duplicate
+    detection, and matching logic over larger collections. It may be intentional
+    for pairwise comparison, matrix-like operations, or cases where every
+    combination must be inspected.
+
+    HOW:
+    Review whether the nested loop can be replaced with a single pass, indexing,
+    a set, a dictionary, grouping, or another data structure suited to lookup.
+    If all pairwise combinations are genuinely required, keep the loop and
+    document or suppress the advisory finding.
     """
     id = "PERF-005"
     title = "Nested loops over the same collection"
@@ -212,13 +266,25 @@ class DoubleLoopSameCollection(Rule):
 
 class LoopCouldBeComprehension(Rule):
     """
-    Loop can be expressed as a comprehension.
+    WHAT:
+    Detects simple loops that build a list, set, or dictionary and could likely
+    be expressed as a comprehension.
 
-    In some cases, loops that build collections can be rewritten using list,
-    set, or dictionary comprehensions. This often results in more concise and
-    idiomatic Python code.
+    WHY:
+    For straightforward collection construction, comprehensions are often more
+    concise and idiomatic in Python. They can make the transformation from input
+    to output clearer when the loop body is simple.
 
-    Consider using a comprehension if it improves readability.
+    WHEN:
+    This is useful for simple append/add/assignment patterns without complex
+    branching, side effects, or multi-step logic. It should not be applied when
+    a normal loop is clearer, when debugging is easier with explicit statements,
+    or when the loop performs meaningful side effects.
+
+    HOW:
+    Rewrite the loop as a list, set, or dictionary comprehension only if the result
+    is easier to read. If the explicit loop communicates the logic better, keep it
+    and suppress the advisory finding.
     """
     id = "PERF-006"
     title = "Loop could be a comprehension"
@@ -249,13 +315,24 @@ class LoopCouldBeComprehension(Rule):
 
 class JoinOnGenerator(Rule):
     """
-    join() builds an unnecessary intermediate list.
+    WHAT:
+    Detects str.join() calls that receive a list comprehension or list-wrapped
+    generator expression.
 
-    When passing values to join(), a generator expression is usually more efficient
-    than a list comprehension or list(...) wrapper, because it avoids creating
-    an extra temporary list in memory.
+    WHY:
+    join() can consume an iterable of strings directly. Building an intermediate
+    list is usually unnecessary and can increase memory usage, especially when
+    joining many values.
 
-    Consider using a generator expression inside join().
+    WHEN:
+    This is relevant when the list is created only for the join() call and is not
+    used elsewhere. It is most useful for large iterables or repeated join
+    operations. For very small inputs, the performance difference may be negligible.
+
+    HOW:
+    Pass a generator expression directly to join() instead of a list comprehension
+    or list(...) wrapper. Keep the list only if it is intentionally reused or
+    needed for debugging.
     """
     id = "PERF-007"
     title = "Use generator expression in join()"
