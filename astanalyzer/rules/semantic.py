@@ -47,13 +47,23 @@ from ..tools import is_builtin_print_call
 
 class AlwaysTrueConditionIf(Rule):
     """
-    This condition is always true.
+    WHAT:
+    Detects if statements whose condition can be determined as always true.
 
-    An always-true condition makes the surrounding 'if' statement redundant,
-    because the guarded block will always execute. This may indicate unnecessary
-    control flow, a logic mistake, or leftover debugging code.
+    WHY:
+    An always-true condition makes the if statement redundant because the guarded
+    block will always execute. This can hide leftover debugging code, obsolete
+    conditions, or a logic mistake where a real condition was intended.
 
-    Consider removing the condition and keeping only the body if this behavior is intentional.
+    WHEN:
+    This is usually relevant in normal application logic, tests, and validation
+    code. It may be intentional in temporary debugging code, generated code, or
+    code where a constant condition is used to keep a block visually isolated.
+
+    HOW:
+    Remove the redundant condition and keep the body if the behaviour is intended.
+    If a real condition was expected, replace the constant expression with the
+    correct condition before flattening the code.
     """
     id = "SEM-001"
     title = "Condition is always true"
@@ -75,12 +85,24 @@ class AlwaysTrueConditionIf(Rule):
 
 class AlwaysTrueConditionWhile(Rule):
     """
-    While loop condition is always true.
+    WHAT:
+    Detects while loops whose condition can be determined as always true.
 
-    This creates a potentially infinite loop, which may lead to high CPU usage
-    or a program that never terminates unless explicitly interrupted.
+    WHY:
+    An always-true while condition creates a potentially infinite loop. This can
+    cause non-terminating behaviour, high CPU usage, blocked execution, or code
+    that relies on hidden break statements to exit.
 
-    Ensure that this behavior is intentional, or consider adding a proper exit condition.
+    WHEN:
+    This is important in application logic, services, scripts, and loops that do
+    not clearly contain an exit path. It may be intentional in event loops,
+    servers, workers, REPLs, or loops that deliberately terminate through break,
+    return, exceptions, or external signals.
+
+    HOW:
+    Add an explicit exit condition when the loop should terminate normally. If the
+    infinite loop is intentional, make the exit mechanism clear and document or
+    suppress the advisory finding.
     """
     id = "SEM-002"
     title = "While condition is always true"
@@ -108,13 +130,21 @@ class AlwaysTrueConditionWhile(Rule):
 
 class CompareToNoneUsingEq(Rule):
     """
-    Comparison to None using '==' or '!='.
+    WHAT:
+    Detects comparisons to None using == or !=.
 
-    In Python, None should be compared using 'is' or 'is not', not equality
-    operators. Using '==' or '!=' can lead to incorrect behavior if an object
-    overrides equality semantics.
+    WHY:
+    None is a singleton in Python and should be compared by identity. Equality
+    operators can be affected by custom __eq__ implementations, which may produce
+    unexpected results or obscure the intended None check.
 
-    Consider replacing the comparison with 'is None' or 'is not None'.
+    WHEN:
+    This is relevant whenever code checks whether a value is absent or uninitialised.
+    It is rarely intentional to use == or != with None, except in unusual cases
+    where custom equality behaviour is explicitly being tested.
+
+    HOW:
+    Replace x == None with x is None, and x != None with x is not None.
     """
     id = "SEM-003"
     title = "Comparison to None using == or !="
@@ -139,12 +169,25 @@ class CompareToNoneUsingEq(Rule):
 
 class AssignmentInCondition(Rule):
     """
-    Assignment inside a condition using the walrus operator (':=').
+    WHAT:
+    Detects assignments inside if or while conditions using the walrus operator.
 
-    While valid in Python, assignments within conditions can reduce readability
-    and make the control flow harder to understand, especially in more complex expressions.
+    WHY:
+    Assignment inside a condition combines state change with control-flow
+    decision-making. Although valid Python, it can make the condition harder to
+    read and increases the chance that the assigned value or branch logic is
+    misunderstood.
 
-    Consider moving the assignment outside of the condition if it improves clarity.
+    WHEN:
+    This is most relevant in complex conditions, long expressions, or code written
+    for maintainability by a wider team. It may be acceptable when the assignment
+    is simple and idiomatic, such as while chunk := file.read(size): or if match
+    := pattern.search(text):.
+
+    HOW:
+    Move the assignment before the condition when clarity improves. Keep the walrus
+    operator only when it makes the code shorter without hiding the control-flow
+    logic, and suppress the advisory finding if intentional.
     """
     id = "SEM-004"
     title = "Assignment in condition (walrus)"
@@ -173,12 +216,24 @@ class AssignmentInCondition(Rule):
 
 class RedeclaredVariable(Rule):
     """
-    Variable is reassigned before its previous value is used.
+    WHAT:
+    Detects variables that are assigned again in the same block before the previous
+    assigned value is used.
 
-    This may indicate redundant code, a logical error, or an unintended overwrite.
-    The earlier assignment has no effect if its value is never used.
+    WHY:
+    The earlier assignment has no observable effect if its value is overwritten
+    before being read. This may indicate redundant code, a missed use of the first
+    value, or an accidental overwrite caused by reusing the same variable name.
 
-    Consider removing the unused assignment or renaming variables to clarify intent.
+    WHEN:
+    This is relevant in sequential logic, calculations, parsing, and data
+    transformation code. It may be intentional when a variable is deliberately
+    reinitialised for clarity, but that pattern should be obvious from context.
+
+    HOW:
+    Remove the earlier assignment if it is truly redundant. If both values are
+    needed, use the first value before reassignment or rename one of the variables
+    to make the intent clear.
     """
     id = "SEM-005"
     title = "Redeclared variable in the same scope"
@@ -210,13 +265,25 @@ class RedeclaredVariable(Rule):
 
 class ExceptionNotUsed(Rule):
     """
-    Exception is assigned to a variable but never used.
+    WHAT:
+    Detects except clauses that bind the caught exception to a variable but never
+    use that variable.
 
-    Binding an exception to a name in an 'except' clause is unnecessary if the
-    variable is not used. This may indicate leftover debugging code or a missed
-    opportunity to log or handle the exception details.
+    WHY:
+    Binding an exception name suggests that the exception object is important.
+    If it is never used, the alias adds noise and may indicate missing logging,
+    missing error handling, or leftover debugging code.
 
-    Consider removing the unused alias or using it meaningfully.
+    WHEN:
+    This is relevant when exception details should be logged, inspected, re-raised,
+    or included in an error response. It may be acceptable when the alias is a
+    placeholder during development, though using _ is clearer for intentionally
+    unused values.
+
+    HOW:
+    Remove the unused exception alias if the exception object is not needed. If
+    the details matter, use the variable for logging, diagnostics, wrapping, or
+    re-raising.
     """
     id = "SEM-006"
     title = "Exception bound in except-clause is not used"
@@ -248,13 +315,23 @@ class ExceptionNotUsed(Rule):
 
 class BareExcept(Rule):
     """
-    Bare 'except:' clause catches all exceptions.
+    WHAT:
+    Detects bare except: clauses that do not specify an exception type.
 
-    Using a bare 'except:' will catch all exceptions, including system-exiting
-    ones like KeyboardInterrupt and SystemExit. This can hide bugs and make
-    debugging difficult.
+    WHY:
+    A bare except catches all exceptions, including KeyboardInterrupt and
+    SystemExit. This can hide programming errors, make debugging harder, and
+    prevent expected shutdown or interruption behaviour.
 
-    Consider catching a more specific exception or using 'except Exception:' instead.
+    WHEN:
+    This is relevant in almost all application code. It may be intentional only at
+    very high-level crash boundaries, cleanup code, or defensive wrappers where all
+    exceptions must be captured and handled carefully.
+
+    HOW:
+    Catch a specific exception type whenever possible. If a broad handler is
+    needed, prefer except Exception: and ensure the exception is logged or handled
+    explicitly.
     """
     id = "SEM-007"
     title = "Bare except clause"
@@ -285,13 +362,23 @@ class BareExcept(Rule):
 
 class MutableDefaultArgument(Rule):
     """
-    Function uses a mutable object as a default argument.
+    WHAT:
+    Detects function parameters that use mutable objects such as lists,
+    dictionaries, or sets as default values.
 
-    Mutable default arguments (e.g. lists, dictionaries) are evaluated only once
-    at function definition time, not each time the function is called. This can
-    lead to unexpected behavior, as the same object is reused across calls.
+    WHY:
+    Default argument values are evaluated once when the function is defined, not
+    each time it is called. A mutable default can therefore be shared across calls,
+    causing state to leak between independent invocations.
 
-    Consider using None as the default and initializing the value inside the function.
+    WHEN:
+    This is important whenever the default object may be modified inside the
+    function or passed to code that can modify it. It may be intentional only when
+    shared state across calls is explicitly desired, which should be documented.
+
+    HOW:
+    Use None as the default value and create a new mutable object inside the
+    function when needed, for example: if value is None: value = [].
     """
     id = "SEM-008"
     title = "Mutable default argument"
@@ -314,12 +401,24 @@ class MutableDefaultArgument(Rule):
 
 class PrintDebugStatement(Rule):
     """
-    Debug print statement detected.
+    WHAT:
+    Detects print() calls used as standalone expression statements.
 
-    Using print() for debugging can leave unwanted output in production code,
-    make logs inconsistent, and expose internal details during execution.
+    WHY:
+    Debug print statements can leave unwanted output in production code, make
+    runtime output inconsistent, and bypass the project's logging configuration.
+    They may also expose internal values or make automated output harder to parse.
 
-    Consider removing the statement or replacing it with proper logging.
+    WHEN:
+    This is relevant in application code, libraries, services, and command-line
+    tools with structured output. It may be acceptable in small scripts, examples,
+    teaching code, or intentional CLI output, where print() is part of the user
+    interface rather than debugging.
+
+    HOW:
+    Remove temporary debug prints. For diagnostics, replace them with the logging
+    module or the project's logging abstraction. Keep print() only when it is
+    intentional user-facing output.
     """
     id = "SEM-009"
     title = "Print debug statement"

@@ -23,12 +23,26 @@ from ..rule import Rule
 
 class UnusedVariable(Rule):
     """
-    Assigned variable is never used.
+    WHAT:
+    Detects assignments where the assigned variable is never used.
 
-    This may indicate dead code, a mistake, or leftover debugging logic.
-    Keeping unused variables reduces code clarity and may hide logical issues.
+    WHY:
+    Unused variables introduce noise into the code and make it harder to
+    understand what values are actually relevant. They may also indicate
+    incomplete refactoring, forgotten logic, or mistakes where a value
+    was computed but never applied.
 
-    The assignment can be safely removed if the value has no important side effects.
+    WHEN:
+    This is problematic in most production code, especially in business logic,
+    where unused values may hide missing functionality or incorrect assumptions.
+    However, it may be intentional in cases such as debugging, placeholders,
+    or when calling functions for their side effects.
+
+    HOW:
+    Remove the assignment if the value is not needed. If the expression has
+    side effects (e.g. function calls), keep the expression and remove only
+    the assignment. If the variable is intentionally unused, consider documenting
+    it or suppressing the finding.
     """
     id = "DEAD-001"
     title = "Unused variable"
@@ -50,12 +64,26 @@ class UnusedVariable(Rule):
 
 class UnreachableCode(Rule):
     """
-    Unreachable code detected after a terminal statement.
+    WHAT:
+    Detects statements that appear after a terminal control flow operation
+    such as return, raise, break, or continue.
 
-    Code appearing after return, raise, break, or continue will never be executed.
-    This may indicate a logical error, leftover code, or incorrect control flow.
+    WHY:
+    Code after a terminal statement will never be executed, which makes it
+    dead code. This can indicate logical errors, incomplete refactoring,
+    or misplaced statements. Keeping unreachable code reduces clarity and
+    may mislead readers about the actual behaviour of the program.
 
-    Consider removing or restructuring the unreachable code.
+    WHEN:
+    This is almost always a real issue, particularly in functions with
+    complex control flow. Exceptions may include intentionally unreachable
+    code used for debugging, documentation, or conditional execution patterns
+    that are not statically visible, though such cases should be explicit.
+
+    HOW:
+    Remove the unreachable statements or restructure the control flow so that
+    the intended logic is executed. Ensure that any important operations are
+    placed before the terminal statement.
     """
     id = "DEAD-002"
     title = "Unreachable code after return/raise/break/continue"
@@ -82,12 +110,28 @@ class UnreachableCode(Rule):
 
 class UnusedAssignmentKeepValue(Rule):
     """
-    Assigned variable is never used.
+    WHAT:
+    Detects assignments where the assigned variable is never used, but the
+    assigned expression may have side effects.
 
-    This may indicate dead code, a mistake, or leftover debugging logic.
-    Keeping unused variables reduces code clarity and may hide logical issues.
+    WHY:
+    Removing an unused assignment blindly can change program behaviour if
+    the assigned expression performs side effects (e.g. function calls,
+    I/O operations). This rule identifies such cases and allows preserving
+    the expression while removing the unused variable.
 
-    The assignment is removed while preserving the original expression to keep side effects.
+    WHEN:
+    This is relevant when the assigned value is unused but the right-hand
+    side expression may still be important. It is especially useful in
+    code that performs logging, mutations, or external calls as part of
+    an assignment. It is less relevant for pure expressions without side
+    effects.
+
+    HOW:
+    Replace the assignment with the original expression to preserve side
+    effects while removing the unused variable. If no side effects are
+    expected, the entire assignment can be safely removed. For complex
+    assignments, manual review is recommended.
     """
     id = "DEAD-003"
     title = "Unused assignment (keep value)"

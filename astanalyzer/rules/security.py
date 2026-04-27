@@ -40,14 +40,25 @@ from ..tools import (
 
 class UseOfEval(Rule):
     """
-    Use of eval() or exec() detected.
+    WHAT:
+    Detects calls to eval() or exec(), including explicit access through builtins.
 
-    Dynamic code execution is unsafe, especially when handling untrusted input.
-    It can lead to code injection vulnerabilities and allow attackers to execute
-    arbitrary code.
+    WHY:
+    eval() and exec() execute dynamic Python code. If any part of the executed
+    string can be influenced by external or untrusted input, the program may allow
+    arbitrary code execution. Even with trusted input, dynamic execution makes the
+    code harder to reason about, test, and secure.
 
-    Avoid using eval() or exec(). Prefer safer alternatives such as explicit
-    parsing, dispatch tables, or controlled execution mechanisms.
+    WHEN:
+    This is critical when input comes from users, files, network data, databases,
+    configuration, or any external source. It may be acceptable only in highly
+    controlled internal tooling, sandboxes, educational examples, or plugin systems
+    with strict isolation and clear trust boundaries.
+
+    HOW:
+    Avoid dynamic code execution. Use explicit parsing, dispatch tables, normal
+    function calls, or controlled plugin loading instead. If eval() is only used
+    to parse Python literals, replace it with ast.literal_eval().
     """
     id = "SEC-001"
     title = "Use of eval()/exec()"
@@ -91,13 +102,25 @@ class UseOfEval(Rule):
 
 class EvalLiteralParsingCandidate(Rule):
     """
-    This eval() call appears to be used for parsing Python literals.
+    WHAT:
+    Detects eval() calls that appear to be used for parsing Python literal values.
 
-    Using eval() for literal parsing is unsafe, as it can execute arbitrary code.
-    If the input consists only of Python literals (e.g. strings, numbers, lists,
-    dictionaries), ast.literal_eval() provides a safe alternative.
+    WHY:
+    Using eval() for parsing is unsafe because it can execute arbitrary Python code,
+    not only read data. This creates an unnecessary security risk when the expected
+    input is limited to simple literals such as strings, numbers, lists, tuples, or
+    dictionaries.
 
-    Consider replacing eval() with ast.literal_eval().
+    WHEN:
+    This is relevant when eval() receives data that represents a Python literal,
+    especially data loaded from files, user input, logs, configuration, or network
+    sources. It should not be blindly replaced if the expression intentionally
+    contains executable Python code, although such design should be reviewed.
+
+    HOW:
+    Replace eval() with ast.literal_eval() when the input is expected to contain
+    only Python literals. If the input format is not Python-specific, prefer a
+    dedicated parser such as json.loads() for JSON data.
     """
     id = "SEC-002"
     title = "eval() may be replaced with ast.literal_eval()"
@@ -124,14 +147,25 @@ class EvalLiteralParsingCandidate(Rule):
 
 class UseOfOsSystem(Rule):
     """
-    Use of os.system() or os.popen() detected.
+    WHAT:
+    Detects shell command execution through os.system() or os.popen().
 
-    Shell-based command execution can be unsafe, especially when handling
-    untrusted input, as it may lead to command injection vulnerabilities.
-    Additionally, these APIs are limited and less flexible.
+    WHY:
+    Shell-based execution is risky because command strings can be vulnerable to
+    command injection when they include external input. These APIs also provide
+    limited control over arguments, errors, output handling, and return values
+    compared with the subprocess module.
 
-    Consider using the subprocess module instead, which provides safer and
-    more controlled process execution.
+    WHEN:
+    This is especially dangerous when command strings contain user input, file
+    names, environment values, or data from external systems. It may be acceptable
+    for small trusted scripts, but production code should still prefer explicit
+    process execution through subprocess.
+
+    HOW:
+    Use subprocess.run() or subprocess.Popen() instead. Prefer passing arguments
+    as a list with shell=False. If shell=True is required, validate and quote all
+    inputs carefully and handle errors explicitly, for example with check=True.
     """
     id = "SEC-003"
     title = "Use of os.system()"
@@ -188,13 +222,26 @@ class UseOfOsSystem(Rule):
 
 class HardcodedPasswordOrKey(Rule):
     """
-    Possible hardcoded secret detected.
+    WHAT:
+    Detects assignments that appear to store passwords, tokens, API keys, or other
+    secrets directly in source code.
 
-    Storing passwords, API keys, or tokens directly in source code is insecure,
-    as it may expose sensitive data in version control or logs. This increases
-    the risk of unauthorized access.
+    WHY:
+    Secrets committed to source code can be exposed through version control,
+    logs, backups, package distributions, or shared repositories. Once exposed,
+    they may allow unauthorised access and usually must be rotated.
 
-    Consider moving secrets to environment variables or a secure configuration system.
+    WHEN:
+    This is critical for real credentials, production tokens, private keys, and
+    access secrets. It may be a false positive for placeholder values, tests,
+    documentation examples, or non-secret variables with names such as "key" that
+    do not contain sensitive data.
+
+    HOW:
+    Move secrets out of source code. Use environment variables, secret managers,
+    deployment configuration, or encrypted configuration storage. If the value is
+    only a placeholder or test fixture, make that explicit and suppress the finding
+    where appropriate.
     """
     id = "SEC-004"
     title = "Hardcoded password / key / token"
@@ -227,13 +274,25 @@ class HardcodedPasswordOrKey(Rule):
 
 class InsecureRandom(Rule):
     """
-    Insecure use of the random module.
+    WHAT:
+    Detects use of functions from the random module in contexts that may require
+    unpredictable random values.
 
-    The random module is not designed for security-sensitive purposes and may
-    produce predictable values. Using it for tokens, passwords, or security-related
-    operations can lead to vulnerabilities.
+    WHY:
+    The random module is designed for simulations and general-purpose randomness,
+    not security. Its output can be predictable and should not be used for tokens,
+    passwords, session identifiers, cryptographic keys, or other security-sensitive
+    values.
 
-    Consider using the secrets module or os.urandom() for secure random values.
+    WHEN:
+    This is important whenever random values protect access, identity, secrets, or
+    security decisions. It is usually acceptable for games, simulations, sampling,
+    tests, visual effects, or non-security-related randomisation.
+
+    HOW:
+    Use the secrets module for tokens, passwords, and security-sensitive choices.
+    Use os.urandom() or cryptographic libraries when raw secure random bytes are
+    required. Keep random only for non-security use cases.
     """
     id = "SEC-005"
     title = "Insecure use of random module"
@@ -262,13 +321,26 @@ class InsecureRandom(Rule):
 
 class OpenWithoutWith(Rule):
     """
-    open() is used without a context manager.
+    WHAT:
+    Detects calls to open() that are not used inside a with or async with context
+    manager.
 
-    Opening files without a context manager may lead to resource leaks if the file
-    is not properly closed, especially in case of errors. Using 'with open(...)'
-    ensures that the file is automatically closed.
+    WHY:
+    Files opened without a context manager may not be closed correctly if an
+    exception occurs or if the function exits early. This can cause resource leaks,
+    locked files, incomplete writes, or inconsistent behaviour in long-running
+    programs.
 
-    Consider using a context manager for safer resource handling.
+    WHEN:
+    This is most relevant in production code, repeated file processing, services,
+    and code that opens many files. It may be acceptable when the file object is
+    returned to the caller, managed by another owner, or deliberately kept open
+    for a longer lifetime.
+
+    HOW:
+    Use a context manager, for example with open(...) as f:, so the file is closed
+    automatically. If ownership is intentionally transferred or managed elsewhere,
+    document that decision or suppress the finding.
     """
     id = "SEC-006"
     title = "open() used without context manager"
