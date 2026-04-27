@@ -1,6 +1,6 @@
-# Limitations
-
 [Back to README](../README.md) | [Previous: Ignoring Findings](ignoring-findings.md)
+
+# Limitations
 
 AstAnalyzer is designed for practical static analysis and controlled refactoring. Some limitations are intentional.
 
