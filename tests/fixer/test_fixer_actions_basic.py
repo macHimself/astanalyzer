@@ -52,3 +52,28 @@ def test_remove_dead_code_after_return(parse_code):
 
     assert "x = 2" not in proposal.suggestion
     assert "return 1" in proposal.suggestion
+
+
+def test_review_note_and_ignore_inserts_note_and_ignore(parse_code):
+    module = parse_code(
+        """
+def foo(a, b, c, d, e, f):
+    return a
+"""
+    )
+    node = module.body[0]
+
+    proposal = (
+        fix()
+        .add_review_note_and_ignore("CX-001", "Too many parameters.")
+        .because("test")
+        .build(node)
+    )
+
+    assert "# Too many parameters." in proposal.suggestion
+    assert "# astanalyzer: ignore-next CX-001" in proposal.suggestion
+
+    lines = proposal.suggestion.splitlines()
+    assert lines[0] == "# Too many parameters."
+    assert lines[1] == "# astanalyzer: ignore-next CX-001"
+    assert lines[2].startswith("def foo")

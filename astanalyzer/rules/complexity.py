@@ -54,16 +54,16 @@ class TooManyArguments(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_comment(
+            .add_review_note_and_ignore(
+                "CX-001",
                 lambda node: (
-                    f"# Function has {function_arg_count(node, ignore_bound_first_arg=True, ignore_init=True)} parameters "
-                    # f"# Function has {function_arg_count(node)} parameters "
+                    f"Function has {function_arg_count(node, ignore_bound_first_arg=True, ignore_init=True)} parameters "
                     f"(recommended <= {self.MAX_ARGS}). "
                     "Consider grouping related parameters into an object/dataclass "
                     "or splitting the function into smaller responsibilities."
-                )
+                ),
             )
-            .because("Function has too many parameters.")
+            .because("Add a review note and suppress this advisory complexity finding.")
         ]
 
 
@@ -98,14 +98,18 @@ class TooDeepNesting(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_comment(
+            .add_review_note_and_ignore(
+                "CX-002",
                 lambda node: (
-                    f"# Nesting depth >= {self.MAX_DEPTH}. "
-                    "Consider guard clauses, early return/continue, "
-                    "or extracting nested logic into a helper."
-                )
+                    "Nested control flow is too deep. "
+                    "Consider extracting part of the logic into a helper function, "
+                    "using guard clauses, or simplifying conditional branches."
+                ),
             )
-            .because("Control flow is nested too deeply.")
+            .because(
+                "Add a review note and suppress this advisory complexity finding "
+                "until the nested control flow is manually refactored."
+            )
         ]
 
 
@@ -137,14 +141,17 @@ class FunctionTooLong(Rule):
         ]
         self.fixer_builders = [
             fix()
-            .insert_comment(
+            .add_review_note_and_ignore(
+                "CX-003",
                 lambda node: (
-                    f"# Function is longer than {self.MAX_LINES} lines. "
-                    "Consider refactoring it into smaller helper functions "
-                    "or splitting it by responsibility."
-                )
+                    f"Function has {len(getattr(node, 'body', []))} top-level statements. "
+                    "Consider splitting it into smaller functions with focused responsibilities."
+                ),
             )
-            .because("Long functions are harder to read, test, and maintain.")
+            .because(
+                "Add a review note and suppress this advisory complexity finding "
+                "until the function is manually refactored."
+            )
         ]
 
 

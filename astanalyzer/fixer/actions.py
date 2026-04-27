@@ -58,6 +58,7 @@ class FixerActionsMixin:
             "ensure_import": self._apply_ensure_import,
             "replace_os_system_with_subprocess_template": self._apply_replace_os_system_with_subprocess_template,
             "replace_os_system_with_subprocess_run": self._apply_replace_os_system_with_subprocess_run,
+            "review_note_and_ignore": self._apply_review_note_and_ignore,
         }
         handler = dispatch.get(action.kind)
         if handler:
@@ -341,6 +342,22 @@ class FixerActionsMixin:
     def _apply_comment_after(self, node: Any, action: FixAction, context: FixContext) -> None:
         indent = " " * getattr(node, "col_offset", 0)
         context.suggestion_lines.append(f"{indent}# {action.params['text']}")
+
+    def _apply_review_note_and_ignore(self, node: Any, action: FixAction, context: FixContext) -> None:
+        indent = " " * getattr(node, "col_offset", 0)
+
+        rule_id = action.params["rule_id"]
+        text_builder = action.params["text"]
+
+        text = text_builder(node) if callable(text_builder) else text_builder
+        if not text:
+            return
+
+        if not text.lstrip().startswith("#"):
+            text = f"# {text}"
+
+        context.suggestion_lines.insert(0, f"{indent}# astanalyzer: ignore-next {rule_id}")
+        context.suggestion_lines.insert(0, f"{indent}{text}")
 
     def _apply_add_docstring(self, node: Any, action: FixAction, context: FixContext) -> None:
         doc = action.params["text"]
