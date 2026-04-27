@@ -68,6 +68,9 @@ function describeAction(action) {
       if (label) return label;
       if (note) return note;
       return "Insert a generated comment before the node.";
+    
+    case "review_note_and_ignore":
+      return "Add a review note and suppress this finding.";
 
     case "insert_before":
       return text ? "Insert before the node: " + text : "Insert content before the node.";
@@ -114,7 +117,10 @@ function buildHumanFixText(fx) {
 }
 
 function shortFixSummary(fx) {
-  const text = buildHumanFixText(fx).trim();
+  const text = buildHumanFixText(fx)
+    .replaceAll("\\n", " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!text) return "Review proposed change";
   if (text.length <= 90) return text;

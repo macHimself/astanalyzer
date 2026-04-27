@@ -124,6 +124,19 @@ class FixerBuilder(ProposalBuilder, FixerActionsMixin):
     def comment_on_function(self, text: str) -> "FixerBuilder":
         self.actions.append(FixAction("comment_on_function", {"text": text}))
         return self
+    
+    def add_review_note_and_ignore(self, rule_id: str, text_builder):
+        """Insert a review note and suppress the finding for the next scan."""
+        self.actions.append(
+            FixAction(
+                "review_note_and_ignore",
+                {
+                    "rule_id": rule_id,
+                    "text": text_builder,
+                },
+            )
+        )
+        return self
 
     def remove_line(self) -> "FixerBuilder":
         self.actions.append(FixAction("remove_line"))
