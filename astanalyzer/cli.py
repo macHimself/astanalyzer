@@ -397,19 +397,47 @@ def resolve_selected_input(
     required: bool = True,
 ) -> Path | None:
     """
-    Resolve a selected fixes JSON file from an explicit path or known fallbacks.
+    Resolve the selected findings JSON file from multiple possible sources.
 
     The resolution follows this priority:
-        1. Explicit CLI path, when provided
-        2. ``astanalyzer-selected.json`` in the current working directory
-        3. ``selected.json`` in the current working directory
-        4. Newest matching file in ``~/Downloads`` (``astanalyzer-selected*.json``)
+        1. Explicit CLI path (if provided)
+        2. Working directory ('astanalyzer-selected.json' or 'selected.json')
+        3. Newest matching file in '~/Downloads' ('astanalyzer-selected*.json')
 
-    If a file is found in the Downloads directory and ``copy_from_downloads``
-    is enabled, it is copied into the current working directory and removed
-    from Downloads. When ``required`` is False, missing fallback files return
-    None instead of terminating the command.
+    If a resolved file is outside the current working directory and
+    `copy_from_downloads` is enabled, it is copied into the current working
+    directory and removed from its original location. This also applies to an
+    explicit path such as '~/Downloads/astanalyzer-selected.json'.
+
+    Args:
+        selected_arg (str | None): Optional explicit path to the selected JSON file.
+        copy_from_downloads (bool): If True, copy the resolved file into
+            the working directory and delete the original when it is outside
+            the working directory. If False, use the file in-place. Defaults
+            to True.
+        required (bool): If True, terminate the command when no selected JSON
+            can be resolved. If False, return None when no fallback file exists.
+
+    Returns:
+        Path | None: Path to the resolved selected JSON file, or None when
+        `required` is False and no file is found.
+
+    Raises:
+        SystemExit: If no valid selected JSON file is found and `required` is
+        True, or if the provided path is invalid.
+
+    Side Effects:
+        - May copy a file into the working directory.
+        - May overwrite an existing file in the working directory.
+        - May delete the original file after a successful copy.
+        - Emits log messages describing resolution steps.
+
+    Notes:
+        - Files are selected from Downloads based on the most recent modification time.
+        - The function prefers local files over Downloads when no explicit path is provided.
     """
+    cwd = Path.cwd().resolve()
+
     if selected_arg:
         p = Path(selected_arg).expanduser().resolve()
         if not p.exists():
@@ -418,9 +446,21 @@ def resolve_selected_input(
         if not p.is_file():
             log.error("Selected path '%s' is not a file.", p)
             sys.exit(1)
-        return p
 
-    cwd = Path.cwd()
+        target = (cwd / p.name).resolve()
+
+        if copy_from_downloads and p != target:
+            if target.exists():
+                log.warning("Overwriting existing file in working directory: %s", target)
+
+            shutil.copy2(p, target)
+            if p.exists():
+                p.unlink()
+
+            log.info("Moved selected JSON into working directory: %s -> %s", p, target)
+            return target
+
+        return p
 
     local_candidates = [
         cwd / "astanalyzer-selected.json",
@@ -429,7 +469,7 @@ def resolve_selected_input(
     for candidate in local_candidates:
         if candidate.exists() and candidate.is_file():
             log.info("Using selected JSON from working directory: %s", candidate)
-            return candidate
+            return candidate.resolve()
 
     downloads = Path.home() / "Downloads"
     if not downloads.exists() or not downloads.is_dir():
@@ -457,13 +497,13 @@ def resolve_selected_input(
         )
         sys.exit(1)
 
-    newest = candidates[0]
+    newest = candidates[0].resolve()
 
     if not copy_from_downloads:
         log.info("Using selected JSON directly from Downloads: %s", newest)
-        return newest.resolve()
+        return newest
 
-    target = cwd / newest.name
+    target = (cwd / newest.name).resolve()
 
     if target.exists():
         try:
@@ -503,7 +543,6 @@ def resolve_selected_cli_argument(
         return deprecated_selected_path
 
     return positional_path
-
 
 def ensure_final_newline(path: Path) -> None:
     """
@@ -905,6 +944,9 @@ def cmd_patch(args: argparse.Namespace) -> None:
         getattr(args, "deprecated_selected", None),
     )
     selected = resolve_selected_input(selected_arg)
+    if selected is None:
+        log.error("Selected JSON could not be resolved.")
+        sys.exit(1)
     log.info("Using selected JSON: %s", selected)
 
     try:
@@ -1049,9 +1091,10 @@ def cmd_archive(args: argparse.Namespace) -> None:
         getattr(args, "selected_json_path", None),
         getattr(args, "deprecated_selected", None),
     )
+
     selected_path = resolve_selected_input(
         selected_arg,
-        copy_from_downloads=False,
+        copy_from_downloads=True,
         required=False,
     )
 
@@ -1081,7 +1124,6 @@ def cmd_archive(args: argparse.Namespace) -> None:
     print(f"Archived files:    {len(archived_files)}")
     print(f"Archived patches:  {archived_patches}")
     print()
-
 
 def cmd_clean(args: argparse.Namespace) -> None:
     """
@@ -1295,6 +1337,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="selected_json_path",
         help="Selected fixes JSON file used to resolve project_root for patch archiving",
+    )
+    archive_parser.add_argument(
+        "--selected",
+        dest="deprecated_selected",
+        help="Deprecated alias for selected_json_path",
     )
     archive_parser.set_defaults(func=cmd_archive)
 
