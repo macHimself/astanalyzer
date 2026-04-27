@@ -1,3 +1,66 @@
+function parseRuleExplanation(text) {
+  if (!text) {
+    return null;
+  }
+
+  const cleaned = String(text).trim();
+  const markerPattern = /\b(WHAT|WHY|WHEN|HOW):/g;
+  const matches = [...cleaned.matchAll(markerPattern)];
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const result = {};
+
+  matches.forEach((match, index) => {
+    const key = match[1].toLowerCase();
+    const start = match.index + match[0].length;
+    const end = index + 1 < matches.length
+      ? matches[index + 1].index
+      : cleaned.length;
+
+    result[key] = cleaned.slice(start, end).trim();
+  });
+
+  return result;
+}
+
+function renderRuleDescription(message) {
+  const descDetails = document.createElement("details");
+  descDetails.className = "nested-details rule-description";
+  descDetails.open = false;
+
+  const explanation = parseRuleExplanation(message);
+
+  if (!explanation) {
+    descDetails.innerHTML = `
+      <summary>Rule description</summary>
+      <div class="desc">${escapeHtml(message)}</div>
+    `;
+    return descDetails;
+  }
+
+  const section = (key, title) => explanation[key] ? `
+    <div class="expl-section expl-${key}">
+      <div class="expl-title">${title}</div>
+      <div class="expl-text">${escapeHtml(explanation[key])}</div>
+    </div>
+  ` : "";
+
+  descDetails.innerHTML = `
+    <summary>Rule explanation</summary>
+    <div class="rule-expl">
+      ${section("what", "What was detected")}
+      ${section("why", "Why it matters")}
+      ${section("when", "When it matters")}
+      ${section("how", "How to fix")}
+    </div>
+  `;
+
+  return descDetails;
+}
+
 function renderRuleFirst(visible) {
   const grouped = groupFindingsRuleFirst(visible);
 
@@ -31,13 +94,7 @@ function renderRuleFirst(visible) {
 
         const ruleDescription = rule.findings[0]?.message?.trim();
         if (ruleDescription) {
-          const descDetails = document.createElement("details");
-          descDetails.className = "nested-details";
-          descDetails.innerHTML = `
-            <summary>Rule description</summary>
-            <div class="desc">${escapeHtml(ruleDescription)}</div>
-          `;
-          ruleBody.appendChild(descDetails);
+          ruleBody.appendChild(renderRuleDescription(ruleDescription));
         }
 
         rule.files.forEach((fileItem) => {
