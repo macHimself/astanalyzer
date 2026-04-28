@@ -19,6 +19,9 @@ OUT_DIR="$PROJECT_ROOT/benchmark/results/$TIMESTAMP"
 
 mkdir -p "$OUT_DIR"
 
+EVALUATOR="$OUT_DIR/evaluate.py"
+cp "$PROJECT_ROOT/benchmark/evaluate.py" "$EVALUATOR"
+
 echo "Output directory: $OUT_DIR"
 
 run_scan () {
@@ -73,7 +76,7 @@ EOF
 echo ""
 echo "== Evaluating =="
 
-python "$PROJECT_ROOT/benchmark/evaluate.py" \
+python "$EVALUATOR" \
   "$OUT_DIR/before.json" \
   "$OUT_DIR/after.json" \
   > "$OUT_DIR/summary.txt"
