@@ -33,3 +33,16 @@ def test_archive_parser_accepts_command():
     ])
 
     assert args.command == "archive"
+
+
+def test_scan_parser_accepts_policy_argument():
+    parser = build_parser()
+
+    args = parser.parse_args([
+        "scan",
+        ".",
+        "--policy",
+        "ci",
+    ])
+
+    assert args.policy == "ci"
