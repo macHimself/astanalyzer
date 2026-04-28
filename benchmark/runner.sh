@@ -13,7 +13,9 @@ fi
 echo "== ASTANALYZER BENCHMARK =="
 
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-OUT_DIR="benchmark/results/$TIMESTAMP"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+OUT_DIR="$PROJECT_ROOT/benchmark/results/$TIMESTAMP"
 
 mkdir -p "$OUT_DIR"
 
@@ -71,7 +73,7 @@ EOF
 echo ""
 echo "== Evaluating =="
 
-python benchmark/evaluate.py \
+python "$PROJECT_ROOT/benchmark/evaluate.py" \
   "$OUT_DIR/before.json" \
   "$OUT_DIR/after.json" \
   > "$OUT_DIR/summary.txt"
