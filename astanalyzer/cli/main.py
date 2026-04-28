@@ -151,6 +151,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not open HTML report automatically after scan",
     )
+    scan_parser.add_argument(
+    "--policy",
+    choices=["default", "ci", "strict"],
+    default="default",
+    help="Severity policy profile to apply during scan",
+    )
     add_rules_argument(scan_parser)
     add_scan_filter_arguments(scan_parser)
     scan_parser.set_defaults(func=cmd_scan)

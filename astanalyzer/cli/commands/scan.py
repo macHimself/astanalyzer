@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ...engine import get_list_of_files_in_project, load_project, run_rules_on_project_report
 from ...file_selection import parse_excluded_dir_names
+from ...policy import get_policy 
 from ...report_ui import open_report_in_browser, write_report_html
 from ..utils.files import validate_path
 from ..utils.output import print_section
@@ -54,11 +55,14 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
     selected_rules = getattr(args, "selected_rules", None)
 
+    policy = get_policy(args.policy)
+
     report, scan = run_rules_on_project_report(
         project,
         True,
         False,
         rules=selected_rules,
+        policy=policy,
     )
 
     json_path = Path("scan_report.json").resolve()
