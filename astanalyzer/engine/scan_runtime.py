@@ -28,6 +28,7 @@ from colorama import init
 from ..anchor import build_anchor
 from ..fixer import FixProposal
 from ..ignore_rules import is_ignored_for_node
+from ..policy import PolicyProfile, get_policy, apply_policy
 from ..rule import Rule
 from ..tools import trailing_whitespace_line_numbers
 
@@ -518,6 +519,7 @@ def run_rules_on_project_report(
     build_plans=True,
     build_fixes=False,
     rules: list[Rule] | None = None,
+    policy: PolicyProfile | None = None,
 ) -> tuple[AnalysisReport, dict[str, Any]]:
     """
     Run project analysis and return both aggregated report data and scan JSON.
@@ -539,6 +541,9 @@ def run_rules_on_project_report(
         rules=rules,
     )
 
+    policy = policy or get_policy("default")
+    findings = apply_policy(findings, policy)
+
     project_root = getattr(project, "root_dir", None)
     if not project_root:
         raise ValueError("ProjectNode.root_dir is not set")
@@ -546,12 +551,17 @@ def run_rules_on_project_report(
     report.add_findings(findings)
     report.stop()
 
-    return report, build_scan_json(findings, project_root=Path(project_root))
+    return report, build_scan_json(
+        findings, 
+        project_root=Path(project_root),
+        policy_name=policy.name
+    )
 
 
 def run_rules_on_project_scan_json(
     project: ProjectNode,
     rules: list[Rule] | None = None,
+    policy: PolicyProfile | None = None,
 ) -> Dict[str, Any]:
     """
     Run project analysis and return only normalized scan JSON output.
@@ -562,6 +572,9 @@ def run_rules_on_project_scan_json(
         build_fixes=False,
         rules=rules,
     )
+
+    policy = policy or get_policy("default")
+    findings = apply_policy(findings, policy)
 
     project_root = getattr(project, "root_dir", None)
     if not project_root:
