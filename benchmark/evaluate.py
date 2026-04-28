@@ -2,6 +2,18 @@ import json
 import sys
 from collections import Counter
 
+
+CATEGORY_BY_PREFIX = {
+    "STYLE": "style",
+    "DEAD": "dead_code",
+    "SEM": "semantic",
+    "CX": "complexity",
+    "PERF": "performance",
+    "SEC": "security",
+    "RES": "resource",
+}
+
+
 if len(sys.argv) != 3:
     print("Usage: python evaluate.py before.json after.json")
     sys.exit(1)
@@ -12,6 +24,11 @@ def load(path):
         return json.load(f)
 
 
+def category_from_rule_id(rule_id):
+    prefix = rule_id.split("-", 1)[0]
+    return CATEGORY_BY_PREFIX.get(prefix, "unknown")
+
+
 def stats(report):
     findings = report.get("findings", [])
 
@@ -19,7 +36,9 @@ def stats(report):
         "total": len(findings),
         "by_rule": Counter(f["rule_id"] for f in findings),
         "by_severity": Counter(f["severity"] for f in findings),
-        "by_category": Counter(f.get("category", "unknown") for f in findings),
+        "by_category": Counter(
+            category_from_rule_id(f["rule_id"]) for f in findings
+        ),
     }
 
 
