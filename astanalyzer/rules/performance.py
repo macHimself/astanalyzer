@@ -156,7 +156,6 @@ class RedundantSortBeforeMinMax(Rule):
     def __init__(self):
         super().__init__()
         self.matchers = [
-            # match("Call").where_call(name={"min", "max"}).has_arg("func", "sorted")
             match("Call").satisfies(is_redundant_sorted_before_minmax)
         ]
         self.fixer_builders = [
@@ -247,9 +246,6 @@ class DoubleLoopSameCollection(Rule):
         super().__init__()
         self.matchers = [
             match("For").where("__custom_condition__", is_nested_loop_same_stable_collection)
-            # match("For")
-            # .capture_ancestor("outer", "For")
-            # .same_iter_as_ancestor("outer")
         ]
         self.fixer_builders = [
             fix()

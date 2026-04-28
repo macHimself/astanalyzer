@@ -55,10 +55,6 @@ class TooManyArguments(Rule):
 
     def __init__(self):
         super().__init__()
-        # self.matchers = [
-        #     match("FunctionDef|AsyncFunctionDef")
-        #     .where("__custom_condition__", arg_count_gt(self.MAX_ARGS))
-        # ]
         self.matchers = [
             match("FunctionDef|AsyncFunctionDef").where(
                 "__custom_condition__",
@@ -178,9 +174,6 @@ class FunctionTooLong(Rule):
         self.matchers = [
             match("FunctionDef|AsyncFunctionDef").satisfies(
                 lambda node: count_relevant_statements(node) > self.MAX_LINES
-                # lambda node: hasattr(node, "lineno")
-                # and hasattr(node, "end_lineno")
-                # and (node.end_lineno - node.lineno + 1) > self.MAX_LINES
             )
         ]
         self.fixer_builders = [
