@@ -122,3 +122,40 @@ astanalyzer apply
 ### Reference
 
 - [Limitations](docs/limitations.md) — known constraints  
+
+---
+
+## Benchmark
+
+AstAnalyzer provides a simple benchmark setup for evaluating the impact of rule changes.
+
+The benchmark compares two versions of the analyzer (e.g. a baseline tag and an improved branch) on the same project and commit.
+
+Run:
+
+```bash
+./benchmark/runner.sh /path/to/project before-ref after-ref
+```
+
+Example:
+
+```bash
+./benchmark/runner.sh ~/projects/test-project before-rules-merge improvements
+```
+
+Results are stored in:
+
+```
+benchmark/results/<timestamp>/
+```
+
+Each run includes:
+
+- before/after findings (`.json`)
+- summary comparison
+- execution time
+- metadata for reproducibility
+
+For more details, see:
+
+[Benchmark documentation](benchmark/README.md)
