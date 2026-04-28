@@ -90,6 +90,62 @@ Rule filters are applied in the following order:
 
 This means that `--include` can restore rules that were previously excluded.
 
+## Scan policy
+
+AstAnalyzer supports policy profiles that control how findings are evaluated.
+
+Policies do not change which issues are detected. Instead, they define how
+severity levels are interpreted in different contexts (e.g. local development vs CI).
+
+### Usage
+
+```bash
+astanalyzer scan . --policy default
+astanalyzer scan . --policy ci
+astanalyzer scan . --policy strict
+```
+
+### Available policies
+
+#### `default`
+
+Uses rule-defined severity without modification.
+
+#### `ci`
+
+Promotes security findings to errors.
+
+```text
+SECURITY: warning → error
+```
+
+#### `strict`
+
+Applies stricter enforcement for critical categories.
+
+```text
+SECURITY → error
+SEMANTIC → error
+RESOURCE → error
+```
+
+### How it works
+
+The scan pipeline consists of two phases:
+
+```text
+rules → findings → policy → report
+```
+
+Rules detect issues and assign default severity. The selected policy can
+override these values before results are reported.
+
+### Notes
+
+- Policies do not filter findings.
+- Use `--exclude` or `--only` for filtering.
+- Policies only affect severity and reporting behaviour.
+
 ## Patch generation
 
 Generate patch files from the exported selected JSON plan:

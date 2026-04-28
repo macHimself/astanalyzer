@@ -277,7 +277,11 @@ def _relpath(p: Path, project_root: Path | None = None) -> str:
     return to_project_relative_path(p, project_root=project_root)
 
 
-def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, Any]:
+def build_scan_json(
+    findings: List[Finding], 
+    project_root: Path,
+    policy_name: str = "default"
+) -> Dict[str, Any]:
     """
     Build normalized scan report JSON from collected findings.
 
@@ -285,7 +289,11 @@ def build_scan_json(findings: List[Finding], project_root: Path) -> Dict[str, An
     associated fix builders into their serialized report representation.
     """
     project_root = Path(project_root).resolve()
-    out: Dict[str, Any] = {"project_root": str(project_root), "findings": []}
+    out: Dict[str, Any] = {
+        "project_root": str(project_root),
+        "policy": policy_name,
+        "findings": [],
+    }
 
     f_counter = 0
     fx_counter = 0
