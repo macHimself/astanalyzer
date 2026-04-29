@@ -14,6 +14,7 @@ tools/benchmark/results/
 
 # Environment variables
 .env
+.coverage
 
 # macOS
 .DS_Store
@@ -23,3 +24,4 @@ scan_report.json
 astanalyzer-selected.json
 *.log
 astanalyzer.ico
+

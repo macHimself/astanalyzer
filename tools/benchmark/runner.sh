@@ -52,8 +52,14 @@ run_scan () {
   pip install -e . > /dev/null
 
   coverage erase
+  set +e
   coverage run -m pytest
-  coverage json -o "$COVERAGE_FILE"
+  TEST_EXIT_CODE=$?
+  set -e
+
+  coverage json -o "$COVERAGE_FILE" || true
+
+  echo "$REF tests exit code: $TEST_EXIT_CODE" >> "$OUT_DIR/test_status.txt"
 
   # clean previous artifacts
   astanalyzer clean || true
