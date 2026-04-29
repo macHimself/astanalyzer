@@ -9,3 +9,4 @@ These scripts are:
 
 Examples:
 - CSS refactoring
+- benchmarking
