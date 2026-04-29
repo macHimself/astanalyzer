@@ -28,7 +28,7 @@ import logging
 from typing import Any
 
 from .enums import Severity, RuleCategory, NodeType 
-from .matcher import MatchResult
+from ..matcher import MatchResult
 
 log = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from ..anchor import FindingAnchor
+from ..core.anchor import FindingAnchor
 from .path_utils import to_project_relative_path
 
 @dataclass

@@ -39,11 +39,11 @@ full refactoring would require semantic analysis beyond AST level.
 
 from __future__ import annotations
 
-from ..enums import NodeType, RuleCategory, Severity
+from ..core.enums import NodeType, RuleCategory, Severity
 from ..fixer import fix
 from ..refactor import refactor_builder
 from ..matcher import match
-from ..rule import Rule
+from ..core.rule import Rule
 from ..tools import has_trailing_whitespace
 
 

@@ -12,7 +12,7 @@ from typing import Set, Type, Union
 
 from astroid import nodes
 
-from .kinds import Domain, K
+from ..core.kinds import Domain, K
 
 log = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .enums import RuleCategory, Severity
-from .engine.reporting import Finding
+from ..core.enums import RuleCategory, Severity
+from ..engine.reporting import Finding
 
 
 @dataclass(frozen=True)

@@ -6,9 +6,9 @@ from astanalyzer.rules import load_builtin_rules
 def test_import_rules_from_path_loads_custom_rule(tmp_path):
     rule_file = tmp_path / "my_rules.py"
     rule_file.write_text(
-        "from astanalyzer.rule import Rule\n"
+        "from astanalyzer.core.rule import Rule\n"
         "from astanalyzer.matcher import match\n"
-        "from astanalyzer.enums import Severity, RuleCategory, NodeType\n"
+        "from astanalyzer.core.enums import Severity, RuleCategory, NodeType\n"
         "\n"
         "class MyCustomRule(Rule):\n"
         "    id = 'CUST-001'\n"

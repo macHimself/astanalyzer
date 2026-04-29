@@ -1,5 +1,5 @@
 from astanalyzer.engine.reporting import Finding
-from astanalyzer.policy import get_policy, apply_policy
+from astanalyzer.filtering.policy import get_policy, apply_policy
 from pathlib import Path
 
 

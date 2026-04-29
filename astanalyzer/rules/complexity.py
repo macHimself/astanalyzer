@@ -15,10 +15,10 @@ developer intent and broader semantic context.
 
 from __future__ import annotations
 
-from ..enums import NodeType, RuleCategory, Severity
+from ..core.enums import NodeType, RuleCategory, Severity
 from ..fixer import fix
 from ..matcher import match
-from ..rule import Rule
+from ..core.rule import Rule
 from ..tools import arg_count_gt, function_arg_count, parent_depth_at_least, count_relevant_statements
 
 

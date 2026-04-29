@@ -1,7 +1,7 @@
 from astroid import parse
 
 from astanalyzer.engine import attach_tree_metadata, load_project, run_rules_on_project_report
-from astanalyzer.ignore_rules import _parse_ignore_rule_ids, is_ignored_for_node
+from astanalyzer.filtering.ignore_rules import _parse_ignore_rule_ids, is_ignored_for_node
 
 
 def test_ignore_inline_rule_suppresses_finding(tmp_path):

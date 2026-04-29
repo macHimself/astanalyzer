@@ -57,7 +57,7 @@ from .conditions import (
     special_handlers,
 )
 from .types import MatchResult, Ref, ref
-from ..node_selector import NodeSelectorInput, resolve_node_selector
+from ..selection.node_selector import NodeSelectorInput, resolve_node_selector
 from ..predicates import Predicate
 from ..tools import (
     _is_none_const,
