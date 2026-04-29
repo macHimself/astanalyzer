@@ -1,0 +1,50 @@
+.nested-details {
+  border: 1px dashed rgba(127,127,127,.18);
+  border-radius: 10px;
+  padding: 7px 9px;
+}
+
+.nested-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: .9;
+  user-select: none;
+  list-style: none;
+}
+
+.nested-details summary::selection {
+  background: transparent;
+}
+
+summary,
+details > summary,
+.nested-details > summary,
+.group > summary {
+  list-style: none;
+  outline: none;
+}
+
+summary::-webkit-details-marker,
+details > summary::-webkit-details-marker,
+.nested-details > summary::-webkit-details-marker,
+.group > summary::-webkit-details-marker,
+.finding > summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::marker,
+details > summary::marker,
+.nested-details > summary::marker,
+.group > summary::marker,
+.finding > summary::marker {
+  content: "";
+  font-size: 0;
+}
+
+details:focus,
+details:focus-visible,
+summary:focus,
+summary:focus-visible {
+  outline: none;
+}

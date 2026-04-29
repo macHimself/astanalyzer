@@ -1,0 +1,95 @@
+.group {
+  border: 1px solid rgba(127,127,127,.22);
+  border-radius: 10px;
+  border-color: rgba(127,127,127,.18);
+  background: color-mix(in oklab, Canvas, CanvasText 1.5%);
+  overflow: hidden;
+}
+
+.group > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  user-select: none;
+  border-bottom: 0;
+}
+
+.group > summary:hover {
+  background: color-mix(in oklab, Canvas, CanvasText 3%);
+}
+
+.group-body {
+  padding: 8px 10px 10px;
+  display: grid;
+  gap: 8px;
+  border-top: 0;
+}
+
+.group-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.group-title {
+  font-weight: 700;
+}
+
+.group-meta {
+  font-size: 12px;
+  opacity: .7;
+  white-space: nowrap;
+}
+
+.category-group {
+  background: color-mix(in oklab, Canvas, CanvasText 2%);
+}
+
+.category-group .group-title {
+  font-size: 15px;
+}
+
+.file-group .group-title {
+  background: transparent;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular,  Menlo, Monaco, Consolas, monospace;
+  word-break: break-word;
+  padding: 4px 0;
+  border-radius: 0;
+}
+
+.category-warning {
+  border-left: 2px solid rgba(245, 158, 11, 0.75);
+}
+
+.category-error {
+  border-left: 2px solid rgba(220, 38, 38, 0.75);
+}
+
+.file-warning {
+  border-left: 2px solid rgba(245, 158, 11, 0.75);
+}
+
+.file-error {
+  border-left: 2px solid rgba(220, 38, 38, 0.75);
+}
+
+.snippet-marker {
+  font-size: 12px;
+  opacity: 0.6;
+  margin: 6px 0 6px;
+  padding-left: 4px;
+  border-left: 2px solid rgba(255,255,255,.10);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.line-range {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: .7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

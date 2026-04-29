@@ -1,0 +1,54 @@
+.card {
+  border: 1px solid rgba(127,127,127,.16);
+  border-radius: 10px;
+  border-color: rgba(127,127,127,.18);
+  background: color-mix(in oklab, Canvas, CanvasText 2%);
+  overflow: hidden;
+}
+
+.summary-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.summary-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.meta {
+  opacity: .8;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  opacity: .85;
+  word-break: break-word;
+}
+
+.message {
+  margin-top: 8px;
+  line-height: 1.45;
+  opacity: .95;
+  white-space: pre-wrap;
+}
+
+.expand-hint {
+  font-size: 12px;
+  opacity: .65;
+  white-space: nowrap;
+}

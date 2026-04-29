@@ -1,0 +1,41 @@
+.code.diff-preview {
+  padding: 10px 12px;
+  white-space: pre;
+  line-height: 1.5;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  overflow: auto;
+  overflow-x: auto;
+}
+
+.code.diff-preview pre {
+  margin: 0;
+  white-space: pre;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  min-width: max-content;
+}
+
+.code.diff-preview div {
+  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code.diff-preview .line-add {
+  color: #9be9a8;
+}
+
+.code.diff-preview .line-del {
+  color: #ffb3b3;
+}
+
+.code.diff-preview .line-meta {
+  color: #8b949e;
+}
+
+.code.diff-preview .line-hunk {
+  color: #79c0ff;
+}

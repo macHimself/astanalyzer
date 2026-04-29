@@ -1,0 +1,71 @@
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  align-items: center;
+}
+
+.toolbar-main {
+  margin-top: 18px;
+}
+
+.toolbar-view {
+  margin-top: 8px;
+}
+
+.toolbar-selection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(127,127,127,.14);
+}
+
+.toolbar input[type="search"] {
+  flex: 1;
+  min-width: 320px;
+}
+
+.toolbar-selection button {
+  min-width:120px;
+}
+
+.view-toggle {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid rgba(127,127,127,.35);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  border: 0;
+  border-radius: 0;
+}
+
+.view-toggle button.active {
+  background: color-mix(in oklab, CanvasText 12%, Canvas);
+  font-weight: 700;
+}
+
+button, input[type="file"] {
+  border: 1px solid rgba(127,127,127,.35);
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+input[type="search"] {
+  border: 1px solid rgba(127,127,127,.35);
+  padding: 8px 12px;
+  border-radius: 10px;
+  min-width: 280px;
+  font: inherit;
+  background: transparent;
+}

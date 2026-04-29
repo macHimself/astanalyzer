@@ -1,0 +1,43 @@
+.fixes, .actions {
+  display: grid;
+  gap: 8px;
+}
+
+.fix, .action {
+  border: 1px solid rgba(127,127,127,.18);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  background: color-mix(in oklab, Canvas, CanvasText 2%);
+}
+
+.action.ignore {
+  opacity: .85;
+  border-style: dashed;
+}
+
+.fix label,
+.action label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.fix-title,
+.action-title {
+  font-weight: 600;
+}
+
+.action-reason {
+  opacity: .8;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fix-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
