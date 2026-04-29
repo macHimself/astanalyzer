@@ -44,6 +44,14 @@ def build_report_shell(styles: str, script: str) -> str:
   <main>
     <div class="toolbar toolbar-main">
         <input id="fileInput" type="file" accept=".json,application/json" />
+    </div>
+    <div class="toolbar toolbar-main">
+        <p>Selection:</p>
+        <button id="btnSelectAll">Select all findings</button>
+        <button id="btnClear">Clear selection</button>
+    </div>
+    <div class="toolbar toolbar-selection">
+        <p>Export:</p>
         <button id="btnPickDir">Choose folder</button>
         <button id="btnExport">Export selected.json</button>
     </div>
@@ -56,14 +64,9 @@ def build_report_shell(styles: str, script: str) -> str:
             <button id="btnFileFirst" type="button">File first</button>
         </div>
     </div>
-
-    <div class="toolbar toolbar-selection">
-        <button id="btnSelectAll">Select all</button>
-        <button id="btnClear">Clear selection</button>
-    </div>
-
+    
     <div class="hint">
-      Review findings → select fixes → export selected.json → run astanalyzer patch
+      Open report → Review findings → select fixes → export selected.json → run astanalyzer patch
     </div>
 
     <div id="hint" class="warn" style="display:none; margin: 0 0 12px;"></div>
