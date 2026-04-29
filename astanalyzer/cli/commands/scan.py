@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 from ...engine import get_list_of_files_in_project, load_project, run_rules_on_project_report
-from ...file_selection import parse_excluded_dir_names
-from ...policy import get_policy 
+from ...selection.file_selection import parse_excluded_dir_names
+from ...filtering.policy import get_policy 
 from ...report_ui import open_report_in_browser, write_report_html
 from ..utils.files import validate_path
 from ..utils.output import print_section

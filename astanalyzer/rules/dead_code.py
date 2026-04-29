@@ -15,10 +15,10 @@ and predictable.
 
 from __future__ import annotations
 
-from ..enums import NodeType, RuleCategory, Severity
+from ..core.enums import NodeType, RuleCategory, Severity
 from ..fixer import fix
 from ..matcher import match
-from ..rule import Rule
+from ..core.rule import Rule
 
 
 class UnusedVariable(Rule):

@@ -1,6 +1,6 @@
 from astroid import parse
 
-from astanalyzer.anchor import (
+from astanalyzer.core.anchor import (
     FindingAnchor,
     build_anchor,
     get_context_hash,

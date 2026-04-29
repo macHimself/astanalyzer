@@ -6,9 +6,9 @@ import argparse
 import logging
 import sys
 
-from ..logging_config import setup_logging
-from ..rule import Rule
-from ..rule_filtering import RuleFilterError, build_rule_selection, filter_rules
+from ..runtime.logging_config import setup_logging
+from ..core.rule import Rule
+from ..filtering.rule_filtering import RuleFilterError, build_rule_selection, filter_rules
 from ..rule_loader import import_rules_from_path
 from ..rules import load_builtin_rules
 from .commands.apply import cmd_apply

@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..anchor import build_anchor
+from ..core.anchor import build_anchor
 from ..fixer import FixProposal, fix
-from ..ignore_rules import is_ignored_for_node
+from ..filtering.ignore_rules import is_ignored_for_node
 
 from .project_loader import (
     ModuleNode, 

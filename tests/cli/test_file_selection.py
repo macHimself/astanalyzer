@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from astanalyzer.file_selection import (
+from astanalyzer.selection.file_selection import (
     filter_scan_paths,
     parse_excluded_dir_names,
     should_skip_path,

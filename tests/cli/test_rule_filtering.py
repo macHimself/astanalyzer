@@ -1,6 +1,6 @@
 import pytest
 
-from astanalyzer.rule_filtering import (
+from astanalyzer.filtering.rule_filtering import (
     RuleFilterError,
     build_rule_selection,
     filter_rules,

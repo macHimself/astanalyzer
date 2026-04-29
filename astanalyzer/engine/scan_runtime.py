@@ -25,11 +25,11 @@ from typing import Any, Dict, List
 
 from colorama import init
 
-from ..anchor import build_anchor
+from ..core.anchor import build_anchor
 from ..fixer import FixProposal
-from ..ignore_rules import is_ignored_for_node
-from ..policy import PolicyProfile, get_policy, apply_policy
-from ..rule import Rule
+from ..filtering.ignore_rules import is_ignored_for_node
+from ..filtering.policy import PolicyProfile, get_policy, apply_policy
+from ..core.rule import Rule
 from ..tools import trailing_whitespace_line_numbers
 
 from .project_loader import ProjectNode, ModuleNode, count_lines
