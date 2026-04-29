@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from astanalyzer.engine.selected_patch_build import _build_ignore_fix_proposal
-
+from astanalyzer.cli.utils.selected import resolve_selected_input
 
 def make_match(lines, lineno):
     return SimpleNamespace(
@@ -42,7 +42,7 @@ def test_ignore_merges_existing_comment():
     proposal = _build_ignore_fix_proposal(match, "STYLE-002")
 
     assert proposal is not None
-    assert "STYLE-001,STYLE-002" in proposal.suggestion
+    assert "STYLE-001, STYLE-002" in proposal.suggestion
 
 
 from types import SimpleNamespace
