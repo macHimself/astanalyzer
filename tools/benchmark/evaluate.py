@@ -55,8 +55,8 @@ def build_structured_result(before, after):
     all_severities = set(before["by_severity"]) | set(after["by_severity"])
 
     return {
-        "base_ref": os.getenv("AST_BASE_REF"),
-        "test_ref": os.getenv("AST_TEST_REF"),
+        "before_ref": os.getenv("AST_BASE_REF"),
+        "after_ref": os.getenv("AST_TEST_REF"),
         "timestamp": os.getenv("AST_TIMESTAMP")
         or datetime.now(timezone.utc).isoformat(),
         "results": {
