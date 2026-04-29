@@ -92,6 +92,7 @@ astanalyzer apply
 
 ### Getting started
 
+- [Example](docs/example.md) – example output and interactive report walkthrough
 - [Getting Started](docs/getting-started.md) — installation and setup  
 - [CLI](docs/cli.md) — commands and options  
 
