@@ -1,0 +1,142 @@
+.codehilite {
+  margin: 0;
+  background: transparent !important;
+  min-width: max-content;
+  color: #e6edf3;
+}
+
+.codehilite pre {
+  margin: 0;
+  white-space: pre;
+  background: transparent !important;
+  color: #e6edf3;
+  line-height: 1.55;
+}
+
+.codehilite,
+.codehilite pre,
+.codehilite code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+
+.codehilite table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.codehilite td {
+  vertical-align: top;
+  padding: 0;
+}
+
+.codehilite .linenos {
+  user-select: none;
+  opacity: 0.55;
+  color: #8b949e;
+  border-right: 1px solid rgba(255,255,255,.08);
+  padding-right: 12px;
+}
+
+.codehilite .linenos pre,
+.codehilite .code pre {
+  margin: 0;
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+
+.codehilite .linenos pre {
+  text-align: right;
+}
+
+.codehilite .code {
+  width: 100%;
+  padding-left: 12px;
+}
+
+.codehilite .n,
+.codehilite .nn,
+.codehilite .nx,
+.codehilite .p,
+.codehilite .w {
+  color: #e6edf3;
+}
+
+.codehilite .k,
+.codehilite .kn,
+.codehilite .kp,
+.codehilite .kr {
+  color: #ffbd59;
+  font-weight: 600;
+}
+
+.codehilite .nf {
+  color: #2f81f7;
+}
+
+.codehilite .nc,
+.codehilite .kt {
+  color: #a5d6ff;
+}
+
+.codehilite .s,
+.codehilite .sa,
+.codehilite .sb,
+.codehilite .sc,
+.codehilite .sd,
+.codehilite .s1,
+.codehilite .s2,
+.codehilite .se,
+.codehilite .sh,
+.codehilite .si,
+.codehilite .sr,
+.codehilite .ss,
+.codehilite .dl {
+  color: #7ee787;
+  font-style: italic;
+}
+
+.codehilite .m,
+.codehilite .mb,
+.codehilite .mf,
+.codehilite .mh,
+.codehilite .mi,
+.codehilite .mo {
+  color: #ff9e64;
+}
+
+.codehilite .c,
+.codehilite .c1,
+.codehilite .cm,
+.codehilite .cp,
+.codehilite .cs {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.codehilite .nb,
+.codehilite .bp,
+.codehilite .fm,
+.codehilite .vc,
+.codehilite .vg,
+.codehilite .vi {
+  color: #b6e3ff;
+  font-weight: 500;
+}
+
+.codehilite .o,
+.codehilite .ow {
+  color: #c9d1d9;
+}
+
+.codehilite .ne {
+  color: #ff7b72;
+  font-weight: 600;
+}
+
+.codehilite .hll {
+  background: rgba(255,255,255,.07);
+  box-shadow: inset 3px 0 0 rgba(180, 200, 255, 0.28);
+}

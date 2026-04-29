@@ -18,6 +18,9 @@ dependencies = [
     "pillow"
 ]
 
+[tool.setuptools.package-data]
+"astanalyzer.report_ui" = ["styles/*.css", "scripts/*.js"]
+
 [project.optional-dependencies]
 dev = [
     "pytest",

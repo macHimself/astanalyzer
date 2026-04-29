@@ -1,0 +1,69 @@
+.detail-body {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 14px;
+  border-top: 0;
+}
+
+.section {
+  display: grid;
+  gap: 8px;
+}
+
+.desc {
+  padding: 6px 0;
+  border-left: none;
+  border-radius: 0;
+  background: transparent;
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.rule-description {      
+  border-style: solid;
+  background: color-mix(in oklab, Canvas, CanvasText 3%);
+}
+
+.rule-expl {      
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.expl-section {      
+  padding: 8px 10px;
+  border: 1px solid rgba(127,127,127,.16);
+  border-radius: 9px;
+  background: color-mix(in oklab, Canvas, CanvasText 2%);
+}
+
+.expl-title {      
+  font-size: 12px;
+  font-weight: 700;
+  opacity: .9;
+  margin-bottom: 4px;
+}
+
+.expl-text {      
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: .86;
+}
+
+.expl-why {      
+  border-left: 3px solid #d99a00;
+  padding-left: 9px;
+}
+
+.expl-limitations {
+  border-left: 3px solid #777;
+  padding-left: 9px;
+}
+
+.rule-warning {
+  border-left: 1px solid #f59e0b;
+}
+
+.rule-error {
+  border-left: 1px solid #dc2626;
+}
