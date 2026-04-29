@@ -57,7 +57,22 @@ run_scan () {
   TEST_EXIT_CODE=$?
   set -e
 
-  coverage json -o "$COVERAGE_FILE" || true
+  coverage json -o "$COVERAGE_FILE"
+
+COVERAGE_JSON_FILE="$COVERAGE_FILE"
+export COVERAGE_JSON_FILE
+
+python - <<'EOF'
+import json, os
+
+p = os.environ["COVERAGE_JSON_FILE"]
+
+with open(p, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+with open(p, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+EOF
 
   echo "$REF tests exit code: $TEST_EXIT_CODE" >> "$OUT_DIR/test_status.txt"
 

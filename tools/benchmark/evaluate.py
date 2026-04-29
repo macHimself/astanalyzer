@@ -3,8 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import json
 import sys
-from collections import Counter
-
+from collections import Counter, defaultdict
 
 CATEGORY_BY_PREFIX = {
     "STYLE": "style",
@@ -22,6 +21,23 @@ if len(sys.argv) not in (3, 5):
     sys.exit(1)
 
 
+def extract_coverage_by_module(coverage_json):
+    files = coverage_json.get("files", {})
+    modules = defaultdict(list)
+
+    for path, data in files.items():
+        parts = path.split("/")
+        module = parts[1] if len(parts) >= 2 else "root"
+
+        percent = data.get("summary", {}).get("percent_covered", 0)
+        modules[module].append(percent)
+
+    return {
+        module: round(sum(values) / len(values), 2)
+        for module, values in sorted(modules.items())
+    }
+
+
 def coverage_stats(path):
     data = load(path)
     totals = data.get("totals", {})
@@ -32,6 +48,7 @@ def coverage_stats(path):
         "missing_lines": totals.get("missing_lines"),
         "excluded_lines": totals.get("excluded_lines"),
         "percent_covered": totals.get("percent_covered"),
+        "by_module": extract_coverage_by_module(data),
     }
 
 
