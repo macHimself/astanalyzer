@@ -64,6 +64,10 @@ class AlwaysTrueConditionIf(Rule):
     Remove the redundant condition and keep the body if the behaviour is intended.
     If a real condition was expected, replace the constant expression with the
     correct condition before flattening the code.
+
+    LIMITATIONS:
+    Constant conditions may be intentional in generated code, debugging blocks,
+    feature flags, or code used to visually isolate a block.
     """
     id = "SEM-001"
     title = "Condition is always true"
@@ -103,6 +107,10 @@ class AlwaysTrueConditionWhile(Rule):
     Add an explicit exit condition when the loop should terminate normally. If the
     infinite loop is intentional, make the exit mechanism clear and document or
     suppress the advisory finding.
+
+    LIMITATIONS:
+    Infinite loops may be intentional in servers, workers, event loops, REPLs, or
+    loops controlled by break, return, exceptions, or external signals.
     """
     id = "SEM-002"
     title = "While condition is always true"
@@ -145,6 +153,10 @@ class CompareToNoneUsingEq(Rule):
 
     HOW:
     Replace x == None with x is None, and x != None with x is not None.
+
+    LIMITATIONS:
+    Rare false positives may occur in tests or specialised code that intentionally
+    checks custom equality behaviour.
     """
     id = "SEM-003"
     title = "Comparison to None using == or !="
@@ -188,6 +200,10 @@ class AssignmentInCondition(Rule):
     Move the assignment before the condition when clarity improves. Keep the walrus
     operator only when it makes the code shorter without hiding the control-flow
     logic, and suppress the advisory finding if intentional.
+
+    LIMITATIONS:
+    The walrus operator is idiomatic in some simple patterns, such as reading chunks
+    from a file or matching regular expressions.
     """
     id = "SEM-004"
     title = "Assignment in condition (walrus)"
@@ -234,6 +250,10 @@ class RedeclaredVariable(Rule):
     Remove the earlier assignment if it is truly redundant. If both values are
     needed, use the first value before reassignment or rename one of the variables
     to make the intent clear.
+
+    LIMITATIONS:
+    Reassignment may be intentional for staged initialisation, readability, generated
+    code, or framework compatibility. Static analysis cannot always infer intent.
     """
     id = "SEM-005"
     title = "Redeclared variable in the same scope"
@@ -284,6 +304,10 @@ class ExceptionNotUsed(Rule):
     Remove the unused exception alias if the exception object is not needed. If
     the details matter, use the variable for logging, diagnostics, wrapping, or
     re-raising.
+
+    LIMITATIONS:
+    The exception alias may be intentionally unused during development or for API
+    symmetry. Using '_' is clearer for intentionally ignored exception objects.
     """
     id = "SEM-006"
     title = "Exception bound in except-clause is not used"
@@ -332,6 +356,10 @@ class BareExcept(Rule):
     Catch a specific exception type whenever possible. If a broad handler is
     needed, prefer except Exception: and ensure the exception is logged or handled
     explicitly.
+
+    LIMITATIONS:
+    Broad exception handlers may be intentional at high-level crash boundaries,
+    cleanup logic, or defensive wrappers. Such usage should normally be documented.
     """
     id = "SEM-007"
     title = "Bare except clause"
@@ -379,6 +407,10 @@ class MutableDefaultArgument(Rule):
     HOW:
     Use None as the default value and create a new mutable object inside the
     function when needed, for example: if value is None: value = [].
+
+    LIMITATIONS:
+    Shared mutable defaults may be intentional for caching or shared state, but this
+    should be explicit and documented.
     """
     id = "SEM-008"
     title = "Mutable default argument"
@@ -419,6 +451,10 @@ class PrintDebugStatement(Rule):
     Remove temporary debug prints. For diagnostics, replace them with the logging
     module or the project's logging abstraction. Keep print() only when it is
     intentional user-facing output.
+
+    LIMITATIONS:
+    print() is valid in CLI tools, examples, scripts, teaching code, tests, and
+    intentional user-facing output. This rule is context-dependent.
     """
     id = "SEM-009"
     title = "Print debug statement"

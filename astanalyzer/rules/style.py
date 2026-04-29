@@ -66,6 +66,10 @@ class EmptyBlock(Rule):
     Add the missing logic if the block is unfinished, or remove the block if it is
     redundant. If the empty block is intentional, add a clear review note or
     suppress the advisory finding.
+
+    LIMITATIONS:
+    Empty blocks may be intentional in placeholders, examples, abstract templates,
+    or temporary development code. Such cases should be documented or suppressed.
     """
     id = "STYLE-001"
     title = "Empty block"
@@ -122,6 +126,10 @@ class RedundantIfElseReturn(Rule):
     HOW:
     Remove the else header and unindent its body. Keep the explicit else only when
     it makes the control-flow alternatives easier to understand.
+
+    LIMITATIONS:
+    An explicit else may improve readability when two alternative branches are
+    intentionally shown symmetrically.
     """
     id = "STYLE-002"
     title = "Redundant else after terminal branches"
@@ -161,6 +169,10 @@ class MultipleReturnsInFunction(Rule):
     Review whether a single exit point would improve clarity. If multiple returns
     make the function easier to understand, keep them and suppress the advisory
     finding.
+
+    LIMITATIONS:
+    Multiple returns are often clearer when used as guard clauses or early exits.
+    This rule is advisory and should not be treated as a correctness issue.
     """
     id = "STYLE-003"
     title = "Function with multiple return statements"
@@ -205,6 +217,10 @@ class LineTooLong(Rule):
     Split long expressions across multiple lines, extract intermediate variables,
     or reformat argument lists. If the long line is intentional and clearer as-is,
     suppress the advisory finding.
+
+    LIMITATIONS:
+    Long URLs, generated code, data literals, and long strings may be clearer when
+    kept unchanged.
     """
     id = "STYLE-004"
     title = "Line too long"
@@ -250,6 +266,10 @@ class FunctionNameNotSnakeCase(Rule):
     HOW:
     Rename the function to snake_case and update its references. If the name is
     required by an external interface, keep it and suppress the finding.
+    
+    LIMITATIONS:
+    Non-snake-case function names may be required by framework hooks, external APIs,
+    generated code, or compatibility layers.
     """
     id = "STYLE-005"
     title = "Function name not in snake_case"
@@ -287,6 +307,10 @@ class ClassNameNotPascalCase(Rule):
     HOW:
     Rename the class to PascalCase and update references across the project. If
     the name is required externally, keep it and suppress the finding.
+
+    LIMITATIONS:
+    Non-standard class names may be required by generated code, external schemas,
+    compatibility layers, or framework conventions.
     """
     id = "STYLE-006"
     title = "Class name not in PascalCase"
@@ -324,6 +348,11 @@ class ConstantNotUppercase(Rule):
     HOW:
     Rename true constants to UPPER_SNAKE_CASE and update references. If the value
     is not actually a constant, rename or restructure it to reflect its real role.
+
+    LIMITATIONS:
+    This rule may produce false positives for normal module-level variables, mutable
+    values, Sphinx configuration variables, generated code, or values intentionally
+    reassigned later.
     """
     id = "STYLE-007"
     title = "Constant not in UPPER_SNAKE_CASE"
@@ -360,6 +389,10 @@ class TrailingWhitespace(Rule):
     HOW:
     Remove trailing whitespace from the affected lines. If exact trailing spaces
     are required in a fixture or generated file, exclude or suppress the finding.
+    
+    LIMITATIONS:
+    Trailing spaces may be intentional in text fixtures, snapshot tests, generated
+    files, or examples where exact whitespace matters.
     """
     id = "STYLE-008"
     title = "Trailing whitespace"
@@ -398,6 +431,10 @@ class MissingBlankLineBetweenFunctions(Rule):
     HOW:
     Insert the required blank line before the function definition. If the compact
     layout is intentional, suppress the advisory finding.
+
+    LIMITATIONS:
+    Compact formatting may be intentional in generated code, small examples, or
+    tightly grouped helper definitions.
     """
     id = "STYLE-009"
     title = "Missing blank line(s) between definitions"
@@ -435,6 +472,10 @@ class MissingDocstringForFunction(Rule):
     HOW:
     Add a concise docstring that explains what the function does, when to use it,
     and any important parameters, return values, exceptions, or side effects.
+
+    LIMITATIONS:
+    Docstrings may be unnecessary for simple private helpers, tests, generated code,
+    local nested functions, or functions whose intent is already obvious.
     """
     id = "STYLE-010"
     title = "Missing docstring for function"
@@ -472,6 +513,11 @@ class MissingDocstringForClass(Rule):
     HOW:
     Add a concise class docstring describing the class purpose, main
     responsibilities, important attributes, and typical usage.
+
+    LIMITATIONS:
+    Docstrings may be unnecessary for tiny internal helper classes, test-only
+    classes, generated code, dataclasses with self-explanatory fields, or local
+    classes inside tests.
     """
     id = "STYLE-011"
     title = "Missing docstring for class"
@@ -509,6 +555,10 @@ class MissingDocstringForModule(Rule):
     HOW:
     Add a module-level docstring that summarises the module purpose, the main
     concepts it contains, and any important usage or design notes.
+
+    LIMITATIONS:
+    Module docstrings may be unnecessary for package markers, tiny scripts,
+    generated files, test modules, examples, or configuration files.
     """
     id = "STYLE-012"
     title = "Missing docstring for module"
