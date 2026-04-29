@@ -29,7 +29,7 @@ def build_report_shell(styles: str, script: str) -> str:
   <header>
     <h1 class="app-title">
       {build_header_icon()}
-      <span>AstAnalyzer – Scan Results</span>
+      <span id="reportTitleText">AstAnalyzer – Scan Results</span>
     </h1>
 
     <div class="row">

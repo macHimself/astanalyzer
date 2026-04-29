@@ -221,7 +221,7 @@ function applyJson(json, source) {
     ? `AstAnalyzer – Scan Results (${projectName})`
     : "AstAnalyzer – Scan Results";
 
-  const title = document.querySelector("h1");
+  const title = document.getElementById("reportTitleText");
 
   if (title) {
     title.innerHTML = projectName
