@@ -90,8 +90,8 @@ EOF
 echo ""
 echo "== Evaluating =="
 
-export AST_BASE_REF="$BASE_REF"
-export AST_TEST_REF="$TEST_REF"
+export AST_BASE_REF="$BEFORE_REF"
+export AST_TEST_REF="$AFTER_REF"
 export AST_TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 export AST_OUTPUT_DIR="$OUT_DIR"
 
