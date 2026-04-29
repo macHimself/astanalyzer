@@ -113,8 +113,8 @@ class AnalysisReport:
             by_cat[f.category] = by_cat.get(f.category, 0) + 1
 
         cat_str = (
-            ", ".join(
-                f"{k}={v}"
+            " | ".join(
+                f"{k}: {v}"
                 for k, v in sorted(by_cat.items(), key=lambda kv: (-kv[1], kv[0]))
             )
             or "—"

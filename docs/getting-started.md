@@ -1,4 +1,4 @@
-[Back to README](../README.md) | [Next: CLI](cli.md)
+[Example](docs/example.md) | [Next: CLI](cli.md)
 
 # Getting Started
 
@@ -53,4 +53,4 @@ python -m astanalyzer.cli -vv scan .
 
 ---
 
-[Back to README](../README.md) | [Next: CLI](cli.md)
+[Example](docs/example.md) | [Next: CLI](cli.md)
