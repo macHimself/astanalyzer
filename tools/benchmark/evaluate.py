@@ -85,6 +85,10 @@ def build_structured_result(before, after, coverage_before=None, coverage_after=
     all_severities = set(before["by_severity"]) | set(after["by_severity"])
 
     return {
+        "project": {
+            "name": os.getenv("AST_PROJECT_NAME"),
+            "path": os.getenv("AST_PROJECT_PATH"),
+        },
         "before_ref": os.getenv("AST_BASE_REF"),
         "after_ref": os.getenv("AST_TEST_REF"),
         "timestamp": os.getenv("AST_TIMESTAMP")
@@ -118,7 +122,7 @@ def build_structured_result(before, after, coverage_before=None, coverage_after=
                 },
             },
         },
-        "coverage": {
+        "astanalyzer_test_coverage": {
             "before": coverage_before,
             "after": coverage_after,
             "diff": (
