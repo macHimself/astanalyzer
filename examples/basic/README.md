@@ -28,7 +28,9 @@ The analyzer should report issues such as:
 
 ## View results
 
-Open the report in your browser:
+After running the scan, the report opens automatically in your browser.
+
+If it does not open, you can open it manually:
 
 ```bash
 open report.html
