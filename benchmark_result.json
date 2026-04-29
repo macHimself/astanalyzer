@@ -1,0 +1,141 @@
+{
+  "base_ref": "",
+  "test_ref": "",
+  "timestamp": "2026-04-29T08:57:08Z",
+  "results": {
+    "before": {
+      "total": 12158,
+      "by_rule": {
+        "STYLE-012": 406,
+        "STYLE-007": 146,
+        "STYLE-010": 1104,
+        "STYLE-001": 4063,
+        "DEAD-001": 1485,
+        "DEAD-003": 946,
+        "SEM-009": 1560,
+        "CX-003": 488,
+        "STYLE-003": 607,
+        "STYLE-002": 234,
+        "CX-001": 50,
+        "SEC-005": 58,
+        "CX-002": 328,
+        "STYLE-009": 49,
+        "SEM-005": 183,
+        "STYLE-011": 173,
+        "PERF-005": 49,
+        "SEM-002": 76,
+        "PERF-006": 58,
+        "SEC-004": 17,
+        "PERF-007": 29,
+        "SEM-004": 19,
+        "STYLE-006": 8,
+        "STYLE-005": 1,
+        "SEC-006": 11,
+        "STYLE-004": 6,
+        "DEAD-002": 1,
+        "SEM-001": 3
+      },
+      "by_severity": {
+        "warning": 10971,
+        "info": 1187
+      },
+      "by_category": {
+        "style": 6797,
+        "dead_code": 2432,
+        "semantic": 1841,
+        "complexity": 866,
+        "security": 86,
+        "performance": 136
+      }
+    },
+    "after": {
+      "total": 5104,
+      "by_rule": {
+        "STYLE-012": 406,
+        "STYLE-007": 145,
+        "STYLE-010": 1104,
+        "SEM-009": 1559,
+        "STYLE-003": 607,
+        "STYLE-002": 234,
+        "CX-001": 34,
+        "SEC-005": 58,
+        "CX-002": 328,
+        "DEAD-001": 109,
+        "DEAD-003": 65,
+        "SEM-005": 57,
+        "STYLE-011": 173,
+        "PERF-005": 8,
+        "SEM-002": 76,
+        "PERF-007": 27,
+        "SEM-004": 19,
+        "STYLE-006": 8,
+        "STYLE-001": 4,
+        "CX-003": 13,
+        "STYLE-005": 1,
+        "PERF-006": 47,
+        "SEC-006": 3,
+        "STYLE-004": 6,
+        "SEC-004": 9,
+        "DEAD-002": 1,
+        "SEM-001": 3
+      },
+      "by_severity": {
+        "warning": 4021,
+        "info": 1083
+      },
+      "by_category": {
+        "style": 2688,
+        "semantic": 1714,
+        "complexity": 375,
+        "security": 70,
+        "dead_code": 175,
+        "performance": 82
+      }
+    },
+    "diff": {
+      "total": -7054,
+      "by_rule": {
+        "CX-001": -16,
+        "CX-002": 0,
+        "CX-003": -475,
+        "DEAD-001": -1376,
+        "DEAD-002": 0,
+        "DEAD-003": -881,
+        "PERF-005": -41,
+        "PERF-006": -11,
+        "PERF-007": -2,
+        "SEC-004": -8,
+        "SEC-005": 0,
+        "SEC-006": -8,
+        "SEM-001": 0,
+        "SEM-002": 0,
+        "SEM-004": 0,
+        "SEM-005": -126,
+        "SEM-009": -1,
+        "STYLE-001": -4059,
+        "STYLE-002": 0,
+        "STYLE-003": 0,
+        "STYLE-004": 0,
+        "STYLE-005": 0,
+        "STYLE-006": 0,
+        "STYLE-007": -1,
+        "STYLE-009": -49,
+        "STYLE-010": 0,
+        "STYLE-011": 0,
+        "STYLE-012": 0
+      },
+      "by_severity": {
+        "info": -104,
+        "warning": -6950
+      },
+      "by_category": {
+        "complexity": -491,
+        "dead_code": -2257,
+        "performance": -54,
+        "security": -16,
+        "semantic": -127,
+        "style": -4109
+      }
+    }
+  }
+}
