@@ -10,6 +10,20 @@ PROJECT_PATH="$1"
 BEFORE_REF="$2"
 AFTER_REF="$3"
 
+ORIGINAL_REF=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$ORIGINAL_REF" = "HEAD" ]; then
+  ORIGINAL_REF=$(git rev-parse HEAD)
+fi
+
+cleanup() {
+  echo ""
+  echo "Restoring original git state: $ORIGINAL_REF"
+  git checkout --quiet "$ORIGINAL_REF"
+}
+
+trap cleanup EXIT
+
 if [ -z "$PROJECT_PATH" ] || [ -z "$BEFORE_REF" ] || [ -z "$AFTER_REF" ]; then
   echo "Usage: ./benchmark/runner.sh /path/to/project before-ref after-ref"
   exit 1
