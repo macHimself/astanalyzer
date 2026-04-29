@@ -4,6 +4,7 @@ set -e
 PROJECT_PATH="$1"
 BEFORE_REF="$2"
 AFTER_REF="$3"
+PROJECT_NAME="$(basename "$PROJECT_PATH")"
 
 ORIGINAL_REF=$(git rev-parse --abbrev-ref HEAD)
 
@@ -118,6 +119,8 @@ EOF
 echo ""
 echo "== Evaluating =="
 
+export AST_PROJECT_NAME="$PROJECT_NAME"
+export AST_PROJECT_PATH="$PROJECT_PATH"
 export AST_BASE_REF="$BEFORE_REF"
 export AST_TEST_REF="$AFTER_REF"
 export AST_TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -130,5 +133,6 @@ python "$EVALUATOR" \
   "$OUT_DIR/coverage_after.json" \
   > "$OUT_DIR/summary.txt"
 
+rm .coverage
 echo "Done."
 echo "Results in: $OUT_DIR"
