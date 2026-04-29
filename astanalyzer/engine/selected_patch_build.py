@@ -166,6 +166,8 @@ def _selected_actions(
     by_anchor_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
     by_fallback: dict[FallbackKey, list[dict[str, Any]]] = defaultdict(list)
 
+    log.debug("Loaded selected_actions count: %d", len(selected_data.get("selected_actions", []) or []))
+
     for action in selected_data.get("selected_actions", []) or []:
         if not isinstance(action, dict):
             continue
@@ -270,8 +272,21 @@ def _build_ignore_fix_proposal(match, rule_id: str) -> FixProposal | None:
     filename = str(getattr(root, "file", "unknown.py"))
     lineno = getattr(match, "lineno", None)
 
-    if not lines or lineno is None or lineno < 1:
+    if not lines:
         return None
+
+    if lineno is None or lineno < 1:
+        updated_lines = lines[:]
+        updated_lines.insert(0, _build_ignore_next_comment([rule_id]) + "\n")
+
+        return FixProposal(
+            original="".join(lines),
+            suggestion="".join(updated_lines),
+            reason=f"Suppress finding {rule_id} for this module.",
+            lineno=1,
+            filename=filename,
+            full_file_mode=True,
+        )
 
     prev_index = lineno - 2
 
