@@ -4,7 +4,7 @@ function parseRuleExplanation(text) {
   }
 
   const cleaned = String(text).trim();
-  const markerPattern = /\b(WHAT|WHY|WHEN|HOW):/g;
+  const markerPattern = /\b(WHAT|WHY|WHEN|HOW|LIMITATIONS):/g;
   const matches = [...cleaned.matchAll(markerPattern)];
 
   if (matches.length === 0) {
@@ -55,6 +55,7 @@ function renderRuleDescription(message) {
       ${section("why", "Why it matters")}
       ${section("when", "When it matters")}
       ${section("how", "How to fix")}
+      ${section("limitations", "Limitations")}
     </div>
   `;
 

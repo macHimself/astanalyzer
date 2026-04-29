@@ -65,12 +65,12 @@ def build_report_styles(pygments_css: str) -> str:
       border-top: 1px solid rgba(127,127,127,.14);
     }}
 
-    .toobar input[type="search"] {{
+    .toolbar input[type="search"] {{
       flex: 1;
       min-width: 320px;
     }}
 
-    toolbar-selection button {{
+    .toolbar-selection button {{
       min-width:120px;
     }}
 
@@ -197,39 +197,44 @@ def build_report_styles(pygments_css: str) -> str:
       font-size: 13px;
     }}
 
-    .rule-description{{      
+    .rule-description {{      
       border-style: solid;
       background: color-mix(in oklab, Canvas, CanvasText 3%);
     }}
     
-    .rule-expl{{      
+    .rule-expl {{      
       display: grid;
       gap: 10px;
       margin-top: 8px;
     }}
     
-    .expl-section{{      
+    .expl-section {{      
       padding: 8px 10px;
       border: 1px solid rgba(127,127,127,.16);
       border-radius: 9px;
       background: color-mix(in oklab, Canvas, CanvasText 2%);
     }}
 
-    .expl-title{{      
+    .expl-title {{      
       font-size: 12px;
       font-weight: 700;
       opacity: .9;
       margin-bottom: 4px;
     }}
     
-    .expl-text{{      
+    .expl-text {{      
       font-size: 13px;
       line-height: 1.45;
       opacity: .86;
     }}
     
-    .expl-why{{      
+    .expl-why {{      
       border-left: 3px solid #d99a00;
+      padding-left: 9px;
+    }}
+
+    .expl-limitations {{
+      border-left: 3px solid #777;
       padding-left: 9px;
     }}
     
