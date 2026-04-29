@@ -1,8 +1,9 @@
 function setHint(msg, cls = "warn") {
+  const elHint = document.getElementById("hint");
   if (!msg) {
     elHint.style.display = "none";
     elHint.textContent = "";
-    elHint.className = "warn";
+    elHint.className = "";
     return;
   }
   elHint.style.display = "block";
@@ -81,8 +82,10 @@ async function pickDirectory() {
   setHint("");
 
   if (!hasDirectoryPickerSupport()) {
-    setHint("This browser does not support folder selection. Standard file download will be used.");
-    return;
+    setHint(
+        "Folder selection not supported. Using standard download.",
+        "info");
+        return;
   }
 
   try {

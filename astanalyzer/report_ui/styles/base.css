@@ -76,3 +76,11 @@ footer {
   color: #dc2626;
   font-weight: 700;
 }
+
+.info {
+  color: #f59e0b;
+  opacity: .3;
+  font-size: 13px;
+  font-weight: 400;
+  margin: 8px 0 12px;
+}

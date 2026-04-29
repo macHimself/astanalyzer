@@ -4,6 +4,7 @@
   flex-wrap: wrap;
   margin: 10px 0;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .toolbar-main {
@@ -27,6 +28,21 @@
 
 .toolbar-selection button {
   min-width:120px;
+}
+
+.toolbar p {
+  margin: 0;
+  width: 120px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.toolbar button {
+  margin-right: 8px;
+}
+
+.toolbar button:last-of-type {
+  margin-right: 0;
 }
 
 .view-toggle {
