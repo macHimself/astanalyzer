@@ -41,6 +41,7 @@ echo "Output directory: $OUT_DIR"
 run_scan () {
   REF=$1
   OUT_FILE=$2
+  COVERAGE_FILE=$3
 
   echo ""
   echo ">> Running for: $REF"
@@ -49,6 +50,10 @@ run_scan () {
 
   # reinstall (important if rules changed)
   pip install -e . > /dev/null
+
+  coverage erase
+  coverage run -m pytest
+  coverage json -o "$COVERAGE_FILE"
 
   # clean previous artifacts
   astanalyzer clean || true
@@ -67,8 +72,8 @@ run_scan () {
   astanalyzer clean || true
 }
 
-run_scan "$BEFORE_REF" "$OUT_DIR/before.json"
-run_scan "$AFTER_REF" "$OUT_DIR/after.json"
+run_scan "$BEFORE_REF" "$OUT_DIR/before.json" "$OUT_DIR/coverage_before.json"
+run_scan "$AFTER_REF" "$OUT_DIR/after.json" "$OUT_DIR/coverage_after.json"
 
 # Save metadata
 echo "Saving metadata..."
@@ -100,6 +105,8 @@ export AST_OUTPUT_DIR="$OUT_DIR"
 python "$EVALUATOR" \
   "$OUT_DIR/before.json" \
   "$OUT_DIR/after.json" \
+  "$OUT_DIR/coverage_before.json" \
+  "$OUT_DIR/coverage_after.json" \
   > "$OUT_DIR/summary.txt"
 
 echo "Done."

@@ -17,9 +17,22 @@ CATEGORY_BY_PREFIX = {
 }
 
 
-if len(sys.argv) != 3:
-    print("Usage: python evaluate.py before.json after.json")
+if len(sys.argv) not in (3, 5):
+    print("Usage: python evaluate.py before.json after.json [coverage_before.json coverage_after.json]")
     sys.exit(1)
+
+
+def coverage_stats(path):
+    data = load(path)
+    totals = data.get("totals", {})
+
+    return {
+        "covered_lines": totals.get("covered_lines"),
+        "num_statements": totals.get("num_statements"),
+        "missing_lines": totals.get("missing_lines"),
+        "excluded_lines": totals.get("excluded_lines"),
+        "percent_covered": totals.get("percent_covered"),
+    }
 
 
 def load(path):
@@ -88,6 +101,20 @@ def build_structured_result(before, after):
                 },
             },
         },
+        "coverage": {
+            "before": coverage_before,
+            "after": coverage_after,
+            "diff": (
+                None
+                if coverage_before is None or coverage_after is None
+                else {
+                    "percent_covered": coverage_after["percent_covered"] - coverage_before["percent_covered"],
+                    "covered_lines": coverage_after["covered_lines"] - coverage_before["covered_lines"],
+                    "num_statements": coverage_after["num_statements"] - coverage_before["num_statements"],
+                    "missing_lines": coverage_after["missing_lines"] - coverage_before["missing_lines"],
+                }
+            ),
+        },
     }
 
 
@@ -103,6 +130,13 @@ def write_structured_result(result):
 
 before = stats(load(sys.argv[1]))
 after = stats(load(sys.argv[2]))
+
+coverage_before = None
+coverage_after = None
+
+if len(sys.argv) == 5:
+    coverage_before = coverage_stats(sys.argv[3])
+    coverage_after = coverage_stats(sys.argv[4])
 
 print("=== TOTAL ===")
 print(f"Before: {before['total']}")
@@ -130,4 +164,6 @@ for rule in sorted(all_rules):
     if b != a:
         print(f"{rule}: {b} -> {a} ({a - b:+})")
 
-write_structured_result(build_structured_result(before, after))
+write_structured_result(
+    build_structured_result(before, after, coverage_before, coverage_after)
+)
