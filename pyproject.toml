@@ -34,3 +34,14 @@ astanalyzer = "astanalyzer.cli:main"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
+
+[tool.coverage.run]
+source = ["astanalyzer"]
+omit = [
+    "tests/*",
+    "tools/*"
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
