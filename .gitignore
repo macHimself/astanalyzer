@@ -10,7 +10,7 @@ venv/
 *.egg-info/
 build/
 dist/
-benchmark/results/
+tools/benchmark/results/
 
 # Environment variables
 .env

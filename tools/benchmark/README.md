@@ -14,13 +14,13 @@ The same target project and commit must be used for both runs.
 ## Usage
 
 ```bash
-./benchmark/runner.sh /path/to/project before-ref after-ref
+./tools/benchmark/runner.sh /path/to/project before-rules-merge fix/rule-precision-improvements
 ```
 
 Example:
 
 ```bash
-./benchmark/runner.sh ~/projects/test-project before-rules-merge improvements
+./tools/benchmark/runner.sh ~/projects/test-project v0.0.9 v0.1.0
 ```
 
 ## Output

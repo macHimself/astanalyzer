@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+export AST_BASE_REF="$BASE_REF"
+export AST_TEST_REF="$TEST_REF"
+export AST_TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+export AST_OUTPUT_DIR="$OUT_DIR"
+
 PROJECT_PATH="$1"
 BEFORE_REF="$2"
 AFTER_REF="$3"
