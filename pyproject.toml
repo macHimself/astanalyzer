@@ -21,6 +21,9 @@ dependencies = [
 [tool.setuptools.package-data]
 "astanalyzer.report_ui" = ["styles/*.css", "scripts/*.js"]
 
+[tool.setuptools.packages.find]
+include = ["astanalyzer*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest",
