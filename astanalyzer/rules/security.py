@@ -59,6 +59,10 @@ class UseOfEval(Rule):
     Avoid dynamic code execution. Use explicit parsing, dispatch tables, normal
     function calls, or controlled plugin loading instead. If eval() is only used
     to parse Python literals, replace it with ast.literal_eval().
+
+    LIMITATIONS:
+    This rule cannot determine whether input is trusted or whether execution
+    is sandboxed. Dynamic execution may be acceptable in controlled environments.
     """
     id = "SEC-001"
     title = "Use of eval()/exec()"
@@ -121,6 +125,10 @@ class EvalLiteralParsingCandidate(Rule):
     Replace eval() with ast.literal_eval() when the input is expected to contain
     only Python literals. If the input format is not Python-specific, prefer a
     dedicated parser such as json.loads() for JSON data.
+
+    LIMITATIONS:
+    This rule assumes the input represents a literal. If the code intentionally
+    executes expressions, replacement may not be appropriate.
     """
     id = "SEC-002"
     title = "eval() may be replaced with ast.literal_eval()"
@@ -166,6 +174,10 @@ class UseOfOsSystem(Rule):
     Use subprocess.run() or subprocess.Popen() instead. Prefer passing arguments
     as a list with shell=False. If shell=True is required, validate and quote all
     inputs carefully and handle errors explicitly, for example with check=True.
+
+    LIMITATIONS:
+    This rule cannot assess input sanitisation. Some scripts intentionally rely
+    on shell behaviour and may accept the associated risks.
     """
     id = "SEC-003"
     title = "Use of os.system()"
@@ -242,6 +254,10 @@ class HardcodedPasswordOrKey(Rule):
     deployment configuration, or encrypted configuration storage. If the value is
     only a placeholder or test fixture, make that explicit and suppress the finding
     where appropriate.
+
+    LIMITATIONS:
+    This rule is heuristic and may produce false positives for test data,
+    placeholders, or variables that are not actually secrets.
     """
     id = "SEC-004"
     title = "Hardcoded password / key / token"
@@ -293,6 +309,10 @@ class InsecureRandom(Rule):
     Use the secrets module for tokens, passwords, and security-sensitive choices.
     Use os.urandom() or cryptographic libraries when raw secure random bytes are
     required. Keep random only for non-security use cases.
+
+    LIMITATIONS:
+    This rule cannot determine whether randomness is used for security purposes.
+    Usage of the random module may be valid in non-security contexts.
     """
     id = "SEC-005"
     title = "Insecure use of random module"
@@ -341,6 +361,10 @@ class OpenWithoutWith(Rule):
     Use a context manager, for example with open(...) as f:, so the file is closed
     automatically. If ownership is intentionally transferred or managed elsewhere,
     document that decision or suppress the finding.
+
+    LIMITATIONS:
+    This rule assumes local ownership of the file handle. Cases where the file
+    object is returned or managed externally may be valid.
     """
     id = "SEC-006"
     title = "open() used without context manager"

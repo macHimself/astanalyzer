@@ -45,6 +45,11 @@ class TooManyArguments(Rule):
     responsibilities, split the function into smaller functions with clearer
     purposes. If the current signature is intentional, add a review note or suppress
     the advisory finding.
+
+    LIMITATIONS:
+    This rule may produce false positives for framework callbacks, generated code,
+    thin wrappers, constructors, or functions that intentionally mirror an external
+    API. The number of parameters alone does not prove poor design.
     """
     MAX_ARGS = 5
     id = "CX-001"
@@ -101,6 +106,11 @@ class TooDeepNesting(Rule):
     helper functions. Focus on making the main execution path visible and easy
     to follow. If deep nesting is intentional, document the reasoning or suppress
     the advisory finding.
+
+    LIMITATIONS:
+    This rule is heuristic. Deep nesting may be acceptable in short, tightly scoped
+    blocks, parsers, state machines, or algorithms where the nested structure
+    directly represents the problem being solved.
     """
     id = "CX-002"
     title = "Too deep nesting"
@@ -161,6 +171,11 @@ class FunctionTooLong(Rule):
     operations into dedicated objects, or simplify branching before splitting. If
     the function is intentionally long and still clear, add a review note or
     suppress the advisory finding.
+
+    LIMITATIONS:
+    This rule may produce false positives for generated code, simple sequential
+    setup code, test cases, data-loading routines, or functions where splitting
+    would reduce clarity instead of improving it.
     """
     id = "CX-003"
     title = "Too long function"

@@ -59,6 +59,10 @@ class PrintInListComprehension(Rule):
     HOW:
     Replace the list comprehension with an explicit for loop. A for loop makes
     the side effect clear and avoids constructing an unused list.
+
+    LIMITATIONS:
+    This rule assumes the list produced by the comprehension is not used.
+    If the list is intentionally consumed later, this may be a false positive.
     """
     id = "PERF-001"
     title = "Print used inside list comprehension for side effects"
@@ -103,6 +107,10 @@ class UselessListComprehension(Rule):
     HOW:
     Replace the list comprehension with an explicit for loop. A for loop makes
     the side effect clear and avoids constructing an unused list.
+
+    LIMITATIONS:
+    This rule cannot reliably determine whether the result is used indirectly
+    (e.g. debugging, REPL usage, or framework-driven execution).
     """
     id = "PERF-002"
     title = "Useless list comprehension (unused result)"
@@ -146,6 +154,10 @@ class RedundantSortBeforeMinMax(Rule):
     HOW:
     Call min() or max() directly on the original iterable. Preserve any key or
     default arguments where applicable.
+
+    LIMITATIONS:
+    This rule assumes the sorted result is not reused. If sorting is intended
+    for readability or reuse, removing it may not be appropriate.
     """
     id = "PERF-003"
     title = "Redundant sort before min/max"
@@ -186,6 +198,10 @@ class UnnecessaryCopy(Rule):
     Remove the redundant copy when the original object can be safely reused. If
     the copy is intentional for mutation isolation or API safety, keep it and
     document the reason or suppress the advisory finding.
+
+    LIMITATIONS:
+    This rule cannot determine intent. Copies may be required for mutation safety,
+    defensive programming, or API guarantees.
     """
     id = "PERF-004"
     title = "Unnecessary copy of iterable or object"
@@ -235,6 +251,10 @@ class DoubleLoopSameCollection(Rule):
     a set, a dictionary, grouping, or another data structure suited to lookup.
     If all pairwise combinations are genuinely required, keep the loop and
     document or suppress the advisory finding.
+
+    LIMITATIONS:
+    Nested iteration may be intentional for pairwise comparison, matrix-like
+    operations, or algorithms that require full combination evaluation.
     """
     id = "PERF-005"
     title = "Nested loops over the same collection"
@@ -281,6 +301,10 @@ class LoopCouldBeComprehension(Rule):
     Rewrite the loop as a list, set, or dictionary comprehension only if the result
     is easier to read. If the explicit loop communicates the logic better, keep it
     and suppress the advisory finding.
+
+    LIMITATIONS:
+    This rule is stylistic and heuristic. Comprehensions may reduce readability
+    in complex logic or hinder debugging.
     """
     id = "PERF-006"
     title = "Loop could be a comprehension"
@@ -329,6 +353,10 @@ class JoinOnGenerator(Rule):
     Pass a generator expression directly to join() instead of a list comprehension
     or list(...) wrapper. Keep the list only if it is intentionally reused or
     needed for debugging.
+
+    LIMITATIONS:
+    The performance gain is usually small. Using a list may be intentional
+    for reuse, debugging, or clarity.
     """
     id = "PERF-007"
     title = "Use generator expression in join()"

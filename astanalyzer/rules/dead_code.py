@@ -43,6 +43,12 @@ class UnusedVariable(Rule):
     side effects (e.g. function calls), keep the expression and remove only
     the assignment. If the variable is intentionally unused, consider documenting
     it or suppressing the finding.
+
+    LIMITATIONS:
+    This rule may produce false positives when variables are intentionally unused
+    (e.g. placeholders, debugging variables, or variables named '_'). It may also
+    miss indirect usage through dynamic evaluation, reflection, or framework-specific
+    mechanisms.
     """
     id = "DEAD-001"
     title = "Unused variable"
@@ -84,6 +90,11 @@ class UnreachableCode(Rule):
     Remove the unreachable statements or restructure the control flow so that
     the intended logic is executed. Ensure that any important operations are
     placed before the terminal statement.
+
+    LIMITATIONS:
+    This rule assumes standard control flow and may produce false positives in cases
+    where execution paths are controlled dynamically or through patterns not visible
+    in static analysis (e.g. conditional imports, debugging constructs, or tooling).
     """
     id = "DEAD-002"
     title = "Unreachable code after return/raise/break/continue"
@@ -132,6 +143,11 @@ class UnusedAssignmentKeepValue(Rule):
     effects while removing the unused variable. If no side effects are
     expected, the entire assignment can be safely removed. For complex
     assignments, manual review is recommended.
+
+    LIMITATIONS:
+    This rule relies on heuristics and cannot reliably determine whether an expression
+    has side effects. Complex assignments, dynamic behaviour, or framework-specific
+    patterns may require manual review before applying fixes.
     """
     id = "DEAD-003"
     title = "Unused assignment (keep value)"
