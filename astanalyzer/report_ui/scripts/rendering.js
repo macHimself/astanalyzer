@@ -197,11 +197,38 @@ function render() {
   updateViewButtons();
 }
 
+function projectNameFromRoot(projectRoot) {
+  if (!projectRoot) {
+    return "";
+  }
+
+  const parts = String(projectRoot)
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(Boolean);
+
+  return parts.at(-1) || "";
+}
+
 function applyJson(json, source) {
   state.raw = json;
   state.findings = normalisePlan(json);
   state.selected.clear();
   state.selectedActions.clear();
+
+  const projectName = projectNameFromRoot(json.project_root);
+  document.title = projectName
+    ? `AstAnalyzer – Scan Results (${projectName})`
+    : "AstAnalyzer – Scan Results";
+
+  const title = document.querySelector("h1");
+
+  if (title) {
+    title.innerHTML = projectName
+      ? `AstAnalyzer – Scan Results <span class="project-name">(${escapeHtml(projectName)})</span>`
+      : "AstAnalyzer – Scan Results";
+  }
+
   elSourceHint.textContent = source ?? "JSON";
   enableButtons(true);
   render();
