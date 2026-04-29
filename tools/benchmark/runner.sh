@@ -63,6 +63,8 @@ run_scan () {
 
   echo "Time: $((END - START))s" >> "$OUT_DIR/timing.txt"
   echo "$REF: $((END - START))s"
+  
+  astanalyzer clean || true
 }
 
 run_scan "$BEFORE_REF" "$OUT_DIR/before.json"
