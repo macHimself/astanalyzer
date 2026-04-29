@@ -62,7 +62,7 @@ def counter_to_dict(value):
     return dict(value)
 
 
-def build_structured_result(before, after):
+def build_structured_result(before, after, coverage_before=None, coverage_after=None):
     all_rules = set(before["by_rule"]) | set(after["by_rule"])
     all_categories = set(before["by_category"]) | set(after["by_category"])
     all_severities = set(before["by_severity"]) | set(after["by_severity"])
