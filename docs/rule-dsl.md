@@ -1,4 +1,4 @@
-[Back to README](../README.md) | [Previous: Rule Catalog](rule-catalog.md) | [Next: Matcher Helpers](matcher-helpers.md)
+[Back to README](../README.md) | [Previous: Rule Catalog](rule-catalog.md) | [Next: Fixes](fixes.md) 
 
 # Rule DSL
 
@@ -96,6 +96,17 @@ match("If").redundant_else_after_terminal()
 
 ---
 
+## Reference
+
+For lower-level helper APIs used by custom matcher rules, see:
+
+- [Matcher Helpers](matcher-helpers.md) — convenience methods built on top of the core matcher DSL
+  - Internals:
+    - [Predicates Reference](reference/predicates.md) — reusable conditions for `Matcher.where(...)`
+    - [Tools Reference](reference/tools.md) — helper functions for analysing AST nodes and relationships
+
+---
+
 ## Notes
 
 - matchers operate on astroid nodes
@@ -104,4 +115,4 @@ match("If").redundant_else_after_terminal()
 
 ---
 
-[Back to README](../README.md) | [Previous: Rule Catalog](rule-catalog.md) | [Next: Matcher Helpers](matcher-helpers.md)
+[Back to README](../README.md) | [Previous: Rule Catalog](rule-catalog.md) | [Next: Fixes](fixes.md) 

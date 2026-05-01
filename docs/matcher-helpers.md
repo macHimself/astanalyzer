@@ -1,4 +1,4 @@
-[Back to README](../README.md) | [Previous: Rule DSL](rule-dsl.md) | [Next: Fixes](fixes.md)
+[Back to Rule DSL](rule-dsl.md) | [Back to README](../../README.md)
 
 # Matcher Helpers
 
@@ -217,6 +217,16 @@ match("Assign").is_unused()
 
 ---
 
+## Reference
+
+For lower-level helper APIs used by custom matcher rules, see:
+
+- Internals:
+  - [Predicates Reference](reference/predicates.md) — reusable conditions for `Matcher.where(...)`
+  - [Tools Reference](reference/tools.md) — helper functions for analysing AST nodes and relationships
+
+---
+
 ## Notes
 
 - Helpers should remain readable and focused.
@@ -226,4 +236,4 @@ match("Assign").is_unused()
 
 ---
 
-[Back to README](../README.md) | [Previous: Rule DSL](rule-dsl.md) | [Next: Fixes](fixes.md)
+[Back to Rule DSL](rule-dsl.md) | [Back to README](../../README.md)

@@ -1,4 +1,4 @@
-[Back to README](../README.md) | [Previous: Matcher Helpers](matcher-helpers.md) | [Ignoring Fixer Actions](fixer-actions.md)
+[Back to README](../README.md) | [Previous: Rule DSL](rule-dsl.md)  | [Ignoring Fixer Actions](fixer-actions.md)
 
 # Fixes
 
@@ -145,4 +145,4 @@ to_upper_snake_case("myConst")   # -> "MY_CONST"
 
 ---
 
-[Back to README](../README.md) | [Previous: Matcher Helpers](matcher-helpers.md) | [Ignoring Fixer Actions](fixer-actions.md)
+[Back to README](../README.md) | [Previous: Rule DSL](rule-dsl.md)  | [Ignoring Fixer Actions](fixer-actions.md)

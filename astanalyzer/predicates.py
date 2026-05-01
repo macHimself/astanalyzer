@@ -70,7 +70,7 @@ class ANY(Predicate):
 
 
 class EXISTS(Predicate):
-    """"
+    """
     True if attribute exists and is non-empty when sized.
 
     Semantics:
