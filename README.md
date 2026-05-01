@@ -108,7 +108,9 @@ astanalyzer apply
 - [Rules](docs/rules.md) — categories and rule structure  
 - [Rule Catalog](docs/rule-catalog.md) — built-in rules  
 - [Rule DSL](docs/rule-dsl.md) — matcher DSL  
-- [Matcher Helpers](docs/matcher-helpers.md) — advanced matching helpers  
+  - [Matcher Helpers](docs/matcher-helpers.md) — advanced matching helpers  
+    - [Predicates Reference](reference/predicates.md) — reusable conditions for `Matcher.where(...)`
+    - [Tools Reference](reference/tools.md) — helper functions for analysing AST nodes and relationships
 
 ### Fixes and transformations
 
