@@ -1,4 +1,4 @@
-[Back to Rule DSL](rule-dsl.md) | [Back to README](../../README.md)
+[Back to Rule DSL](rule-dsl.md) | [Back to README](../README.md)
 
 # Matcher Helpers
 
@@ -236,4 +236,4 @@ For lower-level helper APIs used by custom matcher rules, see:
 
 ---
 
-[Back to Rule DSL](rule-dsl.md) | [Back to README](../../README.md)
+[Back to Rule DSL](rule-dsl.md) | [Back to README](../README.md)
