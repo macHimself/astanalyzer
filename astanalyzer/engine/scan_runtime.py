@@ -23,8 +23,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List
 
-from colorama import init
-
 from ..core.anchor import build_anchor
 from ..fixer import FixProposal
 from ..filtering.ignore_rules import is_ignored_for_node
@@ -39,7 +37,6 @@ from .patch_writer import (
     create_diff,
     emit_patch_if_changed,
     build_patch_preview_data,
-    make_patch_run_dir,
 )
 
 log = logging.getLogger(__name__)
@@ -167,7 +164,7 @@ def prepare_rule_runtime(
         raise ValueError("ProjectNode.root_dir is not set")
 
     project_root = Path(project_root).resolve()
-    patch_run_dir = make_patch_run_dir(project_root) if build_fixes else None
+    patch_run_dir = project_root if build_fixes else None
     return active_rules, rule_index, project_root, patch_run_dir
 
 
