@@ -15,43 +15,14 @@ from __future__ import annotations
 import logging
 import re
 import textwrap
-from datetime import datetime
 from pathlib import Path
 from colorama import Fore, Style, init
 from ..fixer import FixProposal
 
 from .project_loader import ModuleNode
-from .reporting import _relpath
 
 log = logging.getLogger(__name__)
 init(autoreset=True)
-
-
-def _slug(s: str, max_len: int = 60) -> str:
-    """
-    Convert text into a filesystem-safe slug.
-
-    Non-alphanumeric characters are replaced with hyphens and the result
-    is lowercased and truncated to the requested maximum length.
-    """
-    s = (s or "").strip().lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s)
-    s = re.sub(r"-{2,}", "-", s).strip("-")
-    return s[:max_len] or "run"
-
-
-def make_patch_run_dir(project_root: Path) -> Path:
-    """
-    Create a timestamped directory for patch artifacts under `.astanalyzer/patches`.
-
-    The directory name includes the current timestamp and a slug derived
-    from the project root name.
-    """
-    base = project_root / ".astanalyzer" / "patches"
-    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    run_dir = base / f"{ts}__{_slug(project_root.name)}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    return run_dir
 
 
 def write_patch(
