@@ -1,0 +1,195 @@
+{
+  "project": {
+    "name": "requests",
+    "path": "../requests"
+  },
+  "before_ref": "v0.0.9",
+  "after_ref": "v0.1.1-structure-refactor",
+  "timestamp": "2026-05-01T14:44:54Z",
+  "results": {
+    "before": {
+      "total": 1510,
+      "by_rule": {
+        "STYLE-012": 15,
+        "STYLE-001": 345,
+        "STYLE-011": 40,
+        "STYLE-010": 431,
+        "DEAD-001": 230,
+        "DEAD-003": 198,
+        "STYLE-007": 38,
+        "CX-003": 29,
+        "STYLE-005": 35,
+        "STYLE-009": 18,
+        "STYLE-003": 41,
+        "STYLE-004": 4,
+        "SEM-005": 14,
+        "SEM-009": 5,
+        "PERF-006": 5,
+        "SEC-004": 15,
+        "SEM-002": 2,
+        "CX-001": 9,
+        "CX-002": 25,
+        "STYLE-002": 10,
+        "SEM-004": 1
+      },
+      "by_severity": {
+        "warning": 1359,
+        "info": 151
+      },
+      "by_category": {
+        "style": 977,
+        "dead_code": 428,
+        "complexity": 63,
+        "semantic": 22,
+        "performance": 5,
+        "security": 15
+      }
+    },
+    "after": {
+      "total": 692,
+      "by_rule": {
+        "STYLE-012": 15,
+        "STYLE-011": 40,
+        "STYLE-010": 431,
+        "STYLE-007": 38,
+        "STYLE-005": 35,
+        "STYLE-003": 41,
+        "DEAD-001": 10,
+        "DEAD-003": 7,
+        "STYLE-001": 4,
+        "STYLE-004": 4,
+        "SEM-009": 5,
+        "PERF-006": 4,
+        "SEC-004": 9,
+        "SEM-005": 4,
+        "SEM-002": 2,
+        "CX-002": 25,
+        "CX-003": 2,
+        "CX-001": 5,
+        "STYLE-002": 10,
+        "SEM-004": 1
+      },
+      "by_severity": {
+        "warning": 560,
+        "info": 132
+      },
+      "by_category": {
+        "style": 618,
+        "dead_code": 17,
+        "semantic": 12,
+        "performance": 4,
+        "security": 9,
+        "complexity": 32
+      }
+    },
+    "diff": {
+      "total": -818,
+      "by_rule": {
+        "CX-001": -4,
+        "CX-002": 0,
+        "CX-003": -27,
+        "DEAD-001": -220,
+        "DEAD-003": -191,
+        "PERF-006": -1,
+        "SEC-004": -6,
+        "SEM-002": 0,
+        "SEM-004": 0,
+        "SEM-005": -10,
+        "SEM-009": 0,
+        "STYLE-001": -341,
+        "STYLE-002": 0,
+        "STYLE-003": 0,
+        "STYLE-004": 0,
+        "STYLE-005": 0,
+        "STYLE-007": 0,
+        "STYLE-009": -18,
+        "STYLE-010": 0,
+        "STYLE-011": 0,
+        "STYLE-012": 0
+      },
+      "by_severity": {
+        "info": -19,
+        "warning": -799
+      },
+      "by_category": {
+        "complexity": -31,
+        "dead_code": -411,
+        "performance": -1,
+        "security": -6,
+        "semantic": -10,
+        "style": -359
+      }
+    }
+  },
+  "astanalyzer_test_coverage": {
+    "before": {
+      "covered_lines": 5979,
+      "num_statements": 7404,
+      "missing_lines": 1425,
+      "excluded_lines": 0,
+      "percent_covered": 80.75364667747164,
+      "by_module": {
+        "__init__.py": 100.0,
+        "anchor": 100.0,
+        "anchor.py": 94.92,
+        "cli": 75.47,
+        "conftest.py": 100.0,
+        "engine": 87.86,
+        "enums.py": 100.0,
+        "file_selection.py": 84.62,
+        "fixer": 91.9,
+        "ignore_rules.py": 88.76,
+        "kinds.py": 93.33,
+        "logging_config.py": 33.33,
+        "matcher": 89.66,
+        "node_selector.py": 50.0,
+        "predicates.py": 96.46,
+        "private": 100.0,
+        "refactor": 91.5,
+        "report_ui": 83.05,
+        "rule.py": 69.57,
+        "rule_filtering.py": 97.18,
+        "rule_loader.py": 64.52,
+        "rules": 99.09,
+        "test_basic.py": 100.0,
+        "test_extract_snippets.py": 100.0,
+        "test_predicates.py": 100.0,
+        "test_rule_loader.py": 100.0,
+        "test_snippet.py": 100.0,
+        "tools.py": 63.37,
+        "utils": 95.45
+      }
+    },
+    "after": {
+      "covered_lines": 4621,
+      "num_statements": 6091,
+      "missing_lines": 1470,
+      "excluded_lines": 0,
+      "percent_covered": 75.86603185027089,
+      "by_module": {
+        "__init__.py": 100.0,
+        "cli": 64.1,
+        "core": 91.56,
+        "engine": 82.95,
+        "filtering": 93.36,
+        "fixer": 83.27,
+        "matcher": 83.2,
+        "predicates.py": 96.46,
+        "refactor": 91.5,
+        "report_ui": 71.18,
+        "rule_loader.py": 64.52,
+        "rules": 98.97,
+        "runtime": 66.67,
+        "selection": 78.21,
+        "tools.py": 77.75,
+        "utils": 95.45
+      }
+    },
+    "diff": {
+      "percent_covered": -4.88761482720075,
+      "covered_lines": -1358,
+      "num_statements": -1313,
+      "missing_lines": 45
+    }
+  }
+}

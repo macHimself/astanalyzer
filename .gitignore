@@ -10,7 +10,14 @@ venv/
 *.egg-info/
 build/
 dist/
-tools/benchmark/results/
+
+# Large benchmark artifacts
+#tools/benchmark/results/
+before.json
+after.json
+coverage_*.json
+# benchmark temporary scripts
+tools/benchmark/results/**/evaluate.py
 
 # Environment variables
 .env
@@ -24,4 +31,3 @@ scan_report.json
 astanalyzer-selected.json
 *.log
 astanalyzer.ico
-
