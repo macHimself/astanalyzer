@@ -1,0 +1,6 @@
+./tools/benchmark/runner.sh ../fastapi v0.0.9 v0.1.1-structure-refactor 
+./tools/benchmark/runner.sh ../flask v0.0.9 v0.1.1-structure-refactor 
+./tools/benchmark/runner.sh ../django v0.0.9 v0.1.1-structure-refactor 
+./tools/benchmark/runner.sh ../rich v0.0.9 v0.1.1-structure-refactor 
+./tools/benchmark/runner.sh ../requests v0.0.9 v0.1.1-structure-refactor 
+./tools/benchmark/runner.sh ../Algorithms v0.0.9 v0.1.1-structure-refactor 

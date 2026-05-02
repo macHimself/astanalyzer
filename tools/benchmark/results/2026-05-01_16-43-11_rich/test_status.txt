@@ -1,0 +1,2 @@
+v0.0.9 tests exit code: 1
+v0.1.1-structure-refactor tests exit code: 0

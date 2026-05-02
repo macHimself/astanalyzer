@@ -1,0 +1,23 @@
+=== TOTAL ===
+Before: 7718
+After:  5750
+Change: -1968
+
+=== BY SEVERITY ===
+Before: {'warning': 7251, 'info': 467}
+After:  {'warning': 5400, 'info': 350}
+
+=== BY CATEGORY ===
+Before: {'style': 6310, 'dead_code': 768, 'complexity': 480, 'security': 20, 'semantic': 133, 'performance': 7}
+After:  {'style': 5403, 'semantic': 122, 'dead_code': 54, 'complexity': 154, 'performance': 7, 'security': 10}
+
+=== TOP RULE CHANGES ===
+CX-001: 56 -> 39 (-17)
+CX-003: 325 -> 16 (-309)
+DEAD-001: 414 -> 30 (-384)
+DEAD-003: 354 -> 24 (-330)
+SEC-001: 4 -> 0 (-4)
+SEC-004: 14 -> 8 (-6)
+SEM-005: 14 -> 3 (-11)
+STYLE-001: 798 -> 8 (-790)
+STYLE-009: 117 -> 0 (-117)

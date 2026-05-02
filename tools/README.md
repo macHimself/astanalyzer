@@ -8,6 +8,7 @@ These scripts are:
 - intended for internal use only
 
 Examples:
-- CSS refactoring
 - benchmarking
+- CSS refactoring
+- generate reference docs
 - refactoring core modules
